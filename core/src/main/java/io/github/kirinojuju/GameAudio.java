@@ -18,34 +18,50 @@ final class GameAudio {
     private float hitCooldown;
 
     private static Sound load(String name) {
+        if (!Gdx.files.internal(ROOT + name).exists()) return null;
         return Gdx.audio.newSound(Gdx.files.internal(ROOT + name));
     }
 
     void update(float dt) { hitCooldown = Math.max(0, hitCooldown - dt); }
-    void click() { click.play(.35f); }
-    void lanAttack() { lanAttack.play(.42f); }
-    void notebookAttack() { click.play(.18f); }
-    void weaponSwitch() { weaponSwitch.stop(); weaponSwitch.play(.42f); }
-    void skillCast() { skillCast.stop(); skillCast.play(.38f); }
-    void skillImpact() { skillImpact.stop(); skillImpact.play(.48f); }
-    void cppTransform() { cppTransform.stop(); cppTransform.play(.52f); }
-    void nextStage() { nextStage.play(.50f); }
+    void click() { play(click, .35f); }
+    void lanAttack() { play(lanAttack, .42f); }
+    void notebookAttack() { play(click, .18f); }
+    void weaponSwitch() { restart(weaponSwitch, .42f); }
+    void skillCast() { restart(skillCast, .38f); }
+    void skillImpact() { restart(skillImpact, .48f); }
+    void cppTransform() { restart(cppTransform, .52f); }
+    void nextStage() { play(nextStage, .50f); }
 
     void hit(boolean armor) {
         if (hitCooldown > 0) return;
-        (armor ? armorHit : hit).play(.35f);
+        play(armor ? armorHit : hit, .35f);
         hitCooldown = .06f;
     }
 
+    private static void play(Sound sound, float volume) {
+        if (sound != null) sound.play(volume);
+    }
+
+    private static void restart(Sound sound, float volume) {
+        if (sound != null) {
+            sound.stop();
+            sound.play(volume);
+        }
+    }
+
+    private static void dispose(Sound sound) {
+        if (sound != null) sound.dispose();
+    }
+
     void dispose() {
-        click.dispose();
-        hit.dispose();
-        armorHit.dispose();
-        lanAttack.dispose();
-        nextStage.dispose();
-        weaponSwitch.dispose();
-        skillCast.dispose();
-        skillImpact.dispose();
-        cppTransform.dispose();
+        dispose(click);
+        dispose(hit);
+        dispose(armorHit);
+        dispose(lanAttack);
+        dispose(nextStage);
+        dispose(weaponSwitch);
+        dispose(skillCast);
+        dispose(skillImpact);
+        dispose(cppTransform);
     }
 }

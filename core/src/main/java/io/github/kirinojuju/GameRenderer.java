@@ -55,9 +55,7 @@ final class GameRenderer {
     }
 
     private static Texture loadRoom(String path) {
-        Texture texture = new Texture(Gdx.files.internal(path));
-        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        return texture;
+        return OptionalAssetTexture.load(path);
     }
 
     void draw(RunDirector run, PlayerCharacter player, CombatRoom combat) {

@@ -1,6 +1,5 @@
 package io.github.kirinojuju;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -18,9 +17,7 @@ final class SatiSprite {
     private final TextureRegion spearRegion = new TextureRegion(spear);
 
     private static Texture load(String name) {
-        Texture texture = new Texture(Gdx.files.internal(ROOT + name));
-        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        return texture;
+        return OptionalAssetTexture.load(ROOT + name);
     }
 
     private static Texture[] loadFrames(String prefix, int count) {
