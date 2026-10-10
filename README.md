@@ -2,6 +2,25 @@
 
 A small playable libGDX action roguelike prototype about surviving computer engineering school life. This is a student-themed spin-off of Pusenbi. Its visual direction carries over Pusenbi's simple pixel-art style and adapts the characters, clothing, enemies, and settings to ISNE student life.
 
+## Where to find the code
+
+Start with `core/src/main/java/io/github/kirinojuju/schoolLife.java`. The 34 main Java files are organized into matching folders and Java packages:
+
+| Folder | Responsibility |
+| --- | --- |
+| `flow/` | Screens, room progression, stages and loops |
+| `player/` | Player movement, skills and upgrades |
+| `weapon/` | LAN, Notebook and weapon abilities |
+| `combat/` | Combat updates, projectiles, collision and damage |
+| `enemy/` | Shared AI, monster behaviors, spawning and spacing |
+| `enemy/boss/` | Ajarn boss behaviors |
+| `enemy/ex/` | EX monster behaviors |
+| `render/` | Drawing, character animations and fallback textures |
+| `world/` | Arena bounds, entrance scene and table obstacles |
+| `audio/` | Game sounds |
+
+See [CODE_ARCHITECTURE.md](CODE_ARCHITECTURE.md) for the six-file reading order and a guide to finding the code for each feature. The desktop launcher remains in `lwjgl3`; the rules check remains in `core/src/test/java`.
+
 ## Clone and play
 
 The team's original art and sound files are kept locally and are not included in Git. A fresh clone includes an empty `assets/` folder and runs with simple generated placeholder art and no sound. If you have the original files, put them under `assets/` using the paths shown in the art and sound sections below; the game will use each file that exists and fall back only for missing files. Do not commit those local files.
@@ -40,19 +59,27 @@ The upper wall contains windows. The student and monsters are restricted to the 
 
 ## Run structure
 
+To test table cover directly, run `gradlew.bat :lwjgl3:run --args="--test-obstacles"`. Monster and boss rooms use `scene/sceneroom_not_table.png` with three separate tables, randomized once on room entry. Left, middle and right zones leave wide detours; the middle table alternates between the top and bottom of the room to keep the player's spawn clear. Table art also varies among table00, table01 and table04; the middle uses a low table. Walk around them with WASD/arrow keys; Shift stops before a table. Tables block player and ordinary monster projectiles. Boss projectiles travel over tables, including reflected shots and Sati's spear. Press 2 to try Notebook impacts against cover, or E to explode PowerBall against a table. Monsters route around the furniture. Tables are permanent; EX and Final Exam rooms keep their existing scene rules.
+
+To test the Final Exam directly, run `gradlew.bat :lwjgl3:run --args="--test-final-exam"`. Press Enter on the black cutscene to begin. The test starts with Notebook equipped; use A/D or Left/Right to move, Shift for a horizontal dash, and click/Space or E to attack. Restarting with R returns to this test cutscene.
+
 - Each loop shuffles four school-themed stages and picks four distinct Ajarns from a pool of eight, with one from each combat family.
-- Each stage has a regular monster room, then an Ajarn boss room.
+- Each stage has a regular monster room, then an Ajarn boss room. Normal bosses start with two different minions in loop 1, three in loop 2 and five from loop 3 onward. First-loop bosses introduce minion types gradually, starting with basic and ranged monsters; all six types can appear from loop 2. Minions spawn once and are not replenished. Defeat both the boss and its minions to clear the room.
 - Each defeated Ajarn offers three random upgrades; choose one permanent upgrade for that run before the next room.
-- Clearing stage four starts a new loop. Enemy HP, SP, speed, and damage increase every loop.
-- Immediately after the final Ajarn of every even-numbered loop, one random EX monster appears before the next loop. Defeating Liquid Cat, Allergic Vacuum, or Insecure Sword grants its corresponding permanent buff for that run.
+- After stage four and any queued EX or Final Exam fight, the next loop begins. Each additional loop adds 15% of base HP/armor, 10% SP/regen, 10% damage and 4% speed.
+- The first random EX monster appears after the final Ajarn of loop 1; subsequent EX encounters retain the schedule after loops 2, 4, 6 and so on. Defeating Liquid Cat, Allergic Vacuum, or Insecure Sword grants its corresponding permanent buff for that run.
+- Defeating Ajarn Ae, Far (Fa), and Dome during the same run unlocks the separate Final Exam server room once. If the third victory coincides with an even-loop EX encounter, the EX monster is fought first. During loop 1, a ready Final Exam waits until after the introductory EX, even when its three required victories are reached before stage four. A black cutscene then says "Good...Let's us prepare the final EXAM" before the three Ajarns appear together.
+- In the Final Exam, the three Ajarns stay on the three upper server cabinets. The student stays in the lower lane and can move or dash only left and right; Notebook and PowerBall can reach the bosses above. Press Enter on the cutscene to start the fight. Clearing all three returns to the normal room sequence.
 - LAN Tether and Notebook Heat Beam become available only during the EX fight. They switch off when that encounter ends and do not appear among the normal boss upgrade cards.
-- Ajarn defeats restore 24 HP. The run continues until the player is defeated.
+- Monster rooms restore 12 HP on victory; Ajarn defeats restore 35 HP. The run continues until the player is defeated.
 
 ## Enemy encounters
 
 - Regular monsters move apart when they crowd each other. Green ranged monsters keep their distance, blue wave monsters fire expanding energy waves, white shielded monsters absorb damage with armor, cyan binders stop movement, and purple warpers teleport to a marked spot.
 - Loop 1 introduces these enemies gradually: ranged in stage 1, waves in stage 2, shields and binders in stage 3, then warpers in stage 4. Later loops add random special monsters more often.
-- Ajarns appear at the far right and hold their ground between attacks. Their projectiles hit harder and fire more often. The four families are summon + reflecting shield, summon + warp strike, long-range huge projectile, and energy waves + reflecting shield. Summoners call skilled monsters with shields: one at a time in loop 1, then up to two at a time, with four living minions as the limit. Boss warps are sudden: the Ajarn appears beside the student, alternates between binding their legs and a heavy hit, then returns to the original position. Regular warping monsters still mark their destination first. From loop 3 onward, a random extra trait may combine with a boss's main pattern; from loop 5 onward, some gain waves too. Ajarn Sati has an additional C++ element that transforms into a spear. A line marks the target point while the spear charges, so the player can dodge before it launches. Ajarn Talgo (Ken), linked to the `Talgorithm(Ken)` boss folder, marks a green safe circle before a full-room AOE. Reach the circle during the 1.8-second cast or time a dash for the impact. His other attacks pause while he casts. Other boss names and graphics are still placeholders.
+- Ajarns appear at the far right and hold their ground between attacks. Their projectiles hit harder and fire more often. Their shared traits include reflecting armor, warp strikes, long-range huge projectiles, and energy waves. Every normal boss room uses the same rule for initial minions based on the loop; boss behaviors no longer summon enemies during combat. Minions use their normal monster statistics, and only the shielded type starts with armor. Some Ajarns use a sudden warp beside the student, alternating between a bind and a heavy hit before returning home. Ae marks a fixed destination before his warp. Regular warping monsters still mark their destination first. From loop 3 onward, reflecting armor or warping may combine with a boss's main pattern; from loop 5 onward, some gain waves too. Ajarn Sati has an additional C++ element that transforms into a spear. A line marks the target point while the spear charges, so the player can dodge before it launches. Ajarn Talgo (Ken), linked to the `Talgorithm(Ken)` boss folder, marks a green safe circle before a full-room AOE. Reach the circle during the 1.8-second cast or time a dash for the impact. His other attacks pause while he casts. Far currently uses his existing boss-family attacks; his individual art and new skills can be added later. Other boss names and graphics are still placeholders.
+- Ajarn Ae waits six seconds before his first warp warning, then marks a radius-75 area for 0.8 seconds. Walk out of the fixed circle or dash at impact to avoid the alternating one-second bind / base-14-damage hit. He returns home after 0.38 seconds and waits a seven-second cooldown before warning again (scaling down to at least five seconds in later loops). His regular spread fires every 1.1 seconds, with base speed 220 and damage 8 per shot. Final Exam Ae uses the slower spread while staying on his cabinet.
+- Ajarn Dome uses the `Tnetwork(Dome)` character and effect animations. He alternates a lightning strike marked for 0.85 seconds (28 SP, base damage 22, radius set by `LIGHTNING_RADIUS`, currently 200) and a laser charged for 1 second (38 SP, base damage 18, active for 0.6 seconds). Lightning and the normal-room laser target the player's position at cast start, allowing a dodge. In Final Exam, his laser fires straight down from the server cabinet. Dash invulnerability protects against both attacks. Dome keeps reflecting armor in his normal boss room, and these skills replace his generic wave attacks. Recovery lasts 0.3 seconds and the pause between casts is 0.9 seconds (scaling down to 0.55 seconds in later loops).
 
 ### EX encounters
 
@@ -64,13 +91,15 @@ The upper wall contains windows. The student and monsters are restricted to the 
 
 The student now renders from transparent 64 × 64 PNG frames in `assets/characters/student_player/`: `idle` (left/right), `walk` (four frames per side), and `skill_case` (eight left / nine right). The sprite uses nearest-neighbor filtering at 2× size. `skill_case` plays only during the E/touch skill; `power_ball.png` is released partway through that animation. Normal weapon attacks do not trigger the skill animation. The character source is `../characters/main/aseprite/student001.aseprite`.
 
-The Building 30 entrance uses `assets/scene/scene30building_entrance_withoutcar.png` with the separate `scene30bCar_object.png` overlay at a crisp 3× scale. Monster and boss rooms use the team's `assets/scene/sceneroom.png` and `sceneroom_boss.png` art, repeated across the wide arena. Sati's `cpp_element` uses six idle frames, sixteen transformation frames, and the spear sprite. Liquid Cat now uses the team's 62 exported PNG frames in `assets/characters/boss_ex/liquid-cat/` for idle, compact-form walking, transformation, divide, orbital strike and bullet attacks. The `skill` folder is still empty. Allergic Vacuum and Insecure Sword still use temporary game shapes. The team's `Frame.png` and `Concept.png` files guide their behavior; they are presentation boards rather than game sprite frames. Sati's main body and ordinary enemies still use placeholder blocks. The classroom furniture is currently visual background art, without collision.
+The Building 30 entrance uses `assets/scene/scene30building_entrance_withoutcar.png` with the separate `scene30bCar_object.png` overlay at a crisp 3× scale. Monster and boss rooms use `assets/scene/sceneroom_not_table.png`, repeated across the wide arena, with three separate table objects and matching collision. EX encounters still use `assets/scene/sceneroom.png`. Sati's `cpp_element` uses six idle frames, sixteen transformation frames, and the spear sprite. Liquid Cat now uses the team's 62 exported PNG frames in `assets/characters/boss_ex/liquid-cat/` for idle, compact-form walking, transformation, divide, orbital strike and bullet attacks. The `skill` folder is still empty. Insecure Sword uses five idle and five attack PNG frames in `assets/characters/boss_ex/insecure-sword/`, at a crisp 2x scale. Its attack animation starts on the slash or zero-damage whiff; applying a Post-it interrupts it. Allergic Vacuum still uses temporary game shapes. The team's `Frame.png` and `Concept.png` files guide their behavior; they are presentation boards rather than game sprite frames. Sati's main body and ordinary enemies still use placeholder blocks. Tables in monster and boss rooms block movement, dashes and ordinary projectiles.
 
 The on-screen skill button accepts touch or mouse input. This repository currently has a desktop launcher; an iPad build and its full touch control scheme are future platform work.
 
 ## Sound effects
 
 The team's original `.m4a` files remain in `assets/characters/soundfx/`. The matching `.ogg` copies are used by the desktop game for menu choices, LAN and notebook attacks, hits, armor hits, weapon switching, PowerBall casting and impact, and room transitions. Sati's `boss_fx/cpp_transform_sound.ogg` plays when the C++ element begins transforming into a spear.
+
+Dome uses four cues from `boss_fx/Dome/`: `lighting_efx_cast_sound.ogg` on lightning charge, `lighting_efx_hit_sound.ogg` on the strike, `laser_efx_cast_sound.ogg` on laser charge, and `laser_efx_hit_sound.ogg` when firing. They play once per phase in both normal and Final Exam encounters, including when the player dodges. The two cast copies are shortened with tempo adjustment, preserving pitch, to match 0.85 and 1 second respectively; the original M4A files are retained. The other six Dome clips have OGG copies prepared but are not currently triggered. Adjust cast/fire volume in `audio/GameAudio.java`. Missing audio files remain optional.
 
 ## Weapon upgrades
 

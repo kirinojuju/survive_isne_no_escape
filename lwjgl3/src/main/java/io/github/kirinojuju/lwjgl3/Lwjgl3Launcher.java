@@ -3,16 +3,22 @@ package io.github.kirinojuju.lwjgl3;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import io.github.kirinojuju.schoolLife;
+import java.util.Arrays;
+import java.util.List;
 
 /** Launches the desktop (LWJGL3) application. */
 public class Lwjgl3Launcher {
     public static void main(String[] args) {
         if (StartupHelper.startNewJvmIfRequired()) return; // This handles macOS support and helps on Windows.
-        createApplication();
+        List<String> options = Arrays.asList(args);
+        schoolLife.TestMode testMode = schoolLife.TestMode.NONE;
+        if (options.contains("--test-final-exam")) testMode = schoolLife.TestMode.FINAL_EXAM;
+        else if (options.contains("--test-obstacles")) testMode = schoolLife.TestMode.OBSTACLES;
+        createApplication(testMode);
     }
 
-    private static Lwjgl3Application createApplication() {
-        return new Lwjgl3Application(new schoolLife(), getDefaultConfiguration());
+    private static Lwjgl3Application createApplication(schoolLife.TestMode testMode) {
+        return new Lwjgl3Application(new schoolLife(testMode), getDefaultConfiguration());
     }
 
     private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
