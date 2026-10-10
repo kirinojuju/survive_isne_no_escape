@@ -4,17 +4,11 @@ import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.flow.RunPlan;
 import io.github.kirinojuju.player.PlayerCharacter;
 
-/** Sati's C++ element charges, then becomes a aimed spear. */
+/** Sati's charge, target snapshot and spear attack; cast state stays on the boss. */
 public final class SatiBossBehavior extends AjarnBehavior {
     @Override
     protected boolean useSpecial(CombatRoom room, CombatRoom.Enemy boss, float dt,
                                  PlayerCharacter player, RunPlan plan) {
-        if (boss instanceof SatiBoss) {
-            int firstShot = room.shots.size;
-            boolean casting = ((SatiBoss) boss).updateSkill(dt, player, plan, room.shots, room.audio);
-            for (int i = firstShot; i < room.shots.size; i++) room.shots.get(i).ignoresTables = true;
-            return casting;
-        }
         if (boss.satiCharge > 0) {
             boss.satiCharge = Math.max(0, boss.satiCharge - dt);
             if (boss.satiCharge == 0) {
@@ -23,9 +17,11 @@ public final class SatiBossBehavior extends AjarnBehavior {
                 float dx = boss.satiAimX - x, dy = boss.satiAimY - y;
                 float distance = (float)Math.sqrt(dx * dx + dy * dy);
                 if (distance < .001f) { dx = 0; dy = -1; distance = 1; }
-                float speed = 390 * plan.speedScale();
+                // Keep the custom Sati's original stats and the generic enemy's cleanup stats.
+                float speed = (boss instanceof SatiBoss ? SatiBoss.SPEAR_SPEED : 390) * plan.speedScale();
+                float radius = boss instanceof SatiBoss ? SatiBoss.SPEAR_RADIUS : 24;
                 CombatRoom.Shot spear = new CombatRoom.Shot(x, y, dx / distance * speed,
-                    dy / distance * speed, 12, 22 * plan.damageScale(), 3f, false);
+                    dy / distance * speed, radius, 22 * plan.damageScale(), 3f, false);
                 spear.satiSpear = true;
                 room.addEnemyShot(boss, spear);
             }

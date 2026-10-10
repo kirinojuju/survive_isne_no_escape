@@ -11,7 +11,8 @@ import java.util.Locale;
 public final class SatiSprite {
     private static final String ROOT = "characters/boss/Tprogram(Sati)/skill/cpp_element/";
     private static final float ELEMENT_SIZE = 92;
-    private static final float SPEAR_SIZE = 96;
+    private static final float SPEAR_WIDTH = 192;
+    private static final float SPEAR_LENGTH = 192;
     private final Texture[] idle = loadFrames("cpp_idle", 6);
     private final Texture[] transform = loadFrames("cpp_transform", 16);
     private final Texture spear = load("cpp_spear00.png");
@@ -47,9 +48,9 @@ public final class SatiSprite {
     public void drawSpear(SpriteBatch batch, CombatRoom.Shot shot) {
         float rotation = MathUtils.atan2(shot.vy, shot.vx)
             * MathUtils.radiansToDegrees + 90;
-        batch.draw(spearRegion, shot.x - SPEAR_SIZE / 2,
-            shot.y - SPEAR_SIZE / 2, SPEAR_SIZE / 2, SPEAR_SIZE / 2,
-            SPEAR_SIZE, SPEAR_SIZE, 1, 1, rotation);
+        batch.draw(spearRegion, shot.x - SPEAR_WIDTH / 2,
+            shot.y - SPEAR_LENGTH / 2, SPEAR_WIDTH / 2, SPEAR_LENGTH / 2,
+            SPEAR_WIDTH, SPEAR_LENGTH, 1, 1, rotation);
     }
 
     public void dispose() {

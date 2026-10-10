@@ -18,6 +18,7 @@ import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.enemy.boss.DomeBossBehavior;
 import io.github.kirinojuju.enemy.boss.AjarnBehavior;
 import io.github.kirinojuju.enemy.boss.KenBoss;
+import io.github.kirinojuju.enemy.boss.AeBoss;
 import io.github.kirinojuju.enemy.boss.MBoss;
 import io.github.kirinojuju.enemy.AlgoMonster;
 import io.github.kirinojuju.flow.RunDirector;
@@ -58,6 +59,7 @@ public final class GameRenderer {
     private final SatiSprite sati = new SatiSprite();
     private final DomeSprite dome = new DomeSprite();
     private final KenSprite ken = new KenSprite();
+    private final AeSprite ae = new AeSprite();
     private final MSprite m = new MSprite();
     private final AlgoMonSprite algoMon = new AlgoMonSprite();
     private final NotebookSprite notebook = new NotebookSprite();
@@ -121,7 +123,7 @@ public final class GameRenderer {
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         drawArena(run.room);
         for (CombatRoom.Enemy enemy : combat.enemies)
-            if (enemy.kind == RunPlan.TALGO_ID && enemy.hp > 0
+            if (enemy.kind == RunPlan.KEN_ID && enemy.hp > 0
                 && (enemy.talgoCharge > 0 || enemy.talgoFlashTime > 0))
                 drawTalgoWarning(enemy);
         for (CombatRoom.Shot shot : combat.shots) {
@@ -154,9 +156,11 @@ public final class GameRenderer {
         for (CombatRoom.Enemy enemy : combat.enemies)
             if (enemy.warpReturnTime > 0) drawBossWarpFlash(enemy);
         for (CombatRoom.Enemy enemy : combat.enemies)
-            if (enemy.kind == 0 && enemy.satiCharge > 0) drawSatiWarning(enemy);
+            if (enemy.kind == RunPlan.SATI_ID && enemy.satiCharge > 0) drawSatiWarning(enemy);
         for (CombatRoom.Enemy enemy : combat.enemies)
             if (enemy.kind == RunPlan.DOME_ID) drawDomeWarning(enemy);
+        for (CombatRoom.Enemy enemy : combat.enemies)
+            if (enemy instanceof AeBoss) ae.drawLaserShapes(shapes, (AeBoss) enemy);
         if (run.phase == RunDirector.Phase.FIGHT) drawAttackLock(player);
         for (CombatRoom.Enemy enemy : combat.enemies) {
             if (enemy.tetherTime > 0 && enemy.hp > 0) {
@@ -178,6 +182,7 @@ public final class GameRenderer {
         for (CombatRoom.Enemy enemy : combat.enemies)
             if (enemy.kind == RunPlan.DOME_ID) dome.drawEffect(batch, enemy);
             else if (enemy instanceof KenBoss) ken.drawBombWarnings(batch, (KenBoss) enemy);
+            else if (enemy instanceof AeBoss) ae.drawLaser(batch, (AeBoss) enemy);
         for (CombatRoom.Shot shot : combat.shots)
             if (shot.powerBall) student.drawPowerBall(batch, shot);
             else if (shot.satiSpear) sati.drawSpear(batch, shot);
@@ -187,13 +192,14 @@ public final class GameRenderer {
         for (CombatRoom.NotebookImpact impact : combat.notebookImpacts)
             notebook.drawImpact(batch, impact);
         for (CombatRoom.Enemy enemy : combat.enemies)
-            if (enemy.kind == 0) sati.drawElement(batch, enemy);
+            if (enemy.kind == RunPlan.SATI_ID) sati.drawElement(batch, enemy);
             else if (enemy.kind == CombatRoom.LIQUID_CAT)
                 liquidCat.draw(batch, enemy);
             else if (enemy.kind == CombatRoom.INSECURE_SWORD)
                 insecureSword.draw(batch, enemy);
             else if (enemy.kind == RunPlan.DOME_ID) dome.draw(batch, enemy);
             else if (enemy instanceof KenBoss) ken.draw(batch, (KenBoss) enemy);
+            else if (enemy instanceof AeBoss) ae.draw(batch, (AeBoss) enemy);
             else if (enemy instanceof MBoss) m.draw(batch, enemy);
             else if (enemy instanceof AlgoMonster) algoMon.draw(batch, enemy);
         for (CombatRoom.Enemy enemy : combat.enemies) {
@@ -438,9 +444,10 @@ public final class GameRenderer {
             shapes.circle(enemy.x, enemy.y, enemy.radius + 5, 32);
         }
         if (enemy.kind != RunPlan.DOME_ID && !(enemy instanceof KenBoss)
+            && !(enemy instanceof AeBoss && ae.hasBody())
             && !(enemy instanceof MBoss) && !(enemy instanceof AlgoMonster)) {
             shapes.setColor(finalExam && enemy.kind == RunPlan.AE_ID ? CYAN
-                : finalExam && enemy.kind == RunPlan.FAR_ID ? GOLD
+                : finalExam && enemy.kind == RunPlan.FINAL_EXAM_FAR_ID ? GOLD
                 : enemy.kind == CombatRoom.BINDER ? CYAN
                 : enemy.kind == CombatRoom.WARPER ? PURPLE
                 : enemy.kind == CombatRoom.WAVE ? BLUE
@@ -732,9 +739,9 @@ public final class GameRenderer {
             else if (enemy.dome.phase == DomeBossBehavior.Phase.LASER_CHARGE)
                 font.draw(batch, "DOME: LASER - CLEAR THE LINE", 350, 106);
         }
-        if (run.room == RunDirector.Room.BOSS && run.plan.bossId() == RunPlan.TALGO_ID) {
+        if (run.room == RunDirector.Room.BOSS && run.plan.bossId() == RunPlan.KEN_ID) {
             for (CombatRoom.Enemy enemy : combat.enemies)
-                if (enemy.kind == RunPlan.TALGO_ID && enemy.talgoCharge > 0) {
+                if (enemy.kind == RunPlan.KEN_ID && enemy.talgoCharge > 0) {
                     font.draw(batch, "FULL ROOM AOE IN "
                         + (int)Math.ceil(enemy.talgoCharge * 10) / 10f
                         + "s: GREEN CIRCLE OR DASH AT IMPACT", 350, 106);
@@ -876,6 +883,7 @@ public final class GameRenderer {
         sati.dispose();
         dome.dispose();
         ken.dispose();
+        ae.dispose();
         m.dispose();
         algoMon.dispose();
         notebook.dispose();

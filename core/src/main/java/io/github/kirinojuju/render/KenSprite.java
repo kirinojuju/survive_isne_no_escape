@@ -7,7 +7,7 @@ import java.util.Locale;
 
 public class KenSprite {
     private static final String ROOT = "characters/boss/Talgorithm(Ken)/";
-    private static final float DRAW_SIZE = 92;
+    private static final float DRAW_SIZE = 207;
 
     private final Texture[] bodyFrames = loadFrames("kenBody", 1, 17, false);
     private final Texture[] bombFrames = loadFrames("kenBomb", 7);
@@ -45,7 +45,8 @@ public class KenSprite {
         }
         batch.draw(frame,
             boss.x - DRAW_SIZE / 2,
-            boss.y - DRAW_SIZE / 2,
+            // Keep the top below the HP bar at boss.y + boss.radius + 8.
+            boss.y + boss.radius - DRAW_SIZE,
             DRAW_SIZE, DRAW_SIZE);
     }
 

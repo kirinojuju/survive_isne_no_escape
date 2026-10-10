@@ -7,14 +7,18 @@ import java.util.Random;
 
 /** The four stages and four distinct Ajarns chosen for one school-year loop. */
 public final class RunPlan {
-    public static final int TALGO_ID = 4;
-    public static final int AE_ID = 1, FAR_ID = 2, DOME_ID = 3;
+    // Boss identity, independent of combat family: Sati = C++, M = OOP;
+    // Ae, Far and Dome = Network; Ken = Algorithm.
+    public static final int SATI_ID = 0, AE_ID = 1, M_ID = 2, DOME_ID = 3;
+    public static final int KEN_ID = 4, VOLTAGE_ID = 5, FAR_ID = 6, THESIS_ID = 7;
+    // Preserve cleanup's original Final Exam slot and unlock condition (numeric ID 2).
+    public static final int FINAL_EXAM_FAR_ID = 2;
     public static final String[] STAGES = {
         "Programming Lab", "Circuit Workshop", "Network Center", "Capstone Studio"
     };
     public static final String[] BOSSES = {
-        "Ajarn Sati", "Ajarn Ae", "Ajarn Far (M)", "Ajarn Dome",
-        "Ajarn Talgo (Ken)", "Ajarn Voltage", "Ajarn Firewall", "Ajarn Thesis"
+        "Ajarn Sati", "Ajarn Ae", "Ajarn M", "Ajarn Dome",
+        "Ajarn Ken", "Ajarn Voltage", "Ajarn Far", "Ajarn Thesis"
     };
     public static final String[] EX_MONSTERS = {
         "Liquid Cat", "Allergic Vacuum", "Insecure Sword"
@@ -59,7 +63,7 @@ public final class RunPlan {
 
     public void recordBossDefeat(int bossId) {
         if (bossId == AE_ID) finalExamDefeats |= 1;
-        else if (bossId == FAR_ID) finalExamDefeats |= 2;
+        else if (bossId == FINAL_EXAM_FAR_ID) finalExamDefeats |= 2;
         else if (bossId == DOME_ID) finalExamDefeats |= 4;
     }
 

@@ -4,7 +4,12 @@ import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.combat.CombatRoom.Enemy;
 import io.github.kirinojuju.enemy.AlgoMonster;
 import io.github.kirinojuju.enemy.boss.KenBoss;
+import io.github.kirinojuju.enemy.boss.KenBossBehavior;
+import io.github.kirinojuju.enemy.boss.AeBoss;
+import io.github.kirinojuju.enemy.boss.AeBossBehavior;
+import io.github.kirinojuju.world.GameSpace;
 import io.github.kirinojuju.enemy.boss.MBoss;
+import io.github.kirinojuju.enemy.boss.MBossBehavior;
 import io.github.kirinojuju.enemy.boss.SatiBoss;
 import io.github.kirinojuju.enemy.ex.LiquidCatBoss;
 import io.github.kirinojuju.flow.RunDirector;
@@ -21,6 +26,7 @@ public final class CustomBossCheck {
     public static void main(String[] args) {
         checkFactory();
         checkKen();
+        checkAe();
         checkM();
         checkSati();
         checkCat();
@@ -36,14 +42,14 @@ public final class CustomBossCheck {
                 room.begin(RunDirector.Room.BOSS, plan, 0);
                 Enemy boss = room.enemies.first();
                 check(boss.kind == plan.bossId(), "Factory must preserve the chosen boss identity");
-                if (plan.bossId() == RunPlan.TALGO_ID) {
+                if (plan.bossId() == RunPlan.KEN_ID) {
                     check(boss instanceof KenBoss && boss.summoner && !boss.warper,
-                        "Talgo must retain Ken's bomb/summon class without replacing Ae");
+                        "Ken must retain its bomb/summon class without replacing Ae");
                     ken = true;
-                } else if (plan.bossId() == RunPlan.FAR_ID) {
-                    check(boss instanceof MBoss, "Ordinary Far slot must retain M's split class");
+                } else if (plan.bossId() == RunPlan.M_ID) {
+                    check(boss instanceof MBoss, "M's own identity must create its split class");
                     m = true;
-                } else if (plan.bossId() == 0) {
+                } else if (plan.bossId() == RunPlan.SATI_ID) {
                     check(boss instanceof SatiBoss, "Sati must retain the user's class");
                     sati = true;
                 }
@@ -56,7 +62,12 @@ public final class CustomBossCheck {
         check(room.enemies.first() instanceof AlgoMonster, "Algorithm monster must keep its sprite/projectile class");
         room.begin(RunDirector.Room.FINAL_EXAM, plan, 0);
         check(room.enemies.size == 3, "Cleanup final exam must retain all three anchored bosses");
-        for (Enemy enemy : room.enemies) check(enemy.anchored, "Final exam bosses must stay on their cabinets");
+        for (Enemy enemy : room.enemies) {
+            check(enemy.anchored, "Final exam bosses must stay on their cabinets");
+            check(!(enemy instanceof AeBoss), "Final exam Ae must retain its original behavior");
+            check(!(enemy.behavior instanceof MBossBehavior),
+                "Final exam must retain its anchored attacks rather than M's split behavior");
+        }
         room.begin(RunDirector.Room.EX, plan, 0);
         check(room.enemies.first() instanceof LiquidCatBoss, "EX factory must retain the user's Liquid Cat class");
     }
@@ -65,6 +76,7 @@ public final class CustomBossCheck {
         RunPlan plan = new RunPlan(new Random(1));
         CombatRoom room = new CombatRoom(new Random(2));
         KenBoss ken = new KenBoss(plan, new Random(3));
+        check(ken.behavior instanceof KenBossBehavior, "Ken must use its dedicated behavior");
         PlayerCharacter player = new PlayerCharacter();
         room.enemies.add(ken);
         ken.skillTimer = 0;
@@ -76,7 +88,7 @@ public final class CustomBossCheck {
         player.y = bomb.y;
         player.invulnerable = 0;
         float hp = player.hp;
-        ken.updateBombSkill(3.01f, player, plan, false);
+        KenBossBehavior.updateBombSkill(ken, 3.01f, player, plan, false);
         check(bomb.exploded && player.hp == hp - KenBoss.BOMB_DAMAGE,
             "Ken's warned bomb must keep its original damage");
         ken.summoner = true;
@@ -88,10 +100,48 @@ public final class CustomBossCheck {
             "Ken's original armored summon must coexist with the room's spawn queue");
     }
 
+    private static void checkAe() {
+        RunPlan plan = new RunPlan(new Random(11));
+        CombatRoom room = new CombatRoom(new Random(12));
+        AeBoss ae = new AeBoss(plan);
+        PlayerCharacter player = new PlayerCharacter();
+        player.x = (GameSpace.LEFT + GameSpace.RIGHT) / 2;
+        player.y = (GameSpace.BOTTOM + GameSpace.WALK_TOP) / 2;
+        ae.warper = false;
+        ae.sp = ae.maxSp;
+        float hp = player.hp;
+        ae.updateBehavior(room, 2f, player, plan);
+        check(ae.behavior instanceof AeBossBehavior && ae.laserPhase == AeBoss.LaserPhase.WARNING,
+            "Ae must warn before starting its sweeping laser");
+        check(player.hp == hp && room.shots.size == 3,
+            "Laser warning must not damage the player and Ae must fire aimed bullet volleys");
+        ae.updateBehavior(room, AeBossBehavior.LASER_WARNING, player, plan);
+        check(ae.laserPhase == AeBoss.LaserPhase.SWEEP && ae.laserX == GameSpace.LEFT,
+            "Laser must start at the left edge");
+        ae.updateBehavior(room, AeBossBehavior.LASER_DURATION / 2, player, plan);
+        check(player.hp < hp && Math.abs(ae.laserX - player.x) < .01f,
+            "Sweeping laser must move right and hit a player in its path, even on long frames");
+        float beforeStun = ae.laserX;
+        ae.stunTime = 1;
+        ae.updateBehavior(room, .5f, player, plan);
+        check(ae.laserX == beforeStun, "Stun must pause Ae's sweep");
+        ae.stunTime = 0;
+        player.invulnerable = 1;
+        float hpAfterHit = player.hp;
+        ae.updateBehavior(room, AeBossBehavior.LASER_DURATION / 2, player, plan);
+        check(ae.laserPhase == AeBoss.LaserPhase.IDLE && ae.laserX == GameSpace.RIGHT,
+            "Laser must finish at the right edge and return to cooldown");
+        check(player.hp == hpAfterHit, "Invulnerability must protect against the laser");
+        AeBoss independent = new AeBoss(plan);
+        check(independent.laserPhase == AeBoss.LaserPhase.IDLE && independent.laserX == GameSpace.LEFT,
+            "Each Ae must retain its own laser state");
+    }
+
     private static void checkM() {
         RunPlan plan = new RunPlan(new Random(4));
         CombatRoom room = new CombatRoom(new Random(5));
         MBoss m = new MBoss(plan);
+        check(m.behavior instanceof MBossBehavior, "M must dispatch its dedicated behavior");
         PlayerCharacter player = new PlayerCharacter();
         room.enemies.add(m);
         m.hp = m.maxHp / 2;
@@ -100,6 +150,11 @@ public final class CustomBossCheck {
             "M must split once at half health without changing the array during iteration");
         room.update(.01f, player, plan);
         check(room.enemies.size == 2, "M and its copy must not repeatedly split");
+        MBoss second = new MBoss(plan);
+        room.enemies.add(second);
+        second.hp = second.maxHp / 2;
+        room.update(.01f, player, plan);
+        check(room.enemies.size == 4, "Each M must retain its own split state");
         m.skillTimer = 0;
         room.update(.01f, player, plan);
         check(room.shots.size > 0 && room.shots.first().ignoresTables,

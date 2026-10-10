@@ -4,7 +4,7 @@
 
 ## เริ่มอ่านตรงนี้: เข้าใจภาพรวมด้วย 6 ไฟล์
 
-ปัจจุบันมี Java ฝั่งเกมหลัก 43 ไฟล์ใต้ `core/src/main/java/io/github/kirinojuju/` อีก 2 ไฟล์เป็นตัวเปิดเกมบนคอมพิวเตอร์ และ 3 ไฟล์เป็นชุดตรวจเกม จัดโฟลเดอร์และ Java package ตามระบบแล้ว โดยมี `schoolLife.java` เป็นจุดเริ่มที่โฟลเดอร์หลัก ให้เริ่มตามลำดับนี้:
+ปัจจุบันมี Java ฝั่งเกมหลัก 48 ไฟล์ใต้ `core/src/main/java/io/github/kirinojuju/` อีก 2 ไฟล์เป็นตัวเปิดเกมบนคอมพิวเตอร์ และ 3 ไฟล์เป็นชุดตรวจเกม จัดโฟลเดอร์และ Java package ตามระบบแล้ว โดยมี `schoolLife.java` เป็นจุดเริ่มที่โฟลเดอร์หลัก ให้เริ่มตามลำดับนี้:
 
 | ลำดับ | ไฟล์ | คำถามที่ไฟล์นี้ตอบ |
 | --- | --- | --- |
@@ -19,7 +19,7 @@
 
 ## ไฟล์ที่เหลือเปิดเมื่อทำระบบนั้น
 
-ตารางนี้แสดงตำแหน่งครบทั้ง 43 ไฟล์ โดยชื่อในช่องไฟล์คือชื่อก่อน `.java`:
+ตารางนี้แสดงตำแหน่งครบทั้ง 48 ไฟล์ โดยชื่อในช่องไฟล์คือชื่อก่อน `.java`:
 
 | โฟลเดอร์ | ไฟล์ | หน้าที่ |
 | --- | --- | --- |
@@ -29,9 +29,9 @@
 | `weapon/` (4) | `WeaponAttack`, `WeaponAbility`, `LanWeaponAttack`, `NotebookWeaponAttack` | การโจมตีและช่องต่อ Ability ของอาวุธ |
 | `combat/` (1) | `CombatRoom` | ศัตรูและกระสุนในห้อง การชน และผลดาเมจ |
 | `enemy/` (7) | `EnemyBehavior`, `StandardEnemyBehavior`, `WarperMonsterBehavior`, `EnemyFactory`, `EnemySpacing`, `AlgoMonster`, `NetworkMonster` | พฤติกรรมร่วม มอนทั่วไป การสร้างศัตรู และการแยกตัวที่ซ้อนกัน |
-| `enemy/boss/` (7) | `AjarnBehavior`, `SatiBossBehavior`, `TalgoBossBehavior`, `DomeBossBehavior`, `KenBoss`, `MBoss`, `SatiBoss` | พฤติกรรมบอสอาจารย์และท่าเฉพาะ |
+| `enemy/boss/` (11) | `AjarnBehavior`, `SatiBossBehavior`, `TalgoBossBehavior`, `DomeBossBehavior`, `KenBoss`, `KenBossBehavior`, `AeBoss`, `AeBossBehavior`, `MBoss`, `MBossBehavior`, `SatiBoss` | พฤติกรรมบอสอาจารย์และท่าเฉพาะ |
 | `enemy/ex/` (5) | `ExBehavior`, `LiquidCatBehavior`, `AllergicVacuumBehavior`, `InsecureSwordBehavior`, `LiquidCatBoss` | พฤติกรรม EX Monster |
-| `render/` (10) | `GameRenderer`, `StudentSprite`, `SatiSprite`, `DomeSprite`, `LiquidCatSprite`, `InsecureSwordSprite`, `OptionalAssetTexture`, `KenSprite`, `MSprite`, `AlgoMonSprite` | วาดเกม ภาพตัวละคร และภาพสำรอง |
+| `render/` (11) | `GameRenderer`, `StudentSprite`, `SatiSprite`, `DomeSprite`, `LiquidCatSprite`, `InsecureSwordSprite`, `OptionalAssetTexture`, `KenSprite`, `AeSprite`, `MSprite`, `AlgoMonSprite` | วาดเกม ภาพตัวละคร และภาพสำรอง |
 | `world/` (3) | `GameSpace`, `EntranceScene`, `RoomObstacles` | ขอบพื้นที่ ทางเข้าอาคาร โต๊ะ และทางเดินอ้อม |
 | `audio/` (1) | `GameAudio` | เสียงเกม |
 
@@ -52,7 +52,7 @@ Java package ตรงกับโฟลเดอร์ เช่น `player/Pla
 
 `*Behavior` คือการตัดสินใจและกติกาของศัตรู ส่วน `*Sprite` คือภาพของตัวนั้น เช่น แก้เวลาชาร์จเลเซอร์ใน `DomeBossBehavior` และแก้เฟรมเลเซอร์ใน `DomeSprite` การแยกแบบนี้ช่วยให้แก้ระบบหนึ่งได้โดยตามเฉพาะไฟล์ที่เกี่ยวข้อง
 
-จำนวนไฟล์หลักยังเป็น 43 ไฟล์ ตัวช่วยสั้น ๆ ยังคงอยู่ในไฟล์เจ้าของระบบ โดยตัวที่ต้องเรียกข้าม package ใช้ nested class เช่น `WeaponAttack.WeaponAttackSpec`, `NotebookWeaponAttack.NotebookSprite` และ `RoomObstacles.TableSprites` ส่วนท่าของบอสแต่ละตัวยังแยกไว้เพื่อเพิ่มบอสในอนาคตได้ง่าย คลาสแม่ การสืบทอด และ interface ยังใช้โครงสร้างเดิม
+จำนวนไฟล์หลักยังเป็น 48 ไฟล์ ตัวช่วยสั้น ๆ ยังคงอยู่ในไฟล์เจ้าของระบบ โดยตัวที่ต้องเรียกข้าม package ใช้ nested class เช่น `WeaponAttack.WeaponAttackSpec`, `NotebookWeaponAttack.NotebookSprite` และ `RoomObstacles.TableSprites` ส่วนท่าของบอสแต่ละตัวยังแยกไว้เพื่อเพิ่มบอสในอนาคตได้ง่าย คลาสแม่ การสืบทอด และ interface ยังใช้โครงสร้างเดิม
 
 ## รายละเอียดการต่อสู้และ OOP
 
@@ -220,3 +220,6 @@ player.addWeaponAbility(PlayerCharacter.Weapon.MAGICAL,
 อัปเกรดเดิม เช่น poison, splash, slow และ wide sweep ยังคงใช้ flag ของผู้เล่นเพื่อให้หน้าจอและกติกาเดิมทำงานเหมือนเดิม Ability ใหม่ใช้ช่องต่อด้านบนได้โดยไม่ต้องแก้เมธอด `PlayerCharacter.update()` หรือ `CombatRoom.update()`
 
 ก่อนส่งงาน ให้รัน `gradlew.bat :core:verifyGameRules :lwjgl3:classes` แล้วลองเล่นท่าที่แก้จริง ชุดตรวจครอบคลุมลำดับห้อง AI บอสและ EX อาวุธ และตัวอย่าง Ability ที่ปรับการโจมตี Notebook
+
+
+`MBoss` เก็บค่าพลังและสถานะการแบ่งร่าง ส่วน `MBossBehavior` จัดการแบ่งร่างและยิงกระสุน โดยแต่ละร่างมีสถานะของตัวเอง สำหรับ `SatiBoss` เก็บค่าพลังและสถานะ ส่วน `SatiBossBehavior` จัดการชาร์จ ล็อกเป้าหมาย และปล่อยหอก และ `MSprite`/`SatiSprite` ทำหน้าที่วาดภาพ

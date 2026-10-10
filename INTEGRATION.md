@@ -16,15 +16,19 @@
 
 | ระบบเดิม | ตำแหน่งปัจจุบัน | การเชื่อม |
 | --- | --- | --- |
-| Ken | `enemy/boss/KenBoss.java`, `render/KenSprite.java` | ท่าระเบิด 3–5 ลูก, เตือน/ระเบิด, เรียกมอน และชื่อเฟรม 1–17 ที่แก้แล้ว |
-| M | `enemy/boss/MBoss.java`, `render/MSprite.java` | แบ่งร่างหนึ่งครั้งเมื่อ HP ถึงครึ่ง และยิงกระสุนเดิม |
-| Sati | `enemy/boss/SatiBoss.java` | ท่าแปลงธาตุและหอกเดิม รัศมี 36 ความเร็ว 500; เชื่อมกับ SatiBossBehavior |
+| Ken | `enemy/boss/KenBoss.java`, `enemy/boss/KenBossBehavior.java`, `render/KenSprite.java` | KenBoss เก็บสถานะ; KenBossBehavior สุ่มระเบิด 3–5 ลูก นับเวลาเตือน และตรวจดาเมจ โดยคงสกิลเดิม |
+| Ae | `enemy/boss/AeBoss.java`, `enemy/boss/AeBossBehavior.java`, `render/AeSprite.java` | ห้องบอสปกติใช้เลเซอร์แนวตั้งกวาดซ้ายไปขวา พร้อมท่าวาร์ปและกระสุนสามนัดเดิม; Final Exam ใช้ Enemy เดิม |
+| M | `enemy/boss/MBoss.java`, `enemy/boss/MBossBehavior.java`, `render/MSprite.java` | MBoss เก็บค่าพลังและสถานะ; MBossBehavior แบ่งร่างหนึ่งครั้งเมื่อ HP ถึงครึ่ง และยิงกระสุนเดิม |
+| Sati | `enemy/boss/SatiBoss.java`, `enemy/boss/SatiBossBehavior.java` | SatiBoss เก็บค่าพลังและสถานะ; SatiBossBehavior จัดการแปลงธาตุและหอกเดิม รัศมี 36 ความเร็ว 500 |
 | Liquid Cat | `enemy/ex/LiquidCatBoss.java` | แปลงร่าง เดิน กระโดด ยิง และลดดาเมจร่างเล็ก; ใช้การชนสไลม์จาก cleanup |
 | Algo/Network | `enemy/AlgoMonster.java`, `enemy/NetworkMonster.java` | ใช้ EnemyFactory ใหม่ และเก็บภาพ/กระสุน Algo ใน `render/AlgoMonSprite.java` |
 | Enemy | `combat/CombatRoom.java` → `CombatRoom.Enemy` | คลาสแม่รองรับการสืบทอดและ `updateBehavior()` พร้อมคิวเกิดศัตรูหลังจบการอัปเดต |
 
-Ken ใช้ ID 4 (`Talgo (Ken)`) เพื่อไม่ชน Ae ID 1 ที่ใช้ใน Final Exam.
-M ใช้ ID 2 (`Far (M)`) ในห้องบอสปกติ ส่วน Far ใน Final Exam ใช้พฤติกรรมยิงจากตู้ตาม cleanup.
+Ken ใช้ `KEN_ID = 4` และ M ใช้ `M_ID = 2` เป็นชื่อเฉพาะของแต่ละตัว.
+Far ในห้องปกติใช้ `FAR_ID = 6` แยกจาก M โดยแทนชื่อ placeholder Firewall เดิม. Final Exam คงหมายเลขเดิม `FINAL_EXAM_FAR_ID = 2` ทั้งเงื่อนไขปลดล็อกและพฤติกรรมยิงจากตู้ตาม cleanup เพื่อรักษางานส่วนนี้ไว้เหมือนก่อนแก้ชื่อ.
+วิชาของบอส: Sati = C++, M = OOP, Ken = Algorithm และ Ae/Far/Dome = Network. ID เป็นชื่อตัวบอส ไม่ใช่ชื่อวิชาหรือพฤติกรรมการต่อสู้.
+
+Ae โหลด `characters/boss/Tnetwork(Ae)/aeBody.png` ถ้ามี หรือใช้ `aeTest.jpg` ที่ใส่ไว้ก่อน. JPG ปัจจุบันเป็นภาพพร้อมพื้นหลังและ UI โปรแกรมวาด ไม่ใช่ภาพตัวละครโปร่งใส. เลเซอร์ไม่ต้องมี asset: วาดด้วย ShapeRenderer และสามารถใส่ `aeLaser.png` แนวตั้งเพื่อแทนภาพเลเซอร์ได้. ค่าปรับสกิลอยู่ใน AeBossBehavior: เตือน 0.9 วินาที, กวาด 3.5 วินาที, พัก 5 วินาที, ความกว้าง 32 และดาเมจ 16 ก่อนคูณค่ารอบ.
 การเรียกมอนของ Ken/Sati จำกัดมอนที่มีชีวิต 4 ตัว; บอสอื่นใช้มอนเริ่มห้องตาม cleanup.
 
 ภาพและเอฟเฟกต์ Dome ที่ไม่มีไฟล์จะถูกข้าม ไม่มีภาพสำรองของ Dome.

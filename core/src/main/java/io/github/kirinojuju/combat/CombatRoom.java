@@ -56,6 +56,11 @@ public final class CombatRoom {
 
         public Enemy(float x, float y, float radius, float hp, float maxSp,
               float speed, float damage, int kind) {
+            this(x, y, radius, hp, maxSp, speed, damage, kind, EnemyBehaviors.forKind(kind));
+        }
+
+        protected Enemy(float x, float y, float radius, float hp, float maxSp,
+                        float speed, float damage, int kind, EnemyBehavior behavior) {
             this.x = x;
             this.y = y;
             this.homeX = x;
@@ -68,7 +73,7 @@ public final class CombatRoom {
             this.speed = speed;
             this.damage = damage;
             this.kind = kind;
-            this.behavior = EnemyBehaviors.forKind(kind);
+            this.behavior = behavior;
             this.dome = kind == RunPlan.DOME_ID ? new DomeBossBehavior.State() : null;
         }
 

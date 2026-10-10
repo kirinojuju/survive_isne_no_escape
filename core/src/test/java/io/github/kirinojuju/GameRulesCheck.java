@@ -208,7 +208,7 @@ public final class GameRulesCheck {
     private static void checkFinalExamMechanics(int loop) {
         RunPlan plan = new RunPlan(new Random(90));
         plan.recordBossDefeat(RunPlan.AE_ID);
-        plan.recordBossDefeat(RunPlan.FAR_ID);
+        plan.recordBossDefeat(RunPlan.FINAL_EXAM_FAR_ID);
         check(!plan.finalExamReady(), "Two bosses must not unlock the final exam");
         plan.recordBossDefeat(RunPlan.DOME_ID);
         check(plan.finalExamReady(), "Ae, Far and Dome must unlock the final exam");
@@ -227,7 +227,7 @@ public final class GameRulesCheck {
         }
         check(run != null, "The test needs Dome as the final boss of an EX loop");
         run.plan.recordBossDefeat(RunPlan.AE_ID);
-        run.plan.recordBossDefeat(RunPlan.FAR_ID);
+        run.plan.recordBossDefeat(RunPlan.FINAL_EXAM_FAR_ID);
         check(!run.plan.finalExamReady(), "Dome must be the third required victory");
         player.acquire(PlayerCharacter.Weapon.MAGICAL);
         player.acquire(PlayerCharacter.Weapon.PHYSICAL);
@@ -250,7 +250,7 @@ public final class GameRulesCheck {
         run.continueAfterCutscene(player, combat);
         check(run.room == RunDirector.Room.FINAL_EXAM && combat.enemies.size == 3,
             "The final exam must spawn exactly three bosses");
-        int[] kinds = {RunPlan.AE_ID, RunPlan.FAR_ID, RunPlan.DOME_ID};
+        int[] kinds = {RunPlan.AE_ID, RunPlan.FINAL_EXAM_FAR_ID, RunPlan.DOME_ID};
         for (int slot = 0; slot < kinds.length; slot++) {
             CombatRoom.Enemy boss = combat.enemies.get(slot);
             check(boss.kind == kinds[slot] && boss.anchored
@@ -799,7 +799,7 @@ public final class GameRulesCheck {
         earlyExam.plan.completeStage();
         earlyExam.plan.completeStage();
         earlyExam.plan.recordBossDefeat(RunPlan.AE_ID);
-        earlyExam.plan.recordBossDefeat(RunPlan.FAR_ID);
+        earlyExam.plan.recordBossDefeat(RunPlan.FINAL_EXAM_FAR_ID);
         earlyExam.plan.recordBossDefeat(RunPlan.DOME_ID);
         earlyExam.room = RunDirector.Room.BOSS;
         earlyExam.finishRoom(player);
@@ -1376,7 +1376,7 @@ public final class GameRulesCheck {
         CombatRoom.Enemy monster = new CombatRoom.Enemy(740, 360, 17,
             200, 999, 0, 0, CombatRoom.BASIC);
         CombatRoom.Enemy boss = new CombatRoom.Enemy(770, 420, 36,
-            200, 50, 0, 0, RunPlan.TALGO_ID);
+            200, 50, 0, 0, RunPlan.KEN_ID);
         combat.enemies.add(monster);
         combat.enemies.add(boss);
         combat.firePowerBall(700, 360, 0, 0, 42, null);
@@ -1514,7 +1514,7 @@ public final class GameRulesCheck {
         PlayerCharacter player = new PlayerCharacter();
         CombatRoom combat = new CombatRoom(new Random(63));
         CombatRoom.Enemy talgo = new CombatRoom.Enemy(1100, 360, 36,
-            500, 72, 0, 12, RunPlan.TALGO_ID);
+            500, 72, 0, 12, RunPlan.KEN_ID);
         talgo.talgoCooldown = .01f;
         talgo.skillTimer = 100;
         talgo.sp = 0;

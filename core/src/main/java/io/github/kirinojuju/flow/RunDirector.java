@@ -45,7 +45,7 @@ public final class RunDirector {
     /** Desktop test entry: skip progression and keep the real cutscene and fight. */
     public void startFinalExamTest(PlayerCharacter player) {
         plan.recordBossDefeat(RunPlan.AE_ID);
-        plan.recordBossDefeat(RunPlan.FAR_ID);
+        plan.recordBossDefeat(RunPlan.FINAL_EXAM_FAR_ID);
         plan.recordBossDefeat(RunPlan.DOME_ID);
         player.acquire(PlayerCharacter.Weapon.PHYSICAL);
         player.acquire(PlayerCharacter.Weapon.MAGICAL);

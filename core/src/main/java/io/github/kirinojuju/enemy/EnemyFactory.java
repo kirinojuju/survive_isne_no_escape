@@ -6,6 +6,7 @@ import io.github.kirinojuju.enemy.ex.ExBehavior.ExEnvironment;
 import io.github.kirinojuju.enemy.ex.LiquidCatBoss;
 import io.github.kirinojuju.enemy.boss.KenBoss;
 import io.github.kirinojuju.enemy.boss.MBoss;
+import io.github.kirinojuju.enemy.boss.AeBoss;
 import io.github.kirinojuju.enemy.boss.SatiBoss;
 import io.github.kirinojuju.flow.RunDirector;
 import io.github.kirinojuju.flow.RunPlan;
@@ -34,7 +35,7 @@ public final class EnemyFactory {
                 populateBossRoom(combat, plan);
                 break;
             case FINAL_EXAM:
-                int[] bosses = {RunPlan.AE_ID, RunPlan.FAR_ID, RunPlan.DOME_ID};
+                int[] bosses = {RunPlan.AE_ID, RunPlan.FINAL_EXAM_FAR_ID, RunPlan.DOME_ID};
                 for (int slot = 0; slot < bosses.length; slot++)
                     combat.enemies.add(createFinalExamBoss(bosses[slot], slot, plan));
                 break;
@@ -144,9 +145,10 @@ public final class EnemyFactory {
             (190 + plan.stage() * 22 + (id % 3) * 12) * plan.healthScale(),
             72 * plan.spScale(), (90 + (id % 4) * 9) * plan.speedScale(),
             (12 + (id % 3) * 2) * plan.damageScale(), id);
-        if (id == RunPlan.TALGO_ID) boss = new KenBoss(plan, random);
-        else if (id == RunPlan.FAR_ID) boss = new MBoss(plan);
-        else if (id == 0) boss = new SatiBoss(plan, random);
+        if (id == RunPlan.KEN_ID) boss = new KenBoss(plan, random);
+        else if (id == RunPlan.M_ID) boss = new MBoss(plan);
+        else if (id == RunPlan.SATI_ID) boss = new SatiBoss(plan, random);
+        else if (id == RunPlan.AE_ID) boss = new AeBoss(plan);
         boss.reflector = family == 0 || family == 3;
         boss.warper = family == 1;
         boss.artillery = family == 2;
@@ -154,8 +156,8 @@ public final class EnemyFactory {
         if (boss instanceof KenBoss) boss.reflector = false;
         boss.warpCooldown = plan.loop() == 1 ? 4f : 2.8f;
         if (id == RunPlan.AE_ID) boss.warpCooldown = 6f;
-        if (id == 0) boss.satiCooldown = 3.4f;
-        if (id == RunPlan.TALGO_ID) boss.talgoCooldown = 3.4f;
+        if (id == RunPlan.SATI_ID) boss.satiCooldown = 3.4f;
+        if (id == RunPlan.KEN_ID) boss.talgoCooldown = 3.4f;
         if (plan.loop() >= 3) {
             if (random.nextBoolean()) boss.reflector = true;
             else boss.warper = true;
@@ -207,7 +209,7 @@ public final class EnemyFactory {
             170 * plan.healthScale(), 72 * plan.spScale(), 0,
             10 * plan.damageScale(), id);
         boss.anchored = true;
-        boss.artillery = id == RunPlan.FAR_ID;
+        boss.artillery = id == RunPlan.FINAL_EXAM_FAR_ID;
         boss.skillTimer = .65f + slot * .55f;
         boss.sp = boss.maxSp;
         return boss;

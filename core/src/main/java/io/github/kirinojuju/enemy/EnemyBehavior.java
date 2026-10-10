@@ -35,8 +35,8 @@ public interface EnemyBehavior {
             if (kind == CombatRoom.ALLERGIC_VACUUM) return VACUUM;
             if (kind == CombatRoom.INSECURE_SWORD) return SWORD;
             if (kind == CombatRoom.WARPER) return WARPER;
-            if (kind == 0) return SATI;
-            if (kind == RunPlan.TALGO_ID) return TALGO;
+            if (kind == RunPlan.SATI_ID) return SATI;
+            if (kind == RunPlan.KEN_ID) return TALGO;
             if (kind == RunPlan.DOME_ID) return DOME;
             return kind >= 0 ? AJARN : MONSTER;
         }
