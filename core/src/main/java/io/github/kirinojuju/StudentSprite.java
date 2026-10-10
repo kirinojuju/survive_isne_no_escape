@@ -1,6 +1,5 @@
 package io.github.kirinojuju;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -23,9 +22,7 @@ final class StudentSprite {
     private final Texture powerBall = load(ROOT + "skill_case/power_ball.png");
 
     private static Texture load(String path) {
-        Texture texture = new Texture(Gdx.files.internal(path));
-        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        return texture;
+        return OptionalAssetTexture.load(path);
     }
 
     private static Texture[] loadFrames(String folder, String prefix, int count) {

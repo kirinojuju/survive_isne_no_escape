@@ -58,9 +58,9 @@ public final class GameRulesCheck {
         player.switchTo(PlayerCharacter.Weapon.PHYSICAL);
 
         combat.enemies.clear();
-        CombatRoom.Enemy target = new CombatRoom.Enemy(player.x + 150, player.y,
+        Enemy target = new Enemy(player.x + 150, player.y,
             17, 100, 37, 0, 0, -1);
-        CombatRoom.Enemy backup = new CombatRoom.Enemy(player.x + 350, player.y,
+        Enemy backup = new Enemy(player.x + 350, player.y,
             17, 100, 37, 0, 0, -1);
         combat.enemies.add(target);
         combat.enemies.add(backup);
@@ -198,9 +198,9 @@ public final class GameRulesCheck {
             "Six alternating A/D presses should release the player");
 
         CombatRoom combat = new CombatRoom(new Random(8));
-        CombatRoom.Enemy first = new CombatRoom.Enemy(300, 300, 17, 100, 999, 0, 0,
+        Enemy first = new Enemy(300, 300, 17, 100, 999, 0, 0,
             CombatRoom.BASIC);
-        CombatRoom.Enemy second = new CombatRoom.Enemy(300, 300, 17, 100, 999, 0, 0,
+        Enemy second = new Enemy(300, 300, 17, 100, 999, 0, 0,
             CombatRoom.BASIC);
         first.sp = second.sp = 0;
         combat.enemies.add(first);
@@ -211,7 +211,7 @@ public final class GameRulesCheck {
             "Ordinary enemies should separate instead of overlapping");
 
         combat.enemies.clear();
-        CombatRoom.Enemy warper = new CombatRoom.Enemy(300, 300, 17, 58, 42, 0, 0,
+        Enemy warper = new Enemy(300, 300, 17, 58, 42, 0, 0,
             CombatRoom.WARPER);
         warper.sp = warper.maxSp;
         combat.enemies.add(warper);
@@ -227,7 +227,7 @@ public final class GameRulesCheck {
             "Leaving the marked spot should dodge the warp attack");
 
         combat.enemies.clear();
-        CombatRoom.Enemy strikingWarper = new CombatRoom.Enemy(300, 300, 17, 58, 42, 0, 0,
+        Enemy strikingWarper = new Enemy(300, 300, 17, 58, 42, 0, 0,
             CombatRoom.WARPER);
         strikingWarper.sp = strikingWarper.maxSp;
         combat.enemies.add(strikingWarper);
@@ -251,7 +251,7 @@ public final class GameRulesCheck {
 
         combat.enemies.clear();
         combat.shots.clear();
-        CombatRoom.Enemy boss = new CombatRoom.Enemy(850, 400, 36, 200, 72, 0, 12, 2);
+        Enemy boss = new Enemy(850, 400, 36, 200, 72, 0, 12, 2);
         boss.summoner = boss.reflector = true;
         boss.armor = boss.maxArmor = 110;
         boss.summonTimer = .01f;
@@ -275,13 +275,13 @@ public final class GameRulesCheck {
         RunPlan plan = new RunPlan(new Random(11));
         CombatRoom combat = new CombatRoom(new Random(12));
 
-        CombatRoom.Enemy front = new CombatRoom.Enemy(player.x + 115, player.y,
+        Enemy front = new Enemy(player.x + 115, player.y,
             17, 100, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy diagonal = new CombatRoom.Enemy(player.x + 90, player.y + 60,
+        Enemy diagonal = new Enemy(player.x + 90, player.y + 60,
             17, 100, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy behind = new CombatRoom.Enemy(player.x - 100, player.y,
+        Enemy behind = new Enemy(player.x - 100, player.y,
             17, 100, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy beyond = new CombatRoom.Enemy(player.x + 150, player.y,
+        Enemy beyond = new Enemy(player.x + 150, player.y,
             17, 100, 999, 0, 0, CombatRoom.BASIC);
         combat.enemies.add(front);
         combat.enemies.add(diagonal);
@@ -315,11 +315,11 @@ public final class GameRulesCheck {
 
         combat.enemies.clear();
         combat.shots.clear();
-        CombatRoom.Enemy impact = new CombatRoom.Enemy(780, 360, 17, 100, 999, 0, 0,
+        Enemy impact = new Enemy(780, 360, 17, 100, 999, 0, 0,
             CombatRoom.BASIC);
-        CombatRoom.Enemy splash = new CombatRoom.Enemy(875, 360, 17, 100, 999, 0, 0,
+        Enemy splash = new Enemy(875, 360, 17, 100, 999, 0, 0,
             CombatRoom.BASIC);
-        CombatRoom.Enemy outside = new CombatRoom.Enemy(1100, 360, 17, 100, 999, 0, 0,
+        Enemy outside = new Enemy(1100, 360, 17, 100, 999, 0, 0,
             CombatRoom.BASIC);
         impact.sp = splash.sp = outside.sp = 0;
         combat.enemies.add(impact);
@@ -334,7 +334,7 @@ public final class GameRulesCheck {
 
         combat.enemies.clear();
         combat.shots.clear();
-        CombatRoom.Enemy shooter = new CombatRoom.Enemy(500, 360, 17, 100, 999, 80, 0,
+        Enemy shooter = new Enemy(500, 360, 17, 100, 999, 80, 0,
             CombatRoom.RANGED);
         shooter.sp = 0;
         combat.enemies.add(shooter);
@@ -346,7 +346,7 @@ public final class GameRulesCheck {
 
         combat.enemies.clear();
         combat.shots.clear();
-        CombatRoom.Enemy waveEnemy = new CombatRoom.Enemy(300, 360, 17, 100, 43, 0, 9,
+        Enemy waveEnemy = new Enemy(300, 360, 17, 100, 43, 0, 9,
             CombatRoom.WAVE);
         waveEnemy.sp = waveEnemy.maxSp;
         combat.enemies.add(waveEnemy);
@@ -357,7 +357,7 @@ public final class GameRulesCheck {
 
         combat.begin(RunDirector.Room.MOBS, plan, 0);
         int ranged = 0, advanced = 0;
-        for (CombatRoom.Enemy enemy : combat.enemies) {
+        for (Enemy enemy : combat.enemies) {
             check(enemy.y <= GameSpace.WALK_TOP - enemy.radius,
                 "Monsters must spawn below the windows");
             if (enemy.kind == CombatRoom.RANGED) ranged++;
@@ -367,20 +367,20 @@ public final class GameRulesCheck {
             "The first room of loop one should introduce only the ranged special");
         player.y = GameSpace.TOP;
         combat.update(1f, player, plan);
-        for (CombatRoom.Enemy enemy : combat.enemies)
+        for (Enemy enemy : combat.enemies)
             check(enemy.y <= GameSpace.WALK_TOP - enemy.radius,
                 "Monsters must stay below the windows while chasing");
         player.y = GameSpace.HEIGHT / 2;
         plan.completeStage();
         combat.begin(RunDirector.Room.MOBS, plan, 0);
         boolean wave = false;
-        for (CombatRoom.Enemy enemy : combat.enemies)
+        for (Enemy enemy : combat.enemies)
             if (enemy.kind == CombatRoom.WAVE) wave = true;
         check(wave, "The wave monster should appear in the second stage");
         plan.completeStage();
         combat.begin(RunDirector.Room.MOBS, plan, 0);
-        CombatRoom.Enemy shield = null;
-        for (CombatRoom.Enemy enemy : combat.enemies)
+        Enemy shield = null;
+        for (Enemy enemy : combat.enemies)
             if (enemy.kind == CombatRoom.SHIELDED && enemy.armor > 0) shield = enemy;
         check(shield != null, "Shielded monsters should appear later in loop one");
         float shieldHp = shield.hp, shieldArmor = shield.armor;
@@ -391,7 +391,7 @@ public final class GameRulesCheck {
         RunPlan bossPlan = new RunPlan(new Random(13));
         for (int stage = 0; stage < 4; stage++) {
             combat.begin(RunDirector.Room.BOSS, bossPlan, 0);
-            CombatRoom.Enemy boss = combat.enemies.first();
+            Enemy boss = combat.enemies.first();
             check(boss.x >= GameSpace.RIGHT - 80
                 && boss.y <= GameSpace.WALK_TOP - boss.radius,
                 "Boss should spawn at the far right below the windows");
@@ -458,7 +458,7 @@ public final class GameRulesCheck {
             && player.skillDamageBonus == 10,
             "Stat upgrades must be applied to the student");
 
-        CombatRoom.Enemy lanTarget = new CombatRoom.Enemy(player.x + 150, player.y,
+        Enemy lanTarget = new Enemy(player.x + 150, player.y,
             17, 100, 999, 0, 0, CombatRoom.BASIC);
         combat.enemies.add(lanTarget);
         player.attack(combat);
@@ -467,9 +467,9 @@ public final class GameRulesCheck {
             "A wide LAN sweep must reach farther, hit harder, and slow its target");
 
         combat.enemies.clear();
-        CombatRoom.Enemy notebookTarget = new CombatRoom.Enemy(760, player.y,
+        Enemy notebookTarget = new Enemy(760, player.y,
             17, 100, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy nearby = new CombatRoom.Enemy(810, player.y,
+        Enemy nearby = new Enemy(810, player.y,
             17, 100, 999, 0, 0, CombatRoom.BASIC);
         notebookTarget.sp = nearby.sp = 0;
         combat.enemies.add(notebookTarget);
@@ -505,11 +505,11 @@ public final class GameRulesCheck {
         player.setExTechniques(true);
         check(player.lanTether && player.notebookHeatBeam,
             "Both special weapon techniques should activate for EX combat");
-        CombatRoom.Enemy first = new CombatRoom.Enemy(player.x + 110, player.y,
+        Enemy first = new Enemy(player.x + 110, player.y,
             17, 200, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy second = new CombatRoom.Enemy(player.x + 130, player.y + 30,
+        Enemy second = new Enemy(player.x + 130, player.y + 30,
             17, 200, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy ajarn = new CombatRoom.Enemy(player.x + 100, player.y - 65,
+        Enemy ajarn = new Enemy(player.x + 100, player.y - 65,
             36, 250, 999, 0, 0, 0);
         combat.enemies.add(first);
         combat.enemies.add(second);
@@ -524,9 +524,9 @@ public final class GameRulesCheck {
             "Bosses should be marked for the combo without being dragged");
 
         combat.enemies.clear();
-        CombatRoom.Enemy marked = new CombatRoom.Enemy(760, 360,
+        Enemy marked = new Enemy(760, 360,
             17, 200, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy plain = new CombatRoom.Enemy(640, 360,
+        Enemy plain = new Enemy(640, 360,
             17, 200, 999, 0, 0, CombatRoom.BASIC);
         marked.tetherTime = 1.7f;
         marked.sp = plain.sp = 0;
@@ -542,11 +542,11 @@ public final class GameRulesCheck {
         combat.shots.clear();
         Upgrade.NOTEBOOK_POISON.apply(player);
         player.acquire(PlayerCharacter.Weapon.MAGICAL);
-        CombatRoom.Enemy beamNear = new CombatRoom.Enemy(800, 360,
+        Enemy beamNear = new Enemy(800, 360,
             17, 200, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy beamFar = new CombatRoom.Enemy(950, 360,
+        Enemy beamFar = new Enemy(950, 360,
             17, 200, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy outside = new CombatRoom.Enemy(850, 480,
+        Enemy outside = new Enemy(850, 480,
             17, 200, 999, 0, 0, CombatRoom.BASIC);
         combat.enemies.add(beamNear);
         combat.enemies.add(beamFar);
@@ -574,7 +574,7 @@ public final class GameRulesCheck {
         RunPlan plan = new RunPlan(new Random(51));
 
         combat.begin(RunDirector.Room.EX, plan, 0);
-        CombatRoom.Enemy cat = combat.enemies.first();
+        LiquidCatBoss cat = (LiquidCatBoss) combat.enemies.first();
         cat.skillTimer = 100;
         combat.update(3.6f, player, plan);
         check(cat.exState == 1 && cat.radius == 16 && combat.exObjects.size > 0,
@@ -601,7 +601,7 @@ public final class GameRulesCheck {
         player.x = GameSpace.WIDTH / 2;
         player.y = GameSpace.HEIGHT / 2;
         combat.begin(RunDirector.Room.EX, plan, 1);
-        CombatRoom.Enemy vacuum = combat.enemies.first();
+        Enemy vacuum = combat.enemies.first();
         vacuum.exMeter = 100;
         vacuum.exStoredDust = 4;
         combat.update(.01f, player, plan);
@@ -624,7 +624,7 @@ public final class GameRulesCheck {
         player.x = GameSpace.WIDTH / 2;
         player.y = GameSpace.HEIGHT / 2;
         combat.begin(RunDirector.Room.EX, plan, 2);
-        CombatRoom.Enemy sword = combat.enemies.first();
+        Enemy sword = combat.enemies.first();
         CombatRoom.ExObject note = combat.exObjects.first();
         player.x = note.x;
         player.y = note.y;
@@ -655,15 +655,18 @@ public final class GameRulesCheck {
         RunPlan plan = new RunPlan(new Random(21));
         PlayerCharacter player = new PlayerCharacter();
         CombatRoom combat = new CombatRoom(new Random(22));
-        CombatRoom.Enemy sati = new CombatRoom.Enemy(640, 520, 36,
-            200, 72, 90, 12, 0);
+
+        SatiBoss sati = new SatiBoss(plan, new Random(23));
+        sati.x = 640;
+        sati.y = 520;
         sati.satiCooldown = .01f;
         combat.enemies.add(sati);
         combat.update(.02f, player, plan);
-        check(sati.satiCharge == CombatRoom.SATI_CHARGE_DURATION
+        check(sati.satiCharge == SatiBoss.SATI_CHARGE_DURATION
             && sati.satiAimX == player.x && sati.satiAimY == player.y,
             "Sati should lock a warning point before transforming the C++ element");
         float chargedX = sati.x, chargedY = sati.y;
+
         player.x = 850;
         combat.update(1.06f, player, plan);
         check(sati.x == chargedX && sati.y == chargedY,
@@ -677,9 +680,9 @@ public final class GameRulesCheck {
         RunPlan plan = new RunPlan(new Random(60));
         PlayerCharacter player = new PlayerCharacter();
         CombatRoom combat = new CombatRoom(new Random(61));
-        CombatRoom.Enemy monster = new CombatRoom.Enemy(740, 360, 17,
+        Enemy monster = new Enemy(740, 360, 17,
             200, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy boss = new CombatRoom.Enemy(770, 420, 36,
+        Enemy boss = new Enemy(770, 420, 36,
             200, 50, 0, 0, RunPlan.TALGO_ID);
         combat.enemies.add(monster);
         combat.enemies.add(boss);
@@ -696,7 +699,7 @@ public final class GameRulesCheck {
         RunPlan plan = new RunPlan(new Random(62));
         PlayerCharacter player = new PlayerCharacter();
         CombatRoom combat = new CombatRoom(new Random(63));
-        CombatRoom.Enemy talgo = new CombatRoom.Enemy(1100, 360, 36,
+        Enemy talgo = new Enemy(1100, 360, 36,
             500, 72, 0, 12, RunPlan.TALGO_ID);
         talgo.talgoCooldown = .01f;
         talgo.skillTimer = 100;

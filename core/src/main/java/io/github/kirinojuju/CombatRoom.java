@@ -10,49 +10,14 @@ final class CombatRoom {
     static final int WAVE = -4, RANGED = -5, SHIELDED = -6;
     static final int LIQUID_CAT = 8, ALLERGIC_VACUUM = 9, INSECURE_SWORD = 10;
     static final int DUST = 0, NOTE = 1, SLIME = 2;
+
     static final float POWER_BALL_BLAST_RADIUS = 130;
-    static final float CAT_LEAP_WINDUP = .48f;
-    static final float CAT_TRANSFORM_DURATION = .45f;
-    static final float CAT_DIVIDE_DURATION = .65f;
+
     static final float TALGO_CAST_DURATION = 1.8f;
     static final float TALGO_SAFE_RADIUS = 76f;
-    static final float SATI_CHARGE_DURATION = 1.05f;
+
     static final float NOTEBOOK_BEAM_RANGE = 760;
     static final float NOTEBOOK_BEAM_HALF_WIDTH = 42;
-    static final class Enemy {
-        float x, y, radius, hp, maxHp, sp, maxSp, speed, damage;
-        float contactTimer, skillTimer, armor, maxArmor, reflectTimer, summonTimer;
-        float warpCooldown, warpWindup, warpX, warpY, warpReturnTime;
-        final float homeX, homeY;
-        int warpStrikes;
-        float satiCooldown, satiCharge, satiAimX, satiAimY, animationTime;
-        float talgoCooldown, talgoCharge, talgoSafeX, talgoSafeY, talgoFlashTime;
-        float catTransformTime, catDivideTime;
-        boolean catFacingRight, catMoving;
-        float stunTime, slowTime, poisonTime, poisonDps;
-        float tetherTime, tetherCooldown;
-        float exStateTime, exMeter, exAimX, exAimY, exFlashTime, exObjectTimer;
-        int exState, exStoredDust, exConfidence;
-        boolean summoner, reflector, warper, artillery, waveCaster;
-        int kind; // Negative: monster class; 0..7 Ajarn; 8..10 EX.
-
-        Enemy(float x, float y, float radius, float hp, float maxSp,
-              float speed, float damage, int kind) {
-            this.x = x;
-            this.y = y;
-            this.homeX = x;
-            this.homeY = y;
-            this.radius = radius;
-            this.hp = hp;
-            this.maxHp = hp;
-            this.maxSp = maxSp;
-            this.sp = maxSp * .35f;
-            this.speed = speed;
-            this.damage = damage;
-            this.kind = kind;
-            this.summonTimer = 3.8f;
-        }
-    }
 
     static final class ExObject {
         float x, y, vx, vy, radius, life, ejectionTime;
@@ -70,7 +35,7 @@ final class CombatRoom {
     static final class Shot {
         float x, y, vx, vy, radius, damage, life;
         boolean friendly, powerBall, binding, reflected, wave, giant, satiSpear;
-        boolean liquidCatBullet;
+        boolean liquidCatBullet, algoBall;
         boolean poisonous, splash;
         Enemy target;
 
@@ -114,44 +79,73 @@ final class CombatRoom {
                 float x = GameSpace.WIDTH / 2 + MathUtils.cos(angle) * (330 + random.nextInt(90));
                 float y = GameSpace.HEIGHT / 2 + MathUtils.sin(angle) * (95 + random.nextInt(50));
                 int kind = mobKind(i, plan);
-                enemies.add(createMonster(x, y, kind, plan));
+                enemies.add(createMonster(x, y, kind, plan, i == 0));
             }
+
         } else if (room == RunDirector.Room.BOSS) {
-            int id = plan.bossId();
-            int family = id % 4;
-            Enemy boss = new Enemy(GameSpace.RIGHT - 60, GameSpace.WALK_TOP - 75, 36,
-                (190 + plan.stage() * 22 + (id % 3) * 12) * plan.healthScale(),
-                72 * plan.spScale(), (90 + (id % 4) * 9) * plan.speedScale(),
-                (12 + (id % 3) * 2) * plan.damageScale(), id);
-            boss.summoner = family == 0 || family == 1;
-            boss.reflector = family == 0 || family == 3;
-            boss.warper = family == 1;
-            boss.artillery = family == 2;
-            boss.waveCaster = family == 3;
-            boss.summonTimer = plan.loop() == 1 ? 5.2f : 3.8f;
-            boss.warpCooldown = plan.loop() == 1 ? 4f : 2.8f;
-            if (id == 0) boss.satiCooldown = 3.4f;
-            if (id == RunPlan.TALGO_ID) boss.talgoCooldown = 3.4f;
-            if (plan.loop() >= 3) {
-                int bonus = random.nextInt(3);
-                if (bonus == 0) boss.summoner = true;
-                else if (bonus == 1) boss.reflector = true;
-                else boss.warper = true;
-            }
-            if (plan.loop() >= 5 && random.nextBoolean()) boss.waveCaster = true;
-            if (boss.reflector) {
-                boss.maxArmor = ((plan.loop() == 1 ? 75 : 110)
-                    + plan.stage() * 22) * plan.healthScale();
-                boss.armor = boss.maxArmor;
+            int id = 1;
+            Enemy boss;
+
+            if (id == 0) {
+                boss = new SatiBoss(plan, random);
+            } else {
+                int family = id % 4;
+
+                if (id == 1) {
+                    boss = new KenBoss(plan, random);
+                } else if (id == 2) {
+                    boss = new MBoss(plan);
+                } else {
+                    boss = new Enemy(GameSpace.RIGHT - 60, GameSpace.WALK_TOP - 75, 36,
+                        (190 + plan.stage() * 22 + (id % 3) * 12) * plan.healthScale(),
+                        72 * plan.spScale(),
+                        (90 + (id % 4) * 9) * plan.speedScale(),
+                        (12 + (id % 3) * 2) * plan.damageScale(), id);
+                }
+
+                boss.summoner = family == 0 || family == 1;
+                boss.reflector = family == 0 || family == 3;
+                boss.warper = family == 1;
+                boss.artillery = family == 2;
+                boss.waveCaster = family == 3;
+                boss.summonTimer = plan.loop() == 1 ? 5.2f : 3.8f;
+                boss.warpCooldown = plan.loop() == 1 ? 4f : 2.8f;
+
+                if (boss instanceof KenBoss) boss.warper = false;
+
+                if (id == RunPlan.TALGO_ID) boss.talgoCooldown = 3.4f;
+
+                if (plan.loop() >= 3) {
+                    int bonus = random.nextInt(3);
+                    if (bonus == 0) boss.summoner = true;
+                    else if (bonus == 1) boss.reflector = true;
+                    else boss.warper = true;
+                }
+
+                if (plan.loop() >= 5 && random.nextBoolean()) {
+                    boss.waveCaster = true;
+                }
+
+                if (boss.reflector) {
+                    boss.maxArmor = ((plan.loop() == 1 ? 75 : 110)
+                        + plan.stage() * 22) * plan.healthScale();
+                    boss.armor = boss.maxArmor;
+                }
             }
             enemies.add(boss);
+
         } else {
-            Enemy ex = new Enemy(GameSpace.RIGHT - 75, GameSpace.WALK_TOP - 75, 34,
-                380 * plan.healthScale(), 88 * plan.spScale(),
-                120 * plan.speedScale(), 14 * plan.damageScale(), 8 + exId);
+            Enemy ex;
+            if (exId == 0) {
+                ex = new LiquidCatBoss(plan);
+            } else {
+                ex = new Enemy(GameSpace.RIGHT - 75, GameSpace.WALK_TOP - 75, 34,
+                    380 * plan.healthScale(), 88 * plan.spScale(),
+                    120 * plan.speedScale(), 14 * plan.damageScale(), 8 + exId);
+            }
             ex.skillTimer = 1.8f;
-            if (ex.kind == LIQUID_CAT) ex.exStateTime = 3.5f;
-            else if (ex.kind == ALLERGIC_VACUUM) {
+
+            if (ex.kind == ALLERGIC_VACUUM) {
                 ex.exObjectTimer = 1.2f;
                 for (int i = 0; i < 6; i++) spawnDust(ex);
             } else {
@@ -179,20 +173,36 @@ final class CombatRoom {
     }
 
     private Enemy createMonster(float x, float y, int kind, RunPlan plan) {
-        float hp = kind == BINDER ? 58 : kind == WARPER ? 56
-            : kind == WAVE ? 48 : kind == RANGED ? 46
-            : kind == SHIELDED ? 52 : 42 + plan.stage() * 5;
-        float sp = kind == BINDER ? 48 : kind == WARPER ? 42
-            : kind == WAVE ? 43 : kind == RANGED ? 36 : 37;
-        float speed = kind == BINDER ? 68 : kind == WARPER ? 92
-            : kind == WAVE ? 65 : kind == RANGED ? 80
-            : kind == SHIELDED ? 62 : 80;
+        return createMonster(x, y, kind, plan, false);
+    }
+
+    private Enemy createMonster(float x, float y, int kind, RunPlan plan,
+                                boolean algoMonster) {
+        float hp = kind == BINDER ? 58 : kind == WARPER ? 56 : kind == WAVE ? 48 : kind == RANGED ? 46 : kind == SHIELDED ? 52 : 42 + plan.stage() * 5;
+        float sp = kind == BINDER ? 48 : kind == WARPER ? 42 : kind == WAVE ? 43 : kind == RANGED ? 36 : 37;
+        float speed = kind == BINDER ? 68 : kind == WARPER ? 92 : kind == WAVE ? 65 : kind == RANGED ? 80 : kind == SHIELDED ? 62 : 80;
         float damage = kind == WARPER ? 10 : kind == WAVE ? 9 : 7;
-        Enemy enemy = new Enemy(MathUtils.clamp(x, GameSpace.LEFT + 17, GameSpace.RIGHT - 17),
-            MathUtils.clamp(y, GameSpace.BOTTOM + 17, GameSpace.WALK_TOP - 17),
-            17, hp * plan.healthScale(),
-            sp * plan.spScale(), speed * plan.speedScale(),
-            damage * plan.damageScale(), kind);
+
+        float spawnX = MathUtils.clamp(
+            x, GameSpace.LEFT + 17, GameSpace.RIGHT - 17);
+        float spawnY = MathUtils.clamp(
+            y, GameSpace.BOTTOM + 17, GameSpace.WALK_TOP - 17);
+
+        Enemy enemy;
+        if (algoMonster) {
+            enemy = new AlgoMonster(spawnX, spawnY, 17,
+                hp * plan.healthScale(),
+                sp * plan.spScale(),
+                speed * plan.speedScale(),
+                damage * plan.damageScale(), kind);
+        } else {
+            enemy = new Enemy(spawnX, spawnY, 17,
+                hp * plan.healthScale(),
+                sp * plan.spScale(),
+                speed * plan.speedScale(),
+                damage * plan.damageScale(), kind);
+        }
+
         if (kind == SHIELDED) {
             enemy.maxArmor = (36 + plan.stage() * 7) * plan.healthScale();
             enemy.armor = enemy.maxArmor;
@@ -214,17 +224,6 @@ final class CombatRoom {
         float y = GameSpace.BOTTOM + 55
             + random.nextFloat() * (GameSpace.WALK_TOP - GameSpace.BOTTOM - 110);
         exObjects.add(new ExObject(x, y, 11, 20f, NOTE));
-    }
-
-    static float satiElementX(Enemy boss) {
-        float side = boss.x > GameSpace.WIDTH / 2 ? -1 : 1;
-        return MathUtils.clamp(boss.x + side * 72,
-            GameSpace.LEFT + 35, GameSpace.RIGHT - 35);
-    }
-
-    static float satiElementY(Enemy boss) {
-        return MathUtils.clamp(boss.y + 25,
-            GameSpace.BOTTOM + 35, GameSpace.WALK_TOP - 35);
     }
 
     Enemy closestEnemy(float x, float y) {
@@ -291,7 +290,10 @@ final class CombatRoom {
     }
 
     private void damageEnemy(Enemy enemy, float damage, float sourceX, float sourceY) {
-        if (enemy.kind == LIQUID_CAT && enemy.exState == 1) damage *= .55f;
+
+        if (enemy instanceof LiquidCatBoss)
+            damage *= ((LiquidCatBoss) enemy).damageMultiplier();
+
         if (enemy.kind == INSECURE_SWORD && enemy.exState == 2) damage *= 1.5f;
         boolean armored = enemy.armor > 0;
         if (enemy.armor > 0) {
@@ -409,9 +411,12 @@ final class CombatRoom {
             enemy.tetherTime = Math.max(0, enemy.tetherTime - dt);
             enemy.tetherCooldown = Math.max(0, enemy.tetherCooldown - dt);
             enemy.exFlashTime = Math.max(0, enemy.exFlashTime - dt);
-            enemy.catTransformTime = Math.max(0, enemy.catTransformTime - dt);
-            enemy.catDivideTime = Math.max(0, enemy.catDivideTime - dt);
-            if (enemy.kind == LIQUID_CAT) enemy.catMoving = false;
+
+            if (enemy instanceof KenBoss) {
+                ((KenBoss) enemy).updateBombSkill(
+                    dt, player, plan, enemy.stunTime <= 0);
+            }
+
             enemy.talgoFlashTime = Math.max(0, enemy.talgoFlashTime - dt);
             enemy.sp = Math.min(enemy.maxSp,
                 enemy.sp + (enemy.kind == RANGED || enemy.kind == WAVE ? 20
@@ -427,6 +432,13 @@ final class CombatRoom {
             if (enemy.kind == RunPlan.TALGO_ID
                 && updateTalgo(enemy, dt, player, plan)) continue;
             if (enemy.stunTime > 0) continue;
+
+            if (enemy instanceof MBoss) {
+                ((MBoss) enemy).updateSplitAndAttack(
+                    player, plan, shots, spawnQueue);
+                continue;
+            }
+
             if (enemy.kind >= LIQUID_CAT) {
                 updateExEnemy(enemy, dt, player, plan);
                 continue;
@@ -435,10 +447,14 @@ final class CombatRoom {
             boolean warping = enemy.kind == WARPER
                 ? updateWarper(enemy, dt, player, plan)
                 : enemy.kind >= 0 && enemy.kind < 8 && enemy.warper
-                    && (enemy.kind != 0 || enemy.satiCharge <= 0)
+                  && (!(enemy instanceof SatiBoss)
+                      || ((SatiBoss) enemy).satiCharge <= 0)
                     && updateBossWarp(enemy, dt, player, plan);
-            boolean satiCharging = enemy.kind == 0 && !warping
-                && updateSati(enemy, dt, player, plan);
+
+            boolean satiCharging = enemy instanceof SatiBoss
+                && !warping
+                && ((SatiBoss) enemy).updateSkill(dt, player, plan, shots, audio);
+
             float dx = player.x - enemy.x, dy = player.y - enemy.y;
             float length = Math.max(.001f, (float)Math.sqrt(dx * dx + dy * dy));
             if (!warping && !satiCharging && (enemy.kind < 0 || enemy.kind >= 8)) {
@@ -564,92 +580,16 @@ final class CombatRoom {
 
     private void updateExEnemy(Enemy ex, float dt, PlayerCharacter player,
                                RunPlan plan) {
-        if (ex.kind == LIQUID_CAT) updateLiquidCat(ex, dt, player, plan);
+
+        if (ex instanceof LiquidCatBoss)
+            ((LiquidCatBoss) ex).updateSkill(this, dt, player, plan);
+
         else if (ex.kind == ALLERGIC_VACUUM) updateAllergicVacuum(ex, dt, player, plan);
         else updateInsecureSword(ex, dt, player, plan);
         ex.x = MathUtils.clamp(ex.x, GameSpace.LEFT + ex.radius,
             GameSpace.RIGHT - ex.radius);
         ex.y = MathUtils.clamp(ex.y, GameSpace.BOTTOM + ex.radius,
             GameSpace.WALK_TOP - ex.radius);
-    }
-
-    private void updateLiquidCat(Enemy cat, float dt, PlayerCharacter player,
-                                 RunPlan plan) {
-        cat.catFacingRight = player.x >= cat.x;
-        cat.exStateTime -= dt;
-        if (cat.exStateTime <= 0) {
-            cat.exState = cat.exState == 0 ? 1 : 0;
-            cat.exStateTime = cat.exState == 1 ? 2.4f : 3.5f;
-            cat.radius = cat.exState == 1 ? 16 : 34;
-            cat.exMeter = 0;
-            cat.exObjectTimer = 0;
-            cat.exFlashTime = .35f;
-            cat.catTransformTime = CAT_TRANSFORM_DURATION;
-            cat.catDivideTime = 0;
-            cat.skillTimer = cat.exState == 1 ? 1f : 1.4f;
-        }
-        if (cat.exState == 1) {
-            cat.exObjectTimer -= dt;
-            if (cat.exObjectTimer <= 0 && countExObjects(SLIME) < 7) {
-                exObjects.add(new ExObject(cat.x, cat.y, 25, 2.6f, SLIME));
-                cat.exObjectTimer = .45f;
-            }
-            float oldX = cat.x, oldY = cat.y;
-            moveExToward(cat, player.x, player.y, cat.speed * .38f * dt, 8);
-            cat.catMoving = Math.abs(cat.x - oldX) + Math.abs(cat.y - oldY) > .1f;
-            if (cat.skillTimer <= 0) {
-                cat.skillTimer = 1.35f;
-                cat.catDivideTime = CAT_DIVIDE_DURATION;
-                float aimX = player.x - cat.x, aimY = player.y - cat.y;
-                float distance = Math.max(.001f,
-                    (float)Math.sqrt(aimX * aimX + aimY * aimY));
-                Shot bullet = new Shot(cat.x, cat.y,
-                    aimX / distance * 260 * plan.speedScale(),
-                    aimY / distance * 260 * plan.speedScale(),
-                    9, 8 * plan.damageScale(), 3f, false);
-                bullet.liquidCatBullet = true;
-                shots.add(bullet);
-            }
-            float dx = player.x - cat.x, dy = player.y - cat.y;
-            if (dx * dx + dy * dy < (cat.radius + 22) * (cat.radius + 22)) {
-                player.slowTime = Math.max(player.slowTime, 1.1f);
-                if (cat.contactTimer <= 0) {
-                    player.hurt(5 * plan.damageScale());
-                    cat.contactTimer = .85f;
-                }
-            }
-            return;
-        }
-        if (cat.exMeter > 0) {
-            cat.exMeter = Math.max(0, cat.exMeter - dt);
-            if (cat.exMeter == 0) {
-                cat.x = cat.exAimX;
-                cat.y = cat.exAimY;
-                cat.exFlashTime = .3f;
-                float dx = player.x - cat.x, dy = player.y - cat.y;
-                if (dx * dx + dy * dy <= 80 * 80)
-                    player.hurt(20 * plan.damageScale());
-            }
-            return;
-        }
-        if (cat.skillTimer <= 0) {
-            cat.skillTimer = 3.3f;
-            cat.exMeter = CAT_LEAP_WINDUP;
-            cat.exAimX = MathUtils.clamp(player.x,
-                GameSpace.LEFT + cat.radius, GameSpace.RIGHT - cat.radius);
-            cat.exAimY = MathUtils.clamp(player.y,
-                GameSpace.BOTTOM + cat.radius, GameSpace.WALK_TOP - cat.radius);
-            return;
-        }
-        float oldX = cat.x, oldY = cat.y;
-        moveExToward(cat, player.x, player.y, cat.speed * dt, cat.radius + 24);
-        cat.catMoving = Math.abs(cat.x - oldX) + Math.abs(cat.y - oldY) > .1f;
-        float dx = player.x - cat.x, dy = player.y - cat.y;
-        if (dx * dx + dy * dy <= (cat.radius + 18) * (cat.radius + 18)
-            && cat.contactTimer <= 0) {
-            player.hurt(cat.damage);
-            cat.contactTimer = .8f;
-        }
     }
 
     private void updateAllergicVacuum(Enemy vacuum, float dt,
@@ -769,13 +709,13 @@ final class CombatRoom {
         }
     }
 
-    private int countExObjects(int kind) {
+    int countExObjects(int kind) {
         int count = 0;
         for (ExObject object : exObjects) if (object.kind == kind) count++;
         return count;
     }
 
-    private void moveExToward(Enemy enemy, float targetX, float targetY,
+    void moveExToward(Enemy enemy, float targetX, float targetY,
                               float step, float stopDistance) {
         float dx = targetX - enemy.x, dy = targetY - enemy.y;
         float distance = (float)Math.sqrt(dx * dx + dy * dy);
@@ -811,32 +751,6 @@ final class CombatRoom {
         boss.talgoSafeY = MathUtils.clamp(player.y + MathUtils.sin(angle) * distance,
             GameSpace.BOTTOM + TALGO_SAFE_RADIUS,
             GameSpace.WALK_TOP - TALGO_SAFE_RADIUS);
-        return true;
-    }
-
-    private boolean updateSati(Enemy boss, float dt, PlayerCharacter player, RunPlan plan) {
-        if (boss.satiCharge > 0) {
-            boss.satiCharge = Math.max(0, boss.satiCharge - dt);
-            if (boss.satiCharge == 0) {
-                float x = satiElementX(boss), y = satiElementY(boss);
-                float dx = boss.satiAimX - x, dy = boss.satiAimY - y;
-                float distance = (float)Math.sqrt(dx * dx + dy * dy);
-                if (distance < .001f) { dx = 0; dy = -1; distance = 1; }
-                float speed = 390 * plan.speedScale();
-                Shot spear = new Shot(x, y, dx / distance * speed,
-                    dy / distance * speed, 12, 22 * plan.damageScale(), 3f, false);
-                spear.satiSpear = true;
-                shots.add(spear);
-            }
-            return true;
-        }
-        boss.satiCooldown -= dt;
-        if (boss.satiCooldown > 0) return false;
-        boss.satiCooldown = Math.max(3.2f, 5.4f / plan.speedScale());
-        boss.satiCharge = SATI_CHARGE_DURATION;
-        boss.satiAimX = player.x;
-        boss.satiAimY = player.y;
-        if (audio != null) audio.cppTransform();
         return true;
     }
 
@@ -1034,7 +948,9 @@ final class CombatRoom {
     }
 
     private void fireEnemy(Enemy enemy, float angle, float speed, float damage) {
-        shots.add(new Shot(enemy.x, enemy.y, MathUtils.cos(angle) * speed,
-            MathUtils.sin(angle) * speed, 7, damage, 3, false));
+        Shot shot = new Shot(enemy.x, enemy.y, MathUtils.cos(angle) * speed,
+            MathUtils.sin(angle) * speed, 7, damage, 3, false);
+        shot.algoBall = enemy instanceof AlgoMonster;
+        shots.add(shot);
     }
 }

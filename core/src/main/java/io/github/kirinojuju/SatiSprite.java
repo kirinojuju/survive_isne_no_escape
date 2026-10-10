@@ -1,6 +1,5 @@
 package io.github.kirinojuju;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -12,15 +11,14 @@ final class SatiSprite {
     private static final String ROOT = "characters/boss/Tprogram(Sati)/skill/cpp_element/";
     private static final float ELEMENT_SIZE = 92;
     private static final float SPEAR_SIZE = 96;
+
     private final Texture[] idle = loadFrames("cpp_idle", 6);
     private final Texture[] transform = loadFrames("cpp_transform", 16);
     private final Texture spear = load("cpp_spear00.png");
     private final TextureRegion spearRegion = new TextureRegion(spear);
 
     private static Texture load(String name) {
-        Texture texture = new Texture(Gdx.files.internal(ROOT + name));
-        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        return texture;
+        return OptionalAssetTexture.load(ROOT + name);
     }
 
     private static Texture[] loadFrames(String prefix, int count) {
@@ -30,18 +28,20 @@ final class SatiSprite {
         return frames;
     }
 
-    void drawElement(SpriteBatch batch, CombatRoom.Enemy boss) {
+    void drawElement(SpriteBatch batch, SatiBoss boss) {
         Texture frame;
         if (boss.satiCharge > 0) {
-            float progress = 1 - boss.satiCharge / CombatRoom.SATI_CHARGE_DURATION;
+            float progress = 1 - boss.satiCharge / SatiBoss.SATI_CHARGE_DURATION;
             int index = MathUtils.clamp((int)(progress * transform.length),
                 0, transform.length - 1);
             frame = transform[index];
         } else {
             frame = idle[(int)(boss.animationTime / .12f) % idle.length];
         }
-        float x = CombatRoom.satiElementX(boss);
-        float y = CombatRoom.satiElementY(boss);
+
+        float x = SatiBoss.satiElementX(boss);
+        float y = SatiBoss.satiElementY(boss);
+
         batch.draw(frame, x - ELEMENT_SIZE / 2, y - ELEMENT_SIZE / 2,
             ELEMENT_SIZE, ELEMENT_SIZE);
     }
@@ -51,7 +51,7 @@ final class SatiSprite {
             * MathUtils.radiansToDegrees + 90;
         batch.draw(spearRegion, shot.x - SPEAR_SIZE / 2,
             shot.y - SPEAR_SIZE / 2, SPEAR_SIZE / 2, SPEAR_SIZE / 2,
-            SPEAR_SIZE, SPEAR_SIZE, 1, 1, rotation);
+            SPEAR_SIZE * 2, SPEAR_SIZE * 2, 1, 1, rotation);
     }
 
     void dispose() {

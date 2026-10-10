@@ -1,6 +1,5 @@
 package io.github.kirinojuju;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
@@ -16,18 +15,20 @@ final class LiquidCatSprite {
     private final Texture[] idleLeft = loadFrames("idle/liquid_cat_idle_l", 1, 8);
     private final Texture[] idleRight = loadFrames("idle/liquid_cat_idle_r", 1, 9);
     private final Texture[] smallIdle = loadFrames("idle/liquid_cat_new_form", 1, 2);
+
     private final Texture[] smallWalkLeft = loadFrames("walk/liquid_cat_new_form_walk_l", 1, 4);
     private final Texture[] smallWalkRight = loadFrames("walk/liquid_cat_new_form_walk_r", 1, 4);
+
     private final Texture[] transform = loadFrames("transform/liquid_cat_transform", 1, 10);
+
     private final Texture[] divide = loadFrames("divide/liquid_cat_new_form_divide", 1, 13);
+
     private final Texture[] strike = loadFrames("attack/liquid_orbital_strike_animation", 0, 10);
     private final Texture strikeObject = load("attack/liquid_orbital_strike_object.png");
     private final Texture bullet = load("attack/liquid_bullet.png");
 
     private static Texture load(String name) {
-        Texture texture = new Texture(Gdx.files.internal(ROOT + name));
-        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        return texture;
+        return OptionalAssetTexture.load(ROOT + name);
     }
 
     private static Texture[] loadFrames(String prefix, int first, int count) {
@@ -45,18 +46,18 @@ final class LiquidCatSprite {
         return frames[index];
     }
 
-    void draw(SpriteBatch batch, CombatRoom.Enemy cat) {
+    void draw(SpriteBatch batch, LiquidCatBoss cat) {
         Texture frame;
         if (cat.catTransformTime > 0) {
             float progress = 1 - MathUtils.clamp(cat.catTransformTime
-                / CombatRoom.CAT_TRANSFORM_DURATION, 0, 1);
+                / LiquidCatBoss.TRANSFORM_DURATION, 0, 1);
             int index = MathUtils.clamp((int)(progress * transform.length), 0,
                 transform.length - 1);
             frame = transform[cat.exState == 1 ? index : transform.length - 1 - index];
         } else if (cat.exState == 1 && cat.catDivideTime > 0) {
-            frame = timedFrame(divide, cat.catDivideTime, CombatRoom.CAT_DIVIDE_DURATION);
+            frame = timedFrame(divide, cat.catDivideTime, LiquidCatBoss.DIVIDE_DURATION);
         } else if (cat.exState == 0 && cat.exMeter > 0) {
-            frame = timedFrame(strike, cat.exMeter, CombatRoom.CAT_LEAP_WINDUP);
+            frame = timedFrame(strike, cat.exMeter, LiquidCatBoss.LEAP_WINDUP);
         } else if (cat.exState == 1) {
             if (cat.catMoving) {
                 Texture[] walking = cat.catFacingRight ? smallWalkRight : smallWalkLeft;

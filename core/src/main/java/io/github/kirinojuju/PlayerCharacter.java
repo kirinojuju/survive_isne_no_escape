@@ -33,8 +33,8 @@ final class PlayerCharacter {
     float boundTime, bindImmunity;
     int bindProgress, lastBindDirection;
     boolean moving, facingRight = true, skillPlaying, skillReleased;
-    private CombatRoom.Enemy skillTarget;
-    private CombatRoom.Enemy attackTarget;
+    private Enemy skillTarget;
+    private Enemy attackTarget;
     private GameAudio audio;
     private final boolean[] owned = new boolean[Weapon.values().length];
     private Weapon active;
@@ -42,7 +42,7 @@ final class PlayerCharacter {
     Weapon activeWeapon() { return active; }
     boolean owns(Weapon weapon) { return owned[weapon.ordinal()]; }
     boolean hasBothWeapons() { return owns(Weapon.PHYSICAL) && owns(Weapon.MAGICAL); }
-    CombatRoom.Enemy attackTarget() {
+    Enemy attackTarget() {
         return attackTarget != null && attackTarget.hp > 0 ? attackTarget : null;
     }
     void setAudio(GameAudio audio) { this.audio = audio; }
@@ -164,7 +164,7 @@ final class PlayerCharacter {
 
     void lockAttackTarget(CombatRoom combat, float aimX, float aimY) {
         attackTarget = null;
-        CombatRoom.Enemy pointed = combat.closestEnemy(aimX, aimY);
+        Enemy pointed = combat.closestEnemy(aimX, aimY);
         if (pointed != null) {
             float dx = pointed.x - aimX, dy = pointed.y - aimY;
             float pickRadius = pointed.radius + 40;
@@ -206,7 +206,7 @@ final class PlayerCharacter {
                 27 + physicalBonus, lanSlow, lanTether);
         } else if (active == Weapon.MAGICAL && sp >= 10) {
             sp -= 10;
-            CombatRoom.Enemy target = attackTarget();
+            Enemy target = attackTarget();
             float dx = target == null ? faceX : target.x - x;
             float dy = target == null ? faceY : target.y - y;
             float length = Math.max(.001f, (float)Math.sqrt(dx * dx + dy * dy));

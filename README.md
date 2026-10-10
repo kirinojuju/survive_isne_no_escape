@@ -2,11 +2,31 @@
 
 A small playable libGDX action roguelike prototype about surviving computer engineering school life. This is a student-themed spin-off of Pusenbi. Its visual direction carries over Pusenbi's simple pixel-art style and adapts the characters, clothing, enemies, and settings to ISNE student life.
 
-## Play
+## Clone and play
 
-The game assets are kept locally and are not included in this source repository. To run a fresh checkout, place the project's `assets/` directory at the repository root first.
+The team's original art and sound files are kept locally and are not included in Git. A fresh clone includes an empty `assets/` folder and runs with simple generated placeholder art and no sound. If you have the original files, put them under `assets/` using the paths shown in the art and sound sections below; the game will use each file that exists and fall back only for missing files. Do not commit those local files.
 
-On Windows, run `gradlew.bat lwjgl3:run` from this folder. On macOS or Linux, run `./gradlew lwjgl3:run`.
+Install a JDK (17 or newer) and clone the repository. The first Gradle run needs internet access to download dependencies.
+
+```powershell
+git clone https://github.com/kirinojuju/survive_isne_no_escape.git
+cd survive_isne_no_escape
+.\gradlew.bat :lwjgl3:run
+```
+
+On macOS or Linux, use `./gradlew :lwjgl3:run`. To verify the rules and compile without opening the game, run `.\gradlew.bat :core:verifyGameRules :lwjgl3:classes` on Windows.
+
+Each teammate should create a branch from the latest shared branch before coding, for example:
+
+```powershell
+git switch -c feature/dim-monster-ability
+# Make and test your own change.
+git add core/src/main/java core/src/test/java
+git commit -m "Add telegraphed monster ability"
+git push -u origin feature/dim-monster-ability
+```
+
+Use a branch name for your own feature and open a pull request to combine it with the team's work. Access to a private GitHub repository must be granted by its owner before teammates can clone or push.
 
 At the title screen, press **Enter** to arrive at Building 30. Use **WASD** or the arrow keys to walk. Reach the left door to enter the core game. Near the car, press **E** or click the car to choose whether to go home; **1/Y/Enter** confirms the joke ending and **2/N/Esc** returns to the entrance. The opening scene has no combat. Scene changes fade through black.
 

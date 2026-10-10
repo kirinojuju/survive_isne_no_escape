@@ -35,8 +35,15 @@ final class GameRenderer {
     private final BitmapFont font = new BitmapFont();
     private final BitmapFont bigFont = new BitmapFont();
     private final StudentSprite student = new StudentSprite();
+
     private final SatiSprite sati = new SatiSprite();
+    private final KenSprite ken = new KenSprite();
+    private final MSprite m = new MSprite();
+
     private final LiquidCatSprite liquidCat = new LiquidCatSprite();
+
+    private final AlgoMonSprite algoMon = new AlgoMonSprite();
+
     private final Texture normalRoom = loadRoom("scene/sceneroom.png");
     private final Texture bossRoom = loadRoom("scene/sceneroom_boss.png");
     private final Texture building30 = loadRoom("scene/scene30building_entrance_withoutcar.png");
@@ -55,9 +62,7 @@ final class GameRenderer {
     }
 
     private static Texture loadRoom(String path) {
-        Texture texture = new Texture(Gdx.files.internal(path));
-        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        return texture;
+        return OptionalAssetTexture.load(path);
     }
 
     void draw(RunDirector run, PlayerCharacter player, CombatRoom combat) {
@@ -76,12 +81,13 @@ final class GameRenderer {
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         drawArena();
         if (run.phase != RunDirector.Phase.START_SELECT) {
-            for (CombatRoom.Enemy enemy : combat.enemies)
+            for (Enemy enemy : combat.enemies)
                 if (enemy.kind == RunPlan.TALGO_ID && enemy.hp > 0
                     && (enemy.talgoCharge > 0 || enemy.talgoFlashTime > 0))
                     drawTalgoWarning(enemy);
             for (CombatRoom.Shot shot : combat.shots) {
-                if (shot.powerBall || shot.satiSpear || shot.liquidCatBullet) continue;
+                if (shot.powerBall || shot.satiSpear
+                    || shot.liquidCatBullet || shot.algoBall) continue;
                 if (shot.wave) {
                     shapes.setColor(BLUE);
                     shapes.circle(shot.x, shot.y, shot.radius, 28);
@@ -103,22 +109,25 @@ final class GameRenderer {
             if (combat.splashTime > 0) drawNotebookSplash(combat);
             if (combat.beamTime > 0) drawNotebookBeam(combat);
             drawExObjects(combat);
-            for (CombatRoom.Enemy enemy : combat.enemies)
+            for (Enemy enemy : combat.enemies)
                 if (enemy.kind >= CombatRoom.LIQUID_CAT) drawExTelegraph(enemy);
-            for (CombatRoom.Enemy enemy : combat.enemies)
+            for (Enemy enemy : combat.enemies)
                 if (enemy.warpWindup > 0) drawWarpWarning(enemy);
-            for (CombatRoom.Enemy enemy : combat.enemies)
+            for (Enemy enemy : combat.enemies)
                 if (enemy.warpReturnTime > 0) drawBossWarpFlash(enemy);
-            for (CombatRoom.Enemy enemy : combat.enemies)
-                if (enemy.kind == 0 && enemy.satiCharge > 0) drawSatiWarning(enemy);
+            for (Enemy enemy : combat.enemies)
+                if (enemy instanceof SatiBoss
+                    && ((SatiBoss) enemy).satiCharge > 0)
+                    drawSatiWarning((SatiBoss) enemy);
+
             if (run.phase == RunDirector.Phase.FIGHT) drawAttackLock(player);
-            for (CombatRoom.Enemy enemy : combat.enemies) {
+            for (Enemy enemy : combat.enemies) {
                 if (enemy.tetherTime > 0 && enemy.hp > 0) {
                     shapes.setColor(CYAN);
                     shapes.rectLine(player.x, player.y, enemy.x, enemy.y, 3);
                 }
             }
-            for (CombatRoom.Enemy enemy : combat.enemies) drawEnemy(enemy);
+            for (Enemy enemy : combat.enemies) drawEnemy(enemy);
             drawAttackEffect(player);
             drawBars(player);
             if (run.phase == RunDirector.Phase.FIGHT) drawSkillButton(player);
@@ -133,11 +142,29 @@ final class GameRenderer {
                 if (shot.powerBall) student.drawPowerBall(batch, shot);
                 else if (shot.satiSpear) sati.drawSpear(batch, shot);
                 else if (shot.liquidCatBullet) liquidCat.drawBullet(batch, shot);
-            for (CombatRoom.Enemy enemy : combat.enemies)
-                if (enemy.kind == 0) sati.drawElement(batch, enemy);
-                else if (enemy.kind == CombatRoom.LIQUID_CAT)
-                    liquidCat.draw(batch, enemy);
-            for (CombatRoom.Enemy enemy : combat.enemies) {
+                else if (shot.algoBall) algoMon.drawBall(batch, shot);
+
+            for (Enemy enemy : combat.enemies)
+
+                if (enemy instanceof SatiBoss)
+                    sati.drawElement(batch, (SatiBoss) enemy);
+
+                else if (enemy instanceof KenBoss) {
+                    KenBoss boss = (KenBoss) enemy;
+                    ken.draw(batch, boss);
+                    ken.drawBombWarnings(batch, boss);
+                }
+
+                else if (enemy instanceof MBoss)
+                    m.draw(batch, enemy);
+
+                else if (enemy instanceof LiquidCatBoss)
+                    liquidCat.draw(batch, (LiquidCatBoss) enemy);
+
+                else if (enemy instanceof AlgoMonster)
+                    algoMon.draw(batch, enemy);
+
+            for (Enemy enemy : combat.enemies) {
                 if (enemy.kind == CombatRoom.INSECURE_SWORD && enemy.exState == 3)
                     font.draw(batch, "0!", enemy.x - 12, enemy.y + 91);
                 else if (enemy.kind == CombatRoom.ALLERGIC_VACUUM
@@ -291,9 +318,9 @@ final class GameRenderer {
             tileWidth, height);
     }
 
-    private void drawSatiWarning(CombatRoom.Enemy boss) {
-        float x = CombatRoom.satiElementX(boss);
-        float y = CombatRoom.satiElementY(boss);
+    private void drawSatiWarning(SatiBoss boss) {
+        float x = SatiBoss.satiElementX(boss);
+        float y = SatiBoss.satiElementY(boss);
         shapes.setColor(CORAL);
         shapes.rectLine(x, y, boss.satiAimX, boss.satiAimY, 4);
         shapes.circle(boss.satiAimX, boss.satiAimY, 13, 20);
@@ -301,7 +328,7 @@ final class GameRenderer {
         shapes.circle(boss.satiAimX, boss.satiAimY, 8, 20);
     }
 
-    private void drawTalgoWarning(CombatRoom.Enemy boss) {
+    private void drawTalgoWarning(Enemy boss) {
         shapes.setColor(CORAL);
         for (float x = GameSpace.LEFT + 18; x < GameSpace.RIGHT; x += 72)
             shapes.rect(x, GameSpace.BOTTOM, 3, GameSpace.WALK_TOP - GameSpace.BOTTOM);
@@ -318,7 +345,7 @@ final class GameRenderer {
         shapes.circle(boss.talgoSafeX, boss.talgoSafeY, 10, 20);
     }
 
-    private void drawEnemy(CombatRoom.Enemy enemy) {
+    private void drawEnemy(Enemy enemy) {
         if (enemy.kind >= CombatRoom.LIQUID_CAT) {
             drawExEnemy(enemy);
             return;
@@ -329,18 +356,20 @@ final class GameRenderer {
             shapes.setColor(INK);
             shapes.circle(enemy.x, enemy.y, enemy.radius + 5, 32);
         }
-        shapes.setColor(enemy.kind == CombatRoom.BINDER ? CYAN
-            : enemy.kind == CombatRoom.WARPER ? PURPLE
-            : enemy.kind == CombatRoom.WAVE ? BLUE
-            : enemy.kind == CombatRoom.RANGED ? GREEN
-            : enemy.kind == CombatRoom.SHIELDED ? PAPER
-            : enemy.kind == CombatRoom.BASIC ? GOLD
-            : enemy.kind >= 8 ? PURPLE : CORAL);
-        shapes.rect(enemy.x - enemy.radius, enemy.y - enemy.radius,
-            enemy.radius * 2, enemy.radius * 2);
-        shapes.setColor(INK);
-        shapes.rect(enemy.x - 9, enemy.y + 2, 6, 6);
-        shapes.rect(enemy.x + 4, enemy.y + 2, 6, 6);
+        if (!(enemy instanceof AlgoMonster) && !(enemy instanceof KenBoss)) {
+            shapes.setColor(enemy.kind == CombatRoom.BINDER ? CYAN
+                : enemy.kind == CombatRoom.WARPER ? PURPLE
+                  : enemy.kind == CombatRoom.WAVE ? BLUE
+                    : enemy.kind == CombatRoom.RANGED ? GREEN
+                      : enemy.kind == CombatRoom.SHIELDED ? PAPER
+                        : enemy.kind == CombatRoom.BASIC ? GOLD
+                          : enemy.kind >= 8 ? PURPLE : CORAL);
+            shapes.rect(enemy.x - enemy.radius, enemy.y - enemy.radius,
+                enemy.radius * 2, enemy.radius * 2);
+            shapes.setColor(INK);
+            shapes.rect(enemy.x - 9, enemy.y + 2, 6, 6);
+            shapes.rect(enemy.x + 4, enemy.y + 2, 6, 6);
+        }
         if (enemy.stunTime > 0 || enemy.slowTime > 0) {
             shapes.setColor(CYAN);
             shapes.rect(enemy.x - 3, enemy.y + enemy.radius - 3, 6, 8);
@@ -387,7 +416,7 @@ final class GameRenderer {
         }
     }
 
-    private void drawExTelegraph(CombatRoom.Enemy ex) {
+    private void drawExTelegraph(Enemy ex) {
         if (ex.kind == CombatRoom.LIQUID_CAT && ex.exFlashTime > 0
             && ex.exState == 0 && ex.exMeter == 0) {
             shapes.setColor(GREEN);
@@ -422,7 +451,7 @@ final class GameRenderer {
         shapes.circle(warningX, warningY, radius - 5, 48);
     }
 
-    private void drawExEnemy(CombatRoom.Enemy ex) {
+    private void drawExEnemy(Enemy ex) {
         if (ex.kind == CombatRoom.LIQUID_CAT) {
             if (ex.exState == 1) {
                 shapes.setColor(GREEN);
@@ -469,7 +498,7 @@ final class GameRenderer {
         drawExBars(ex);
     }
 
-    private void drawExBars(CombatRoom.Enemy ex) {
+    private void drawExBars(Enemy ex) {
         float width = 80;
         shapes.setColor(INK);
         shapes.rect(ex.x - width / 2, ex.y + 47, width, 7);
@@ -491,7 +520,7 @@ final class GameRenderer {
         }
     }
 
-    private void drawWarpWarning(CombatRoom.Enemy enemy) {
+    private void drawWarpWarning(Enemy enemy) {
         float reach = 75;
         shapes.setColor(CORAL);
         shapes.circle(enemy.warpX, enemy.warpY, reach, 48);
@@ -502,7 +531,7 @@ final class GameRenderer {
         shapes.rect(enemy.warpX - 2, enemy.warpY - 23, 4, 46);
     }
 
-    private void drawBossWarpFlash(CombatRoom.Enemy boss) {
+    private void drawBossWarpFlash(Enemy boss) {
         shapes.setColor(PURPLE);
         shapes.circle(boss.x, boss.y, boss.radius + 14, 36);
         shapes.setColor(INK);
@@ -539,7 +568,7 @@ final class GameRenderer {
     }
 
     private void drawAttackLock(PlayerCharacter player) {
-        CombatRoom.Enemy target = player.attackTarget();
+        Enemy target = player.attackTarget();
         if (target == null || player.skillPlaying) return;
         shapes.setColor(GREEN);
         shapes.circle(target.x, target.y, target.radius + 12, 36);
@@ -626,7 +655,7 @@ final class GameRenderer {
             : "Monster room: " + combat.enemies.size + " left";
         font.draw(batch, target, 75, 62);
         if (run.room == RunDirector.Room.BOSS && run.plan.bossId() == RunPlan.TALGO_ID) {
-            for (CombatRoom.Enemy enemy : combat.enemies)
+            for (Enemy enemy : combat.enemies)
                 if (enemy.kind == RunPlan.TALGO_ID && enemy.talgoCharge > 0) {
                     font.draw(batch, "FULL ROOM AOE IN "
                         + (int)Math.ceil(enemy.talgoCharge * 10) / 10f
@@ -635,7 +664,7 @@ final class GameRenderer {
                 }
         }
         if (run.room == RunDirector.Room.EX && combat.enemies.size > 0) {
-            CombatRoom.Enemy ex = combat.enemies.first();
+            Enemy ex = combat.enemies.first();
             String status = ex.kind == CombatRoom.LIQUID_CAT
                 ? (ex.exState == 1 ? "PUDDLE: smaller hitbox + slowing ooze"
                     : "CAT: watch the leap marker")
@@ -648,8 +677,8 @@ final class GameRenderer {
             font.draw(batch, status, 355, 62);
         }
         if (run.room == RunDirector.Room.BOSS && combat.enemies.size > 0) {
-            CombatRoom.Enemy boss = null;
-            for (CombatRoom.Enemy enemy : combat.enemies)
+            Enemy boss = null;
+            for (Enemy enemy : combat.enemies)
                 if (enemy.kind >= 0) { boss = enemy; break; }
             if (boss != null) {
                 String trait = boss.summoner ? "SUMMONS  " : "";
@@ -763,8 +792,15 @@ final class GameRenderer {
 
     void dispose() {
         student.dispose();
+
         sati.dispose();
+        ken.dispose();
+        m.dispose();
+
         liquidCat.dispose();
+
+        algoMon.dispose();
+
         normalRoom.dispose();
         bossRoom.dispose();
         building30.dispose();
