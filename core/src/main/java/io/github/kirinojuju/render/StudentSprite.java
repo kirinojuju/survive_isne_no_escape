@@ -1,13 +1,14 @@
-package io.github.kirinojuju;
+package io.github.kirinojuju.render;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import io.github.kirinojuju.combat.CombatRoom;
+import io.github.kirinojuju.player.PlayerCharacter;
 import java.util.Locale;
 
 /** Loads the artist's separate 64x64 PNG frames and chooses a player animation. */
-final class StudentSprite {
+public final class StudentSprite {
     private static final String ROOT = "characters/student_player/";
     private static final float WALK_FRAME_TIME = .12f;
     private static final float SKILL_FRAME_TIME = .08f;
@@ -23,9 +24,7 @@ final class StudentSprite {
     private final Texture powerBall = load(ROOT + "skill_case/power_ball.png");
 
     private static Texture load(String path) {
-        Texture texture = new Texture(Gdx.files.internal(path));
-        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        return texture;
+        return OptionalAssetTexture.load(path);
     }
 
     private static Texture[] loadFrames(String folder, String prefix, int count) {
@@ -51,7 +50,7 @@ final class StudentSprite {
         return player.facingRight ? idleRight : idleLeft;
     }
 
-    void draw(SpriteBatch batch, PlayerCharacter player) {
+    public void draw(SpriteBatch batch, PlayerCharacter player) {
         float alpha = player.invulnerable > 0
             && (int)(player.invulnerable * 18) % 2 == 0 ? .45f : 1f;
         batch.setColor(1, 1, 1, alpha);
@@ -60,12 +59,12 @@ final class StudentSprite {
         batch.setColor(Color.WHITE);
     }
 
-    void drawPowerBall(SpriteBatch batch, CombatRoom.Shot shot) {
+    public void drawPowerBall(SpriteBatch batch, CombatRoom.Shot shot) {
         batch.draw(powerBall, shot.x - POWER_BALL_SIZE / 2,
             shot.y - POWER_BALL_SIZE / 2, POWER_BALL_SIZE, POWER_BALL_SIZE);
     }
 
-    void dispose() {
+    public void dispose() {
         idleLeft.dispose();
         idleRight.dispose();
         dispose(walkLeft);

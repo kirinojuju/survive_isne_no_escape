@@ -1,7 +1,7 @@
-package io.github.kirinojuju;
+package io.github.kirinojuju.player;
 
 /** One permanent choice earned after defeating an Ajarn. */
-enum Upgrade {
+public enum Upgrade {
     LAN_DAMAGE("LAN DAMAGE +7", "The cable hits harder."),
     NOTEBOOK_DAMAGE("NOTEBOOK DAMAGE +6", "Thrown notebooks hit harder."),
     ATTACK_SPEED("ATTACK SPEED +18%", "Both weapons attack faster."),
@@ -12,14 +12,14 @@ enum Upgrade {
     NOTEBOOK_POISON("NOTEBOOK: POISON", "Hits deal damage over 3 seconds."),
     NOTEBOOK_SPLASH("NOTEBOOK: SPLASH", "Hits burst into a small area attack.");
 
-    final String title, detail;
+    public final String title, detail;
 
     Upgrade(String title, String detail) {
         this.title = title;
         this.detail = detail;
     }
 
-    boolean available(PlayerCharacter player) {
+    public boolean available(PlayerCharacter player) {
         switch (this) {
             case LAN_SLOW: return !player.lanSlow;
             case LAN_AOE: return !player.lanAoE;
@@ -31,7 +31,7 @@ enum Upgrade {
         }
     }
 
-    void apply(PlayerCharacter player) {
+    public void apply(PlayerCharacter player) {
         switch (this) {
             case LAN_DAMAGE: player.physicalBonus += 7; break;
             case NOTEBOOK_DAMAGE: player.notebookBonus += 6; break;

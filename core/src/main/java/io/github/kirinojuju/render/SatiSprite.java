@@ -1,14 +1,14 @@
-package io.github.kirinojuju;
+package io.github.kirinojuju.render;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
+import io.github.kirinojuju.combat.CombatRoom;
 import java.util.Locale;
 
 /** Sati's C++ element, transformation animation, and thrown spear art. */
-final class SatiSprite {
+public final class SatiSprite {
     private static final String ROOT = "characters/boss/Tprogram(Sati)/skill/cpp_element/";
     private static final float ELEMENT_SIZE = 92;
     private static final float SPEAR_SIZE = 96;
@@ -18,9 +18,7 @@ final class SatiSprite {
     private final TextureRegion spearRegion = new TextureRegion(spear);
 
     private static Texture load(String name) {
-        Texture texture = new Texture(Gdx.files.internal(ROOT + name));
-        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        return texture;
+        return OptionalAssetTexture.load(ROOT + name);
     }
 
     private static Texture[] loadFrames(String prefix, int count) {
@@ -30,7 +28,7 @@ final class SatiSprite {
         return frames;
     }
 
-    void drawElement(SpriteBatch batch, CombatRoom.Enemy boss) {
+    public void drawElement(SpriteBatch batch, CombatRoom.Enemy boss) {
         Texture frame;
         if (boss.satiCharge > 0) {
             float progress = 1 - boss.satiCharge / CombatRoom.SATI_CHARGE_DURATION;
@@ -46,7 +44,7 @@ final class SatiSprite {
             ELEMENT_SIZE, ELEMENT_SIZE);
     }
 
-    void drawSpear(SpriteBatch batch, CombatRoom.Shot shot) {
+    public void drawSpear(SpriteBatch batch, CombatRoom.Shot shot) {
         float rotation = MathUtils.atan2(shot.vy, shot.vx)
             * MathUtils.radiansToDegrees + 90;
         batch.draw(spearRegion, shot.x - SPEAR_SIZE / 2,
@@ -54,7 +52,7 @@ final class SatiSprite {
             SPEAR_SIZE, SPEAR_SIZE, 1, 1, rotation);
     }
 
-    void dispose() {
+    public void dispose() {
         for (Texture frame : idle) frame.dispose();
         for (Texture frame : transform) frame.dispose();
         spear.dispose();

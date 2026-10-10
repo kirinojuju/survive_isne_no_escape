@@ -1,67 +1,86 @@
-package io.github.kirinojuju;
+package io.github.kirinojuju.player;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.MathUtils;
+import io.github.kirinojuju.audio.GameAudio;
+import io.github.kirinojuju.combat.CombatRoom;
+import io.github.kirinojuju.weapon.LanWeaponAttack;
+import io.github.kirinojuju.weapon.NotebookWeaponAttack;
+import io.github.kirinojuju.weapon.WeaponAbility;
+import io.github.kirinojuju.weapon.WeaponAttack;
+import io.github.kirinojuju.world.GameSpace;
+import io.github.kirinojuju.world.RoomObstacles;
 
 /** Player movement, resources, weapon ownership and attacks. */
-final class PlayerCharacter {
-    static final float SKILL_ANIMATION_DURATION = .72f;
-    static final float SKILL_SP_COST = 30f;
-    static final float LAN_SWING_DURATION = .25f;
-    static final float LAN_REACH = 125f;
-    static final float LAN_ATTACK_INTERVAL = .44f;
-    static final float NOTEBOOK_ATTACK_INTERVAL = .28f;
-    static final float NOTEBOOK_BEAM_INTERVAL = .65f;
+public final class PlayerCharacter {
+    public static final float SKILL_ANIMATION_DURATION = .72f;
+    public static final float SKILL_SP_COST = 30f;
+    public static final float LAN_SWING_DURATION = .25f;
+    public static final float LAN_REACH = 125f;
+    public static final float LAN_ATTACK_INTERVAL = .44f;
+    public static final float NOTEBOOK_ATTACK_INTERVAL = .28f;
+    public static final float NOTEBOOK_BEAM_INTERVAL = .65f;
     private static final float SKILL_RELEASE_TIME = .4f;
     private static final float SKILL_COOLDOWN = 2f;
     private static final float EDGE_X = 30, EDGE_Y = 64;
-    enum Weapon { PHYSICAL, MAGICAL }
+    public enum Weapon { PHYSICAL, MAGICAL }
 
-    float x = GameSpace.WIDTH / 2, y = GameSpace.HEIGHT / 2;
-    float faceX = 1, faceY = 0;
-    float swingFaceX = 1, swingFaceY = 0;
-    float hp = 100, maxHp = 100, sp = 100;
-    float physicalBonus, magicalBonus, notebookBonus, speedBonus;
-    float attackSpeedBonus, skillDamageBonus;
-    boolean lanSlow, lanAoE, lanTether;
-    boolean notebookPoison, notebookSplash, notebookHeatBeam;
-    float notebookHeat;
-    float attackTimer, dashTimer, invulnerable, swingTimer;
-    float slowTime;
-    float walkTime, skillTime, skillCooldown;
-    float boundTime, bindImmunity;
-    int bindProgress, lastBindDirection;
-    boolean moving, facingRight = true, skillPlaying, skillReleased;
+    public float x = GameSpace.WIDTH / 2, y = GameSpace.HEIGHT / 2;
+    public float faceX = 1, faceY = 0;
+    public float swingFaceX = 1, swingFaceY = 0;
+    public float hp = 100, maxHp = 100, sp = 100;
+    public float physicalBonus, magicalBonus, notebookBonus, speedBonus;
+    public float attackSpeedBonus, skillDamageBonus;
+    public boolean lanSlow, lanAoE, lanTether;
+    public boolean notebookPoison, notebookSplash, notebookHeatBeam;
+    public float notebookHeat;
+    public float attackTimer, dashTimer, invulnerable, swingTimer;
+    public float slowTime;
+    public float walkTime, skillTime, skillCooldown;
+    public float boundTime, bindImmunity;
+    public int bindProgress, lastBindDirection;
+    public boolean moving, facingRight = true, skillPlaying, skillReleased;
     private CombatRoom.Enemy skillTarget;
     private CombatRoom.Enemy attackTarget;
     private GameAudio audio;
     private final boolean[] owned = new boolean[Weapon.values().length];
+    private final WeaponAttack[] attacks = {new LanWeaponAttack(), new NotebookWeaponAttack()};
     private Weapon active;
+    private boolean horizontalOnly;
+    private RoomObstacles obstacles;
 
-    Weapon activeWeapon() { return active; }
-    boolean owns(Weapon weapon) { return owned[weapon.ordinal()]; }
-    boolean hasBothWeapons() { return owns(Weapon.PHYSICAL) && owns(Weapon.MAGICAL); }
-    CombatRoom.Enemy attackTarget() {
+    public Weapon activeWeapon() { return active; }
+    public boolean owns(Weapon weapon) { return owned[weapon.ordinal()]; }
+    public boolean hasBothWeapons() { return owns(Weapon.PHYSICAL) && owns(Weapon.MAGICAL); }
+    public CombatRoom.Enemy attackTarget() {
         return attackTarget != null && attackTarget.hp > 0 ? attackTarget : null;
     }
-    void setAudio(GameAudio audio) { this.audio = audio; }
+    public void setAudio(GameAudio audio) { this.audio = audio; }
+    public void setObstacles(RoomObstacles obstacles) { this.obstacles = obstacles; }
 
-    void acquire(Weapon weapon) {
+    /** Teammates can attach an ability to one weapon without changing input handling. */
+    public void addWeaponAbility(Weapon weapon, WeaponAbility ability) {
+        attacks[weapon.ordinal()].addAbility(ability);
+    }
+
+    public void acquire(Weapon weapon) {
         owned[weapon.ordinal()] = true;
         active = weapon;
     }
 
-    void switchTo(Weapon weapon) {
+    public void switchTo(Weapon weapon) {
         if (owns(weapon) && active != weapon) {
             active = weapon;
             if (audio != null) audio.weaponSwitch();
         }
     }
 
-    void startRoom() {
+    public void startRoom(boolean horizontalOnly) {
+        obstacles = null;
+        this.horizontalOnly = horizontalOnly;
         x = GameSpace.WIDTH / 2;
-        y = GameSpace.HEIGHT / 2;
+        y = horizontalOnly ? GameSpace.SERVER_PLAYER_Y : GameSpace.HEIGHT / 2;
         sp = Math.min(100, sp + 30);
         invulnerable = .9f;
         attackTimer = 0;
@@ -73,13 +92,13 @@ final class PlayerCharacter {
         skillTarget = attackTarget = null;
     }
 
-    void setExTechniques(boolean enabled) {
+    public void setExTechniques(boolean enabled) {
         lanTether = enabled;
         notebookHeatBeam = enabled;
         notebookHeat = 0;
     }
 
-    void update(float dt, CombatRoom combat, boolean touchSkill, boolean mouseAttack) {
+    public void update(float dt, CombatRoom combat, boolean touchSkill, boolean mouseAttack) {
         attackTimer = Math.max(0, attackTimer - dt);
         dashTimer = Math.max(0, dashTimer - dt);
         invulnerable = Math.max(0, invulnerable - dt);
@@ -124,6 +143,7 @@ final class PlayerCharacter {
         if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) dx++;
         if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) dy--;
         if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) dy++;
+        if (horizontalOnly) dy = 0;
         float length = (float)Math.sqrt(dx * dx + dy * dy);
         moving = length > 0;
         if (length > 0) {
@@ -146,23 +166,42 @@ final class PlayerCharacter {
         if (attacking && attackTimer <= 0) attack(combat);
     }
 
-    boolean dash(float directionX, float directionY) {
+    public boolean dash(float directionX, float directionY) {
         if (dashTimer > 0 || sp < 25) return false;
-        moveBy(directionX * 115, directionY * 115);
+        if (horizontalOnly) {
+            directionX = Math.abs(directionX) > .001f
+                ? Math.signum(directionX) : facingRight ? 1 : -1;
+            directionY = 0;
+        }
+        float dx = directionX * 115, dy = directionY * 115;
+        if (obstacles != null) {
+            float hit = obstacles.hitFraction(x, y, x + dx, y + dy, 17);
+            if (hit >= 0) {
+                float fraction = Math.max(0, hit - .001f);
+                dx *= fraction;
+                dy *= fraction;
+            }
+        }
+        moveBy(dx, dy);
         sp -= 25;
         dashTimer = .75f;
         invulnerable = Math.max(invulnerable, .22f);
         return true;
     }
 
-    void moveBy(float dx, float dy) {
-        x = MathUtils.clamp(x + dx,
+    public void moveBy(float dx, float dy) {
+        float nextX = MathUtils.clamp(x + dx,
             GameSpace.LEFT + EDGE_X, GameSpace.RIGHT - EDGE_X);
-        y = MathUtils.clamp(y + dy,
-            GameSpace.BOTTOM + EDGE_Y, GameSpace.WALK_TOP - EDGE_Y);
+        if (obstacles != null) nextX = obstacles.moveX(x, y, nextX - x, 17);
+        x = nextX;
+        float nextY = horizontalOnly ? GameSpace.SERVER_PLAYER_Y
+            : MathUtils.clamp(y + dy,
+                GameSpace.BOTTOM + EDGE_Y, GameSpace.WALK_TOP - EDGE_Y);
+        if (obstacles != null) nextY = obstacles.moveY(x, y, nextY - y, 17);
+        y = nextY;
     }
 
-    void lockAttackTarget(CombatRoom combat, float aimX, float aimY) {
+    public void lockAttackTarget(CombatRoom combat, float aimX, float aimY) {
         attackTarget = null;
         CombatRoom.Enemy pointed = combat.closestEnemy(aimX, aimY);
         if (pointed != null) {
@@ -194,40 +233,11 @@ final class PlayerCharacter {
         if (Math.abs(dx) > .001f) facingRight = dx > 0;
     }
 
-    void attack(CombatRoom combat) {
-        if (active == Weapon.PHYSICAL) {
-            attackTimer = LAN_ATTACK_INTERVAL / (1 + attackSpeedBonus);
-            swingTimer = LAN_SWING_DURATION;
-            swingFaceX = faceX;
-            swingFaceY = faceY;
-            if (audio != null) audio.lanAttack();
-            combat.damageArc(x, y, swingFaceX, swingFaceY,
-                LAN_REACH + (lanAoE ? 35 : 0), lanAoE ? 85 : 65,
-                27 + physicalBonus, lanSlow, lanTether);
-        } else if (active == Weapon.MAGICAL && sp >= 10) {
-            sp -= 10;
-            CombatRoom.Enemy target = attackTarget();
-            float dx = target == null ? faceX : target.x - x;
-            float dy = target == null ? faceY : target.y - y;
-            float length = Math.max(.001f, (float)Math.sqrt(dx * dx + dy * dy));
-            if (notebookHeatBeam && notebookHeat >= 100) {
-                notebookHeat = 0;
-                attackTimer = NOTEBOOK_BEAM_INTERVAL / (1 + attackSpeedBonus);
-                combat.fireNotebookBeam(x, y, dx / length, dy / length,
-                    62 + magicalBonus + notebookBonus, notebookPoison);
-                if (audio != null) audio.skillImpact();
-            } else {
-                attackTimer = NOTEBOOK_ATTACK_INTERVAL / (1 + attackSpeedBonus);
-                if (notebookHeatBeam) notebookHeat = Math.min(100, notebookHeat + 25);
-                combat.fireFriendly(x, y, dx / length * 540, dy / length * 540,
-                    20 + magicalBonus + notebookBonus, target,
-                    notebookPoison, notebookSplash);
-                if (audio != null) audio.notebookAttack();
-            }
-        }
+    public void attack(CombatRoom combat) {
+        if (active != null) attacks[active.ordinal()].attack(this, combat, audio);
     }
 
-    boolean tryStartSkill(CombatRoom combat) {
+    public boolean tryStartSkill(CombatRoom combat) {
         if (skillPlaying || skillCooldown > 0 || sp < SKILL_SP_COST) return false;
         skillTarget = combat.closestEnemy(x, y);
         if (skillTarget == null) return false;
@@ -244,7 +254,7 @@ final class PlayerCharacter {
         return true;
     }
 
-    void advanceSkill(float dt, CombatRoom combat) {
+    public void advanceSkill(float dt, CombatRoom combat) {
         if (!skillPlaying) return;
         faceSkillTarget(combat);
         skillTime += dt;
@@ -272,16 +282,16 @@ final class PlayerCharacter {
         if (Math.abs(dx) > .001f) facingRight = dx > 0;
     }
 
-    void hurt(float damage) {
+    public void hurt(float damage) {
         if (invulnerable > 0) return;
         hp = Math.max(0, hp - damage);
         if (audio != null) audio.hit(false);
         invulnerable = .65f;
     }
 
-    boolean isBound() { return boundTime > 0; }
+    public boolean isBound() { return boundTime > 0; }
 
-    void bind(float duration) {
+    public void bind(float duration) {
         if (boundTime > 0 || bindImmunity > 0) return;
         boundTime = duration;
         bindProgress = 0;
@@ -289,7 +299,7 @@ final class PlayerCharacter {
         moving = false;
     }
 
-    void escapePress(int direction) {
+    public void escapePress(int direction) {
         if (boundTime <= 0 || (direction != -1 && direction != 1)) return;
         if (direction != lastBindDirection) {
             bindProgress++;
@@ -305,10 +315,10 @@ final class PlayerCharacter {
         bindImmunity = 1.2f;
     }
 
-    void heal(float amount) { hp = Math.min(maxHp, hp + amount); }
-    void recoverSp(float amount) { sp = Math.min(100, sp + amount); }
+    public void heal(float amount) { hp = Math.min(maxHp, hp + amount); }
+    public void recoverSp(float amount) { sp = Math.min(100, sp + amount); }
 
-    void applyExBuff(int exId) {
+    public void applyExBuff(int exId) {
         if (exId == 0) {
             maxHp += 25;
             heal(45);

@@ -1,39 +1,68 @@
-package io.github.kirinojuju;
+package io.github.kirinojuju.flow;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import io.github.kirinojuju.audio.GameAudio;
+import io.github.kirinojuju.combat.CombatRoom;
+import io.github.kirinojuju.player.PlayerCharacter;
+import io.github.kirinojuju.player.Upgrade;
+import io.github.kirinojuju.world.EntranceScene;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Random;
 
 /** Menu, room transitions, loop completion and EX rewards. */
-final class RunDirector {
-    enum Phase { START_SELECT, ENTRANCE, CAR_PROMPT, CAR_ENDING,
-        FIGHT, UPGRADE, TRANSITION, GAME_OVER }
-    enum Room { MOBS, BOSS, EX }
+public final class RunDirector {
+    public enum Phase { START_SELECT, ENTRANCE, CAR_PROMPT, CAR_ENDING,
+        FIGHT, UPGRADE, TRANSITION, CUTSCENE, GAME_OVER }
+    public enum Room { MOBS, BOSS, EX, FINAL_EXAM }
     private static final float SCENE_FADE_DURATION = .4f;
+    public static final int MONSTER_CLEAR_HEAL = 12;
+    public static final int BOSS_CLEAR_HEAL = 35;
 
-    final RunPlan plan;
-    Phase phase = Phase.START_SELECT;
-    Room room = Room.MOBS;
-    Room nextRoom = Room.MOBS;
-    int exId, clearedRooms;
-    String transitionTitle = "", transitionDetail = "";
-    float sceneFade;
-    final Upgrade[] offeredUpgrades = new Upgrade[3];
+    public final RunPlan plan;
+    public Phase phase = Phase.START_SELECT;
+    public Room room = Room.MOBS;
+    public Room nextRoom = Room.MOBS;
+    public int exId, clearedRooms;
+    public String transitionTitle = "", transitionDetail = "";
+    public float sceneFade;
+    public final Upgrade[] offeredUpgrades = new Upgrade[3];
     private boolean nextLoopOnContinue;
+    private boolean finalExamQueued, finalExamCleared;
+    private Room roomAfterFinalExam = Room.MOBS;
+    private boolean nextLoopAfterFinalExam;
     private Phase fadeDestination;
     private final Random random;
     private GameAudio audio;
 
-    RunDirector(Random random) {
+    public RunDirector(Random random) {
         this.random = random;
         plan = new RunPlan(random);
     }
-    void setAudio(GameAudio audio) { this.audio = audio; }
+    public void setAudio(GameAudio audio) { this.audio = audio; }
+
+    /** Desktop test entry: skip progression and keep the real cutscene and fight. */
+    public void startFinalExamTest(PlayerCharacter player) {
+        plan.recordBossDefeat(RunPlan.AE_ID);
+        plan.recordBossDefeat(RunPlan.FAR_ID);
+        plan.recordBossDefeat(RunPlan.DOME_ID);
+        player.acquire(PlayerCharacter.Weapon.PHYSICAL);
+        player.acquire(PlayerCharacter.Weapon.MAGICAL);
+        finalExamQueued = true;
+        nextRoom = Room.FINAL_EXAM;
+        phase = Phase.CUTSCENE;
+    }
+
+    /** Desktop test entry: start directly in a real monster room with tables. */
+    public void startObstaclesTest(PlayerCharacter player, CombatRoom combat) {
+        player.acquire(PlayerCharacter.Weapon.MAGICAL);
+        player.acquire(PlayerCharacter.Weapon.PHYSICAL);
+        beginRoom(Room.MOBS, player, combat);
+    }
 
     /** Returns true when the player requests a fresh run. */
-    boolean update(float dt, PlayerCharacter player, CombatRoom combat,
+    public boolean update(float dt, PlayerCharacter player, CombatRoom combat,
                    boolean touchSkill, boolean mouseAttack) {
         if (advanceSceneFade(dt, player, combat)) return false;
         if (phase == Phase.GAME_OVER)
@@ -89,6 +118,12 @@ final class RunDirector {
             return false;
         }
 
+        if (phase == Phase.CUTSCENE) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER))
+                continueAfterCutscene(player, combat);
+            return false;
+        }
+
         player.update(dt, combat, touchSkill, mouseAttack);
         boolean cleared = combat.update(dt, player, plan);
         if (player.hp <= 0) phase = Phase.GAME_OVER;
@@ -96,19 +131,19 @@ final class RunDirector {
         return false;
     }
 
-    void startRun(PlayerCharacter player, CombatRoom combat) {
+    public void startRun(PlayerCharacter player, CombatRoom combat) {
         if (phase != Phase.START_SELECT) return;
         if (audio != null) audio.click();
         fadeDestination = Phase.ENTRANCE;
     }
 
-    void requestDoor(PlayerCharacter player) {
+    public void requestDoor(PlayerCharacter player) {
         if (phase != Phase.ENTRANCE || sceneFade > 0 || fadeDestination != null
             || !EntranceScene.atDoor(player)) return;
         fadeDestination = Phase.FIGHT;
     }
 
-    void openCarPrompt(PlayerCharacter player) {
+    public void openCarPrompt(PlayerCharacter player) {
         if (phase != Phase.ENTRANCE || sceneFade > 0 || fadeDestination != null
             || !EntranceScene.atCar(player)) return;
         player.moving = false;
@@ -116,14 +151,14 @@ final class RunDirector {
         if (audio != null) audio.click();
     }
 
-    void chooseCar(boolean goHome) {
+    public void chooseCar(boolean goHome) {
         if (phase != Phase.CAR_PROMPT || fadeDestination != null) return;
         if (audio != null) audio.click();
         if (goHome) fadeDestination = Phase.CAR_ENDING;
         else phase = Phase.ENTRANCE;
     }
 
-    boolean advanceSceneFade(float dt, PlayerCharacter player, CombatRoom combat) {
+    public boolean advanceSceneFade(float dt, PlayerCharacter player, CombatRoom combat) {
         if (fadeDestination != null) {
             sceneFade = Math.min(1, sceneFade + dt / SCENE_FADE_DURATION);
             if (sceneFade == 1) {
@@ -148,7 +183,7 @@ final class RunDirector {
         return false;
     }
 
-    void chooseUpgrade(int index, PlayerCharacter player, CombatRoom combat) {
+    public void chooseUpgrade(int index, PlayerCharacter player, CombatRoom combat) {
         if (phase != Phase.UPGRADE || index < 0 || index >= offeredUpgrades.length) return;
         Upgrade choice = offeredUpgrades[index];
         if (choice == null || !choice.available(player)) return;
@@ -158,8 +193,12 @@ final class RunDirector {
         continueAfterRoom(player, combat);
     }
 
-    void continueAfterRoom(PlayerCharacter player, CombatRoom combat) {
+    public void continueAfterRoom(PlayerCharacter player, CombatRoom combat) {
         if (phase != Phase.TRANSITION) return;
+        if (nextRoom == Room.FINAL_EXAM) {
+            phase = Phase.CUTSCENE;
+            return;
+        }
         if (nextLoopOnContinue) {
             plan.nextLoop();
             nextLoopOnContinue = false;
@@ -168,49 +207,80 @@ final class RunDirector {
         beginRoom(nextRoom, player, combat);
     }
 
+    public void continueAfterCutscene(PlayerCharacter player, CombatRoom combat) {
+        if (phase != Phase.CUTSCENE) return;
+        if (audio != null) audio.nextStage();
+        beginRoom(Room.FINAL_EXAM, player, combat);
+    }
+
     private void beginRoom(Room next, PlayerCharacter player, CombatRoom combat) {
         room = next;
         phase = Phase.FIGHT;
-        player.startRoom();
+        player.startRoom(next == Room.FINAL_EXAM);
         player.setExTechniques(next == Room.EX);
         combat.begin(room, plan, exId);
+        player.setObstacles(combat.obstacles);
         sceneFade = 1;
     }
 
-    void finishRoom(PlayerCharacter player) {
+    public void finishRoom(PlayerCharacter player) {
         clearedRooms++;
         phase = Phase.TRANSITION;
-        if (room == Room.MOBS) {
-            transitionTitle = "MONSTER ROOM CLEARED";
-            transitionDetail = "The Ajarn is waiting in the next room.";
-            nextRoom = Room.BOSS;
-            return;
+        switch (room) {
+            case MOBS:
+                player.heal(MONSTER_CLEAR_HEAL);
+                transitionTitle = "MONSTER ROOM CLEARED";
+                transitionDetail = "+" + MONSTER_CLEAR_HEAL + " HP  |  The Ajarn is waiting in the next room.";
+                nextRoom = Room.BOSS;
+                break;
+            case BOSS:
+                finishBossRoom(player);
+                break;
+            case EX:
+                finishExRoom(player);
+                break;
+            case FINAL_EXAM:
+                finalExamQueued = false;
+                finalExamCleared = true;
+                transitionTitle = "FINAL EXAM CLEARED";
+                transitionDetail = "Ae, Far and Dome defeated together.";
+                nextRoom = roomAfterFinalExam;
+                nextLoopOnContinue = nextLoopAfterFinalExam;
+                break;
+        }
+    }
+
+    private void finishBossRoom(PlayerCharacter player) {
+        String defeated = plan.bossName();
+        plan.recordBossDefeat(plan.bossId());
+        player.heal(BOSS_CLEAR_HEAL);
+        if (!plan.completeStage()) {
+            transitionTitle = defeated + " DEFEATED";
+            transitionDetail = "Next stage: " + plan.stageName() + "  |  +" + BOSS_CLEAR_HEAL + " HP";
+            nextRoom = Room.MOBS;
+        } else if (plan.hasExAfterYear()) {
+            exId = plan.randomExId();
+            transitionTitle = "YEAR FOUR COMPLETE - LOOP " + plan.loop();
+            transitionDetail = "EX: " + RunPlan.EX_MONSTERS[exId]
+                + "  |  Tether + Heat Beam active only in this fight";
+            nextRoom = Room.EX;
+        } else {
+            transitionTitle = "YEAR FOUR COMPLETE - LOOP " + plan.loop();
+            transitionDetail = "A harder school year begins.  |  +" + BOSS_CLEAR_HEAL + " HP";
+            nextRoom = Room.MOBS;
+            nextLoopOnContinue = true;
         }
 
-        if (room == Room.BOSS) {
-            String defeated = plan.bossName();
-            player.heal(24);
-            if (!plan.completeStage()) {
-                transitionTitle = defeated + " DEFEATED";
-                transitionDetail = "Next stage: " + plan.stageName() + "  |  +24 HP";
-                nextRoom = Room.MOBS;
-            } else if (plan.hasExAfterYear()) {
-                exId = plan.randomExId();
-                transitionTitle = "YEAR FOUR COMPLETE - LOOP " + plan.loop();
-                transitionDetail = "EX: " + RunPlan.EX_MONSTERS[exId]
-                    + "  |  Tether + Heat Beam active only in this fight";
-                nextRoom = Room.EX;
-            } else {
-                transitionTitle = "YEAR FOUR COMPLETE - LOOP " + plan.loop();
-                nextRoom = Room.MOBS;
-                transitionDetail = "A harder school year begins.  |  +24 HP";
-                nextLoopOnContinue = true;
-            }
-            offerUpgrades(player);
-            phase = Phase.UPGRADE;
-            return;
+        offerUpgrades(player);
+        phase = Phase.UPGRADE;
+        if (plan.finalExamReady() && !finalExamQueued && !finalExamCleared) {
+            finalExamQueued = true;
+            // Let the player reach the introductory EX before the three-boss exam.
+            if (plan.loop() > 1 && nextRoom != Room.EX) queueFinalExam();
         }
+    }
 
+    private void finishExRoom(PlayerCharacter player) {
         player.setExTechniques(false);
         player.applyExBuff(exId);
         transitionTitle = RunPlan.EX_MONSTERS[exId].toUpperCase() + " DEFEATED";
@@ -219,6 +289,14 @@ final class RunDirector {
         else transitionDetail = "Insecure Sword buff: +8 physical / +6 magic damage, +20 HP.";
         nextRoom = Room.MOBS;
         nextLoopOnContinue = true;
+        if (finalExamQueued) queueFinalExam();
+    }
+
+    private void queueFinalExam() {
+        roomAfterFinalExam = nextRoom;
+        nextLoopAfterFinalExam = nextLoopOnContinue;
+        nextRoom = Room.FINAL_EXAM;
+        nextLoopOnContinue = false;
     }
 
     private void offerUpgrades(PlayerCharacter player) {

@@ -2,16 +2,27 @@ package io.github.kirinojuju;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import io.github.kirinojuju.audio.GameAudio;
+import io.github.kirinojuju.combat.CombatRoom;
+import io.github.kirinojuju.flow.RunDirector;
+import io.github.kirinojuju.player.PlayerCharacter;
+import io.github.kirinojuju.render.GameRenderer;
 import java.util.Random;
 
 /** Desktop game entry point. Each gameplay area lives in its own class. */
 public class schoolLife extends ApplicationAdapter {
+    public enum TestMode { NONE, FINAL_EXAM, OBSTACLES }
     private final Random random = new Random();
+    private final TestMode testMode;
     private PlayerCharacter player;
     private CombatRoom combat;
     private RunDirector run;
     private GameRenderer renderer;
     private GameAudio audio;
+
+    public schoolLife() { this(TestMode.NONE); }
+
+    public schoolLife(TestMode testMode) { this.testMode = testMode; }
 
     @Override
     public void create() {
@@ -27,6 +38,8 @@ public class schoolLife extends ApplicationAdapter {
         player.setAudio(audio);
         combat.setAudio(audio);
         run.setAudio(audio);
+        if (testMode == TestMode.FINAL_EXAM) run.startFinalExamTest(player);
+        else if (testMode == TestMode.OBSTACLES) run.startObstaclesTest(player, combat);
     }
 
     @Override

@@ -1,5 +1,6 @@
 ## Gradle:
 .gradle/
+.gradle-user/
 gradle-app.setting
 /build/
 /android/build/
@@ -156,7 +157,8 @@ Thumbs.db
 /assets/assets.txt
 
 ## Local game assets and generated IDE output are excluded from this repository:
-/assets/
+/assets/*
+!/assets/.gitkeep
 /core/bin/
 /lwjgl3/bin/
 /lwjgl3/icons/

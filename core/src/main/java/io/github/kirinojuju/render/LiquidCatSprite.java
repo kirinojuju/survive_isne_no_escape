@@ -1,13 +1,13 @@
-package io.github.kirinojuju;
+package io.github.kirinojuju.render;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
+import io.github.kirinojuju.combat.CombatRoom;
 import java.util.Locale;
 
 /** The team's separate Liquid Cat animation and attack frames. */
-final class LiquidCatSprite {
+public final class LiquidCatSprite {
     private static final float DRAW_SIZE = 128;
     private static final float SMALL_DRAW_SIZE = 96;
     private static final float BULLET_SIZE = 128;
@@ -25,9 +25,7 @@ final class LiquidCatSprite {
     private final Texture bullet = load("attack/liquid_bullet.png");
 
     private static Texture load(String name) {
-        Texture texture = new Texture(Gdx.files.internal(ROOT + name));
-        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        return texture;
+        return OptionalAssetTexture.load(ROOT + name);
     }
 
     private static Texture[] loadFrames(String prefix, int first, int count) {
@@ -45,7 +43,7 @@ final class LiquidCatSprite {
         return frames[index];
     }
 
-    void draw(SpriteBatch batch, CombatRoom.Enemy cat) {
+    public void draw(SpriteBatch batch, CombatRoom.Enemy cat) {
         Texture frame;
         if (cat.catTransformTime > 0) {
             float progress = 1 - MathUtils.clamp(cat.catTransformTime
@@ -75,12 +73,12 @@ final class LiquidCatSprite {
                 cat.exAimY - DRAW_SIZE / 2, DRAW_SIZE, DRAW_SIZE);
     }
 
-    void drawBullet(SpriteBatch batch, CombatRoom.Shot shot) {
+    public void drawBullet(SpriteBatch batch, CombatRoom.Shot shot) {
         batch.draw(bullet, shot.x - BULLET_SIZE / 2, shot.y - BULLET_SIZE / 2,
             BULLET_SIZE, BULLET_SIZE);
     }
 
-    void dispose() {
+    public void dispose() {
         dispose(idleLeft);
         dispose(idleRight);
         dispose(smallIdle);

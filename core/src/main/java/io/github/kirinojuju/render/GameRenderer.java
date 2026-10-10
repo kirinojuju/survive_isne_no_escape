@@ -1,4 +1,4 @@
-package io.github.kirinojuju;
+package io.github.kirinojuju.render;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -10,13 +10,30 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
+import io.github.kirinojuju.combat.CombatRoom;
+import io.github.kirinojuju.enemy.boss.DomeBossBehavior;
+import io.github.kirinojuju.enemy.boss.AjarnBehavior;
+import io.github.kirinojuju.flow.RunDirector;
+import io.github.kirinojuju.flow.RunPlan;
+import io.github.kirinojuju.player.PlayerCharacter;
+import io.github.kirinojuju.player.Upgrade;
+import io.github.kirinojuju.weapon.NotebookWeaponAttack.NotebookSprite;
+import io.github.kirinojuju.world.EntranceScene;
+import io.github.kirinojuju.world.GameSpace;
+import io.github.kirinojuju.world.RoomObstacles.TableSprites;
 
 /** Arena, HUD and temporary enemy art; the player uses exported sprite frames. */
-final class GameRenderer {
+public final class GameRenderer {
     private static final float SKILL_X = 1138, SKILL_Y = 155, SKILL_RADIUS = 45;
+    // Drawing and clicking use the same car choice bounds.
+    private static final Rectangle CAR_TARGET = new Rectangle(825, 335, 199, 120);
+    private static final Rectangle CAR_YES_BUTTON = new Rectangle(300, 239, 315, 64);
+    private static final Rectangle CAR_NO_BUTTON = new Rectangle(665, 239, 315, 64);
+    private static final String CAR_ENDING_MESSAGE = "คุณเรียนไม่จบ 4 ปี ชีิวิตมันชั่งแสนสั้นจริงๆ";
     private static final Color INK = new Color(.09f, .12f, .18f, 1);
     private static final Color PAPER = new Color(.91f, .94f, .91f, 1);
     private static final Color CYAN = new Color(.36f, .85f, .86f, 1);
@@ -36,15 +53,20 @@ final class GameRenderer {
     private final BitmapFont bigFont = new BitmapFont();
     private final StudentSprite student = new StudentSprite();
     private final SatiSprite sati = new SatiSprite();
+    private final DomeSprite dome = new DomeSprite();
+    private final NotebookSprite notebook = new NotebookSprite();
+    private final TableSprites tables = new TableSprites();
     private final LiquidCatSprite liquidCat = new LiquidCatSprite();
+    private final InsecureSwordSprite insecureSword = new InsecureSwordSprite();
     private final Texture normalRoom = loadRoom("scene/sceneroom.png");
-    private final Texture bossRoom = loadRoom("scene/sceneroom_boss.png");
+    private final Texture emptyRoom = loadRoom("scene/sceneroom_not_table.png");
+    private final Texture serverRoom = loadRoom("scene/EX_Room/ServerRoom.png");
     private final Texture building30 = loadRoom("scene/scene30building_entrance_withoutcar.png");
     private final Texture carObject = loadRoom("scene/scene30bCar_object.png");
     private final Vector2 touchPosition = new Vector2();
     private boolean skillPressCaptured;
 
-    GameRenderer() {
+    public GameRenderer() {
         viewport.apply();
         camera.position.set(GameSpace.WIDTH / 2, GameSpace.HEIGHT / 2, 0);
         camera.update();
@@ -55,16 +77,22 @@ final class GameRenderer {
     }
 
     private static Texture loadRoom(String path) {
-        Texture texture = new Texture(Gdx.files.internal(path));
-        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        return texture;
+        return OptionalAssetTexture.load(path);
     }
 
-    void draw(RunDirector run, PlayerCharacter player, CombatRoom combat) {
+    public void draw(RunDirector run, PlayerCharacter player, CombatRoom combat) {
         ScreenUtils.clear(INK);
         camera.update();
         shapes.setProjectionMatrix(camera.combined);
         batch.setProjectionMatrix(camera.combined);
+        if (run.phase == RunDirector.Phase.CUTSCENE) {
+            ScreenUtils.clear(0, 0, 0, 1);
+            batch.begin();
+            title("Good...Let's us prepare the final EXAM", 390);
+            line("Press ENTER to face Ae, Far and Dome", 325);
+            batch.end();
+            return;
+        }
         if (isEntrancePhase(run.phase)) {
             drawEntrance(run, player);
             drawSceneFade(run.sceneFade);
@@ -72,114 +100,132 @@ final class GameRenderer {
         }
         batch.begin();
         drawScene(run);
+        tables.draw(batch, combat.obstacles);
         batch.end();
+        drawCombatShapes(run, player, combat);
+
+        batch.begin();
+        if (run.phase == RunDirector.Phase.FIGHT) drawCombatSprites(run, player, combat);
+        drawCombatPanel(run, player, combat);
+        batch.end();
+        drawSceneFade(run.sceneFade);
+    }
+
+    private void drawCombatShapes(RunDirector run, PlayerCharacter player, CombatRoom combat) {
         shapes.begin(ShapeRenderer.ShapeType.Filled);
-        drawArena();
-        if (run.phase != RunDirector.Phase.START_SELECT) {
-            for (CombatRoom.Enemy enemy : combat.enemies)
-                if (enemy.kind == RunPlan.TALGO_ID && enemy.hp > 0
-                    && (enemy.talgoCharge > 0 || enemy.talgoFlashTime > 0))
-                    drawTalgoWarning(enemy);
-            for (CombatRoom.Shot shot : combat.shots) {
-                if (shot.powerBall || shot.satiSpear || shot.liquidCatBullet) continue;
-                if (shot.wave) {
-                    shapes.setColor(BLUE);
-                    shapes.circle(shot.x, shot.y, shot.radius, 28);
-                    shapes.setColor(INK);
-                    shapes.circle(shot.x, shot.y, Math.max(0, shot.radius - 7), 28);
-                } else if (shot.giant) {
-                    shapes.setColor(CORAL);
-                    shapes.circle(shot.x, shot.y, shot.radius, 36);
-                    shapes.setColor(GOLD);
-                    shapes.circle(shot.x, shot.y, shot.radius * .58f, 30);
-                } else {
-                    shapes.setColor(shot.binding ? CYAN : shot.reflected ? PURPLE
-                        : shot.friendly ? CYAN : GOLD);
-                    shapes.rect(shot.x - shot.radius, shot.y - shot.radius,
-                        shot.radius * 2, shot.radius * 2);
-                }
+        drawArena(run.room);
+        for (CombatRoom.Enemy enemy : combat.enemies)
+            if (enemy.kind == RunPlan.TALGO_ID && enemy.hp > 0
+                && (enemy.talgoCharge > 0 || enemy.talgoFlashTime > 0))
+                drawTalgoWarning(enemy);
+        for (CombatRoom.Shot shot : combat.shots) {
+            if (shot.powerBall || shot.satiSpear || shot.liquidCatBullet || shot.notebook) continue;
+            if (shot.wave) {
+                shapes.setColor(BLUE);
+                shapes.circle(shot.x, shot.y, shot.radius, 28);
+                shapes.setColor(INK);
+                shapes.circle(shot.x, shot.y, Math.max(0, shot.radius - 7), 28);
+            } else if (shot.giant) {
+                shapes.setColor(CORAL);
+                shapes.circle(shot.x, shot.y, shot.radius, 36);
+                shapes.setColor(GOLD);
+                shapes.circle(shot.x, shot.y, shot.radius * .58f, 30);
+            } else {
+                shapes.setColor(shot.binding ? CYAN : shot.reflected ? PURPLE
+                    : shot.friendly ? CYAN : GOLD);
+                shapes.rect(shot.x - shot.radius, shot.y - shot.radius,
+                    shot.radius * 2, shot.radius * 2);
             }
-            if (combat.blastTime > 0) drawPowerBlast(combat);
-            if (combat.splashTime > 0) drawNotebookSplash(combat);
-            if (combat.beamTime > 0) drawNotebookBeam(combat);
-            drawExObjects(combat);
-            for (CombatRoom.Enemy enemy : combat.enemies)
-                if (enemy.kind >= CombatRoom.LIQUID_CAT) drawExTelegraph(enemy);
-            for (CombatRoom.Enemy enemy : combat.enemies)
-                if (enemy.warpWindup > 0) drawWarpWarning(enemy);
-            for (CombatRoom.Enemy enemy : combat.enemies)
-                if (enemy.warpReturnTime > 0) drawBossWarpFlash(enemy);
-            for (CombatRoom.Enemy enemy : combat.enemies)
-                if (enemy.kind == 0 && enemy.satiCharge > 0) drawSatiWarning(enemy);
-            if (run.phase == RunDirector.Phase.FIGHT) drawAttackLock(player);
-            for (CombatRoom.Enemy enemy : combat.enemies) {
-                if (enemy.tetherTime > 0 && enemy.hp > 0) {
-                    shapes.setColor(CYAN);
-                    shapes.rectLine(player.x, player.y, enemy.x, enemy.y, 3);
-                }
-            }
-            for (CombatRoom.Enemy enemy : combat.enemies) drawEnemy(enemy);
-            drawAttackEffect(player);
-            drawBars(player);
-            if (run.phase == RunDirector.Phase.FIGHT) drawSkillButton(player);
         }
+        if (combat.blastTime > 0) drawPowerBlast(combat);
+        if (combat.splashTime > 0) drawNotebookSplash(combat);
+        if (combat.beamTime > 0) drawNotebookBeam(combat);
+        drawExObjects(combat);
+        for (CombatRoom.Enemy enemy : combat.enemies)
+            if (enemy.kind >= CombatRoom.LIQUID_CAT) drawExTelegraph(enemy);
+        for (CombatRoom.Enemy enemy : combat.enemies)
+            if (enemy.warpWindup > 0) drawWarpWarning(enemy);
+        for (CombatRoom.Enemy enemy : combat.enemies)
+            if (enemy.warpReturnTime > 0) drawBossWarpFlash(enemy);
+        for (CombatRoom.Enemy enemy : combat.enemies)
+            if (enemy.kind == 0 && enemy.satiCharge > 0) drawSatiWarning(enemy);
+        for (CombatRoom.Enemy enemy : combat.enemies)
+            if (enemy.kind == RunPlan.DOME_ID) drawDomeWarning(enemy);
+        if (run.phase == RunDirector.Phase.FIGHT) drawAttackLock(player);
+        for (CombatRoom.Enemy enemy : combat.enemies) {
+            if (enemy.tetherTime > 0 && enemy.hp > 0) {
+                shapes.setColor(CYAN);
+                shapes.rectLine(player.x, player.y, enemy.x, enemy.y, 3);
+            }
+        }
+        for (CombatRoom.Enemy enemy : combat.enemies)
+            drawEnemy(enemy, run.room == RunDirector.Room.FINAL_EXAM);
+        drawAttackEffect(player);
+        drawBars(player);
+        if (run.phase == RunDirector.Phase.FIGHT) drawSkillButton(player);
         if (run.phase != RunDirector.Phase.FIGHT) drawPanel();
         if (run.phase == RunDirector.Phase.UPGRADE) drawUpgradeChoices();
         shapes.end();
+    }
 
-        batch.begin();
-        if (run.phase == RunDirector.Phase.FIGHT) {
-            for (CombatRoom.Shot shot : combat.shots)
-                if (shot.powerBall) student.drawPowerBall(batch, shot);
-                else if (shot.satiSpear) sati.drawSpear(batch, shot);
-                else if (shot.liquidCatBullet) liquidCat.drawBullet(batch, shot);
+    private void drawCombatSprites(RunDirector run, PlayerCharacter player, CombatRoom combat) {
+        for (CombatRoom.Enemy enemy : combat.enemies)
+            if (enemy.kind == RunPlan.DOME_ID) dome.drawEffect(batch, enemy);
+        for (CombatRoom.Shot shot : combat.shots)
+            if (shot.powerBall) student.drawPowerBall(batch, shot);
+            else if (shot.satiSpear) sati.drawSpear(batch, shot);
+            else if (shot.liquidCatBullet) liquidCat.drawBullet(batch, shot);
+            else if (shot.notebook) notebook.drawShot(batch, shot);
+        for (CombatRoom.NotebookImpact impact : combat.notebookImpacts)
+            notebook.drawImpact(batch, impact);
+        for (CombatRoom.Enemy enemy : combat.enemies)
+            if (enemy.kind == 0) sati.drawElement(batch, enemy);
+            else if (enemy.kind == CombatRoom.LIQUID_CAT)
+                liquidCat.draw(batch, enemy);
+            else if (enemy.kind == CombatRoom.INSECURE_SWORD)
+                insecureSword.draw(batch, enemy);
+            else if (enemy.kind == RunPlan.DOME_ID) dome.draw(batch, enemy);
+        for (CombatRoom.Enemy enemy : combat.enemies) {
+            if (enemy.kind == CombatRoom.INSECURE_SWORD && enemy.exState == 3)
+                font.draw(batch, "0!", enemy.x - 12, enemy.y + 111);
+            else if (enemy.kind == CombatRoom.ALLERGIC_VACUUM
+                && enemy.exState == 2 && enemy.exFlashTime > 0)
+                font.draw(batch, "ACHOO!", enemy.x - 33, enemy.y + 91);
+        }
+        if (run.room == RunDirector.Room.FINAL_EXAM)
             for (CombatRoom.Enemy enemy : combat.enemies)
-                if (enemy.kind == 0) sati.drawElement(batch, enemy);
-                else if (enemy.kind == CombatRoom.LIQUID_CAT)
-                    liquidCat.draw(batch, enemy);
-            for (CombatRoom.Enemy enemy : combat.enemies) {
-                if (enemy.kind == CombatRoom.INSECURE_SWORD && enemy.exState == 3)
-                    font.draw(batch, "0!", enemy.x - 12, enemy.y + 91);
-                else if (enemy.kind == CombatRoom.ALLERGIC_VACUUM
-                    && enemy.exState == 2 && enemy.exFlashTime > 0)
-                    font.draw(batch, "ACHOO!", enemy.x - 33, enemy.y + 91);
-            }
-            student.draw(batch, player);
+                font.draw(batch, RunPlan.BOSSES[enemy.kind],
+                    enemy.x - 48, enemy.y + enemy.radius + 28);
+        student.draw(batch, player);
+    }
+
+    private void drawCombatPanel(RunDirector run, PlayerCharacter player, CombatRoom combat) {
+        if (player.activeWeapon() == PlayerCharacter.Weapon.MAGICAL)
+            notebook.drawIcon(batch, 36, 19);
+        drawHud(run, player, combat);
+        if (run.phase == RunDirector.Phase.FIGHT) {
+            font.draw(batch, "SKILL", SKILL_X - 29, SKILL_Y + 6);
+            font.draw(batch, "E", SKILL_X - 6, SKILL_Y - 16);
         }
-        if (run.phase == RunDirector.Phase.START_SELECT) {
-            title("SCHOOL LIFE: SURVIVE YEAR FOUR", 415);
-            line("Four stages, four Ajarns, and an endless school-life loop.", 330);
-            line("Start with BOTH weapons: LAN cable and notebook.", 285);
-            line("Switch during combat with Q, 1, or 2.", 250);
-            line("Press ENTER to begin.", 195);
-        } else {
-            drawHud(run, player, combat);
-            if (run.phase == RunDirector.Phase.FIGHT) {
-                font.draw(batch, "SKILL", SKILL_X - 29, SKILL_Y + 6);
-                font.draw(batch, "E", SKILL_X - 6, SKILL_Y - 16);
+        if (run.phase == RunDirector.Phase.TRANSITION) {
+            title(run.transitionTitle, 415);
+            line(run.transitionDetail, 340);
+            line("Press ENTER to continue", 260);
+        } else if (run.phase == RunDirector.Phase.UPGRADE) {
+            title("CHOOSE ONE UPGRADE", 435);
+            line(run.transitionTitle + "  |  +" + RunDirector.BOSS_CLEAR_HEAL + " HP", 390);
+            for (int i = 0; i < run.offeredUpgrades.length; i++) {
+                Upgrade upgrade = run.offeredUpgrades[i];
+                float y = 345 - i * 65;
+                line("[" + (i + 1) + "] " + upgrade.title, y);
+                line(upgrade.detail, y - 25);
             }
-            if (run.phase == RunDirector.Phase.TRANSITION) {
-                title(run.transitionTitle, 415);
-                line(run.transitionDetail, 340);
-                line("Press ENTER to continue", 260);
-            } else if (run.phase == RunDirector.Phase.UPGRADE) {
-                title("CHOOSE ONE UPGRADE", 435);
-                line(run.transitionTitle + "  |  +24 HP", 390);
-                for (int i = 0; i < run.offeredUpgrades.length; i++) {
-                    Upgrade upgrade = run.offeredUpgrades[i];
-                    float y = 345 - i * 65;
-                    line("[" + (i + 1) + "] " + upgrade.title, y);
-                    line(upgrade.detail, y - 25);
-                }
-            } else if (run.phase == RunDirector.Phase.GAME_OVER) {
-                title("SCHOOL LIFE OVER", 415);
-                line("You reached loop " + run.plan.loop() + ", stage "
-                    + (run.plan.stage() + 1) + " and cleared " + run.clearedRooms + " rooms.", 330);
-                line("Press R to start a new run", 260);
-            }
+        } else if (run.phase == RunDirector.Phase.GAME_OVER) {
+            title("SCHOOL LIFE OVER", 415);
+            line("You reached loop " + run.plan.loop() + ", stage "
+                + (run.plan.stage() + 1) + " and cleared " + run.clearedRooms + " rooms.", 330);
+            line("Press R to start a new run", 260);
         }
-        batch.end();
-        drawSceneFade(run.sceneFade);
     }
 
     private static boolean isEntrancePhase(RunDirector.Phase phase) {
@@ -190,71 +236,98 @@ final class GameRenderer {
     }
 
     private void drawEntrance(RunDirector run, PlayerCharacter player) {
-        batch.begin();
-        batch.draw(building30, EntranceScene.DRAW_X, EntranceScene.DRAW_Y,
-            EntranceScene.DRAW_SIZE, EntranceScene.DRAW_SIZE);
-        if (run.phase != RunDirector.Phase.CAR_ENDING)
-            batch.draw(carObject, EntranceScene.DRAW_X, EntranceScene.DRAW_Y,
-                EntranceScene.DRAW_SIZE, EntranceScene.DRAW_SIZE);
-        batch.end();
-
-        shapes.begin(ShapeRenderer.ShapeType.Filled);
-        if (run.phase == RunDirector.Phase.ENTRANCE) {
-            shapes.setColor(INK);
-            shapes.rect(EntranceScene.DRAW_X, 18,
-                EntranceScene.DRAW_SIZE, 51);
-            shapes.setColor(CYAN);
-            shapes.rect(349, 321, 82, 4);
-            shapes.triangle(343, 323, 358, 334, 358, 312);
-            shapes.setColor(GOLD);
-            shapes.rect(EntranceScene.CAR_X - 2, 459, 4, 25);
-            shapes.circle(EntranceScene.CAR_X, 487, 6, 16);
-        } else if (run.phase == RunDirector.Phase.CAR_PROMPT) {
-            shapes.setColor(INK);
-            shapes.rect(265, 207, 750, 285);
-            shapes.setColor(CYAN);
-            shapes.rect(265, 487, 750, 5);
-            shapes.setColor(GREEN);
-            shapes.rect(300, 239, 315, 64);
-            shapes.setColor(CORAL);
-            shapes.rect(665, 239, 315, 64);
-        } else if (run.phase == RunDirector.Phase.CAR_ENDING) {
-            drawPanel();
-        } else {
-            drawPanel();
+        if (run.phase == RunDirector.Phase.CAR_ENDING) {
+            drawCarEnding();
+            return;
         }
-        shapes.end();
-
+        drawEntranceBackground();
+        drawEntranceOverlay(run.phase);
         batch.begin();
         if (run.phase == RunDirector.Phase.ENTRANCE
             || run.phase == RunDirector.Phase.CAR_PROMPT)
             student.draw(batch, player);
-        if (run.phase == RunDirector.Phase.START_SELECT) {
-            title("SCHOOL LIFE: SURVIVE YEAR FOUR", 415);
-            line("Four stages, four Ajarns, and an endless school-life loop.", 330);
-            line("First stop: Building 30. One car. One suspiciously easy way out.", 285);
-            line("Press ENTER to begin.", 210);
-        } else if (run.phase == RunDirector.Phase.ENTRANCE) {
-            bigFont.draw(batch, "BUILDING 30", 30, 650);
-            font.draw(batch, "LEFT DOOR", 34, 555);
-            font.draw(batch, "CORE GAME", 34, 526);
-            font.draw(batch, "CAR", 1030, 555);
-            font.draw(batch, EntranceScene.atCar(player)
-                ? "E / CLICK TO INTERACT" : "WALK CLOSER", 1005, 526);
-            font.draw(batch, "WASD / ARROWS: walk    LEFT DOOR: enter school"
-                + "    E near car: go home?", 289, 50);
-        } else if (run.phase == RunDirector.Phase.CAR_PROMPT) {
-            title("GO HOME?", 407);
-            line("You can skip four years of boss fights...", 345);
-            font.draw(batch, "[1] YES, GO HOME", 355, 278);
-            font.draw(batch, "[2] NO, FACE SCHOOL", 707, 278);
-        } else {
-            title("YOU WENT HOME", 415);
-            line("Quest complete: avoided every Ajarn.", 340);
-            line("Achievement unlocked: Professional Procrastinator.", 295);
-            line("Press ENTER to try school life again.", 230);
-        }
+        drawEntranceText(run.phase, player);
         batch.end();
+    }
+
+    private void drawCarEnding() {
+        ScreenUtils.clear(0, 0, 0, 1);
+        batch.begin();
+        bigFont.draw(batch, CAR_ENDING_MESSAGE, 205, 350);
+        line("Press ENTER to start a new run", 300);
+        batch.end();
+    }
+
+    private void drawEntranceBackground() {
+        batch.begin();
+        batch.draw(building30, EntranceScene.DRAW_X, EntranceScene.DRAW_Y,
+            EntranceScene.DRAW_SIZE, EntranceScene.DRAW_SIZE);
+        batch.draw(carObject, EntranceScene.DRAW_X, EntranceScene.DRAW_Y,
+            EntranceScene.DRAW_SIZE, EntranceScene.DRAW_SIZE);
+        batch.end();
+    }
+
+    private void drawEntranceOverlay(RunDirector.Phase phase) {
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        switch (phase) {
+            case START_SELECT:
+                drawPanel();
+                break;
+            case ENTRANCE:
+                shapes.setColor(INK);
+                shapes.rect(EntranceScene.DRAW_X, 18, EntranceScene.DRAW_SIZE, 51);
+                shapes.setColor(CYAN);
+                shapes.rect(349, 321, 82, 4);
+                shapes.triangle(343, 323, 358, 334, 358, 312);
+                shapes.setColor(GOLD);
+                shapes.rect(EntranceScene.CAR_X - 2, 459, 4, 25);
+                shapes.circle(EntranceScene.CAR_X, 487, 6, 16);
+                break;
+            case CAR_PROMPT:
+                shapes.setColor(INK);
+                shapes.rect(265, 207, 750, 285);
+                shapes.setColor(CYAN);
+                shapes.rect(265, 487, 750, 5);
+                shapes.setColor(GREEN);
+                shapes.rect(CAR_YES_BUTTON.x, CAR_YES_BUTTON.y,
+                    CAR_YES_BUTTON.width, CAR_YES_BUTTON.height);
+                shapes.setColor(CORAL);
+                shapes.rect(CAR_NO_BUTTON.x, CAR_NO_BUTTON.y,
+                    CAR_NO_BUTTON.width, CAR_NO_BUTTON.height);
+                break;
+            default:
+                break;
+        }
+        shapes.end();
+    }
+
+    private void drawEntranceText(RunDirector.Phase phase, PlayerCharacter player) {
+        switch (phase) {
+            case START_SELECT:
+                title("SCHOOL LIFE: SURVIVE YEAR FOUR", 415);
+                line("Four stages, four Ajarns, and an endless school-life loop.", 330);
+                line("First stop: Building 30. One car. One suspiciously easy way out.", 285);
+                line("Press ENTER to begin.", 210);
+                break;
+            case ENTRANCE:
+                bigFont.draw(batch, "BUILDING 30", 30, 650);
+                font.draw(batch, "LEFT DOOR", 34, 555);
+                font.draw(batch, "CORE GAME", 34, 526);
+                font.draw(batch, "CAR", 1030, 555);
+                font.draw(batch, EntranceScene.atCar(player)
+                    ? "E / CLICK TO INTERACT" : "WALK CLOSER", 1005, 526);
+                font.draw(batch, "WASD / ARROWS: walk    LEFT DOOR: enter school"
+                    + "    E near car: go home?", 289, 50);
+                break;
+            case CAR_PROMPT:
+                title("GO HOME?", 407);
+                line("You can skip four years of boss fights...", 345);
+                font.draw(batch, "[1] YES, GO HOME", CAR_YES_BUTTON.x + 55, CAR_YES_BUTTON.y + 39);
+                font.draw(batch, "[2] NO, FACE SCHOOL", CAR_NO_BUTTON.x + 42, CAR_NO_BUTTON.y + 39);
+                break;
+            default:
+                break;
+        }
     }
 
     private void drawSceneFade(float alpha) {
@@ -268,7 +341,7 @@ final class GameRenderer {
         Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 
-    private void drawArena() {
+    private void drawArena(RunDirector.Room room) {
         float left = GameSpace.LEFT, right = GameSpace.RIGHT;
         float bottom = GameSpace.BOTTOM, top = GameSpace.TOP;
         shapes.setColor(.12f, .18f, .25f, 1);
@@ -279,11 +352,18 @@ final class GameRenderer {
         shapes.setColor(CYAN);
         shapes.rect(left - 10, top + 6, right - left + 20, 4);
         shapes.setColor(.12f, .28f, .32f, 1);
-        shapes.rect(left, GameSpace.WALK_TOP, right - left, 3);
+        shapes.rect(left, room == RunDirector.Room.FINAL_EXAM
+            ? GameSpace.SERVER_LANE_TOP : GameSpace.WALK_TOP, right - left, 3);
     }
 
     private void drawScene(RunDirector run) {
-        Texture scene = run.room == RunDirector.Room.BOSS ? bossRoom : normalRoom;
+        if (run.room == RunDirector.Room.FINAL_EXAM) {
+            batch.draw(serverRoom, GameSpace.LEFT, GameSpace.BOTTOM,
+                GameSpace.RIGHT - GameSpace.LEFT, GameSpace.TOP - GameSpace.BOTTOM);
+            return;
+        }
+        Texture scene = run.room == RunDirector.Room.MOBS || run.room == RunDirector.Room.BOSS
+            ? emptyRoom : normalRoom;
         float tileWidth = (GameSpace.RIGHT - GameSpace.LEFT) / 2;
         float height = GameSpace.TOP - GameSpace.BOTTOM;
         batch.draw(scene, GameSpace.LEFT, GameSpace.BOTTOM, tileWidth, height);
@@ -299,6 +379,23 @@ final class GameRenderer {
         shapes.circle(boss.satiAimX, boss.satiAimY, 13, 20);
         shapes.setColor(INK);
         shapes.circle(boss.satiAimX, boss.satiAimY, 8, 20);
+    }
+
+    private void drawDomeWarning(CombatRoom.Enemy boss) {
+        DomeBossBehavior.State state = boss.dome;
+        if (state.phase == DomeBossBehavior.Phase.LIGHTNING_CHARGE) {
+            shapes.setColor(GOLD);
+            shapes.circle(state.aimX, state.aimY, DomeBossBehavior.LIGHTNING_RADIUS, 32);
+            shapes.setColor(INK);
+            shapes.circle(state.aimX, state.aimY, DomeBossBehavior.LIGHTNING_RADIUS - 4, 32);
+            shapes.setColor(GOLD);
+            shapes.rectLine(state.aimX - 12, state.aimY, state.aimX + 12, state.aimY, 3);
+            shapes.rectLine(state.aimX, state.aimY - 12, state.aimX, state.aimY + 12, 3);
+        } else if (state.phase == DomeBossBehavior.Phase.LASER_CHARGE) {
+            shapes.setColor(CYAN);
+            shapes.rectLine(state.originX, state.originY, state.endX, state.endY, 3);
+            shapes.circle(state.originX, state.originY, 7, 16);
+        }
     }
 
     private void drawTalgoWarning(CombatRoom.Enemy boss) {
@@ -318,7 +415,7 @@ final class GameRenderer {
         shapes.circle(boss.talgoSafeX, boss.talgoSafeY, 10, 20);
     }
 
-    private void drawEnemy(CombatRoom.Enemy enemy) {
+    private void drawEnemy(CombatRoom.Enemy enemy, boolean finalExam) {
         if (enemy.kind >= CombatRoom.LIQUID_CAT) {
             drawExEnemy(enemy);
             return;
@@ -329,18 +426,22 @@ final class GameRenderer {
             shapes.setColor(INK);
             shapes.circle(enemy.x, enemy.y, enemy.radius + 5, 32);
         }
-        shapes.setColor(enemy.kind == CombatRoom.BINDER ? CYAN
-            : enemy.kind == CombatRoom.WARPER ? PURPLE
-            : enemy.kind == CombatRoom.WAVE ? BLUE
-            : enemy.kind == CombatRoom.RANGED ? GREEN
-            : enemy.kind == CombatRoom.SHIELDED ? PAPER
-            : enemy.kind == CombatRoom.BASIC ? GOLD
-            : enemy.kind >= 8 ? PURPLE : CORAL);
-        shapes.rect(enemy.x - enemy.radius, enemy.y - enemy.radius,
-            enemy.radius * 2, enemy.radius * 2);
-        shapes.setColor(INK);
-        shapes.rect(enemy.x - 9, enemy.y + 2, 6, 6);
-        shapes.rect(enemy.x + 4, enemy.y + 2, 6, 6);
+        if (enemy.kind != RunPlan.DOME_ID) {
+            shapes.setColor(finalExam && enemy.kind == RunPlan.AE_ID ? CYAN
+                : finalExam && enemy.kind == RunPlan.FAR_ID ? GOLD
+                : enemy.kind == CombatRoom.BINDER ? CYAN
+                : enemy.kind == CombatRoom.WARPER ? PURPLE
+                : enemy.kind == CombatRoom.WAVE ? BLUE
+                : enemy.kind == CombatRoom.RANGED ? GREEN
+                : enemy.kind == CombatRoom.SHIELDED ? PAPER
+                : enemy.kind == CombatRoom.BASIC ? GOLD
+                : CORAL);
+            shapes.rect(enemy.x - enemy.radius, enemy.y - enemy.radius,
+                enemy.radius * 2, enemy.radius * 2);
+            shapes.setColor(INK);
+            shapes.rect(enemy.x - 9, enemy.y + 2, 6, 6);
+            shapes.rect(enemy.x + 4, enemy.y + 2, 6, 6);
+        }
         if (enemy.stunTime > 0 || enemy.slowTime > 0) {
             shapes.setColor(CYAN);
             shapes.rect(enemy.x - 3, enemy.y + enemy.radius - 3, 6, 8);
@@ -447,40 +548,23 @@ final class GameRenderer {
                 shapes.setColor(PAPER);
                 shapes.circle(ex.x - 63, ex.y - 23, 15, 16);
             }
-        } else {
-            shapes.setColor(ex.exConfidence >= 60 ? GOLD : PAPER);
-            shapes.rect(ex.x - 32, ex.y - 27, 64, 44);
-            shapes.triangle(ex.x - 32, ex.y - 27, ex.x - 57, ex.y - 5,
-                ex.x - 32, ex.y + 17);
-            shapes.setColor(CORAL);
-            shapes.rect(ex.x + 18, ex.y - 33, 14, 56);
-            shapes.rect(ex.x + 29, ex.y - 10, 23, 12);
-            shapes.setColor(INK);
-            shapes.rect(ex.x + 21, ex.y - 4, 6, 5);
-            for (int i = 0; i < ex.exConfidence / 25; i++) {
-                shapes.setColor(GOLD);
-                shapes.rect(ex.x - 25 + i * 12, ex.y + 5, 8, 7);
-            }
-            if (ex.exState == 3) {
-                shapes.setColor(CYAN);
-                shapes.circle(ex.x - 40, ex.y + 24, 6, 12);
-            }
         }
         drawExBars(ex);
     }
 
     private void drawExBars(CombatRoom.Enemy ex) {
         float width = 80;
+        float barY = ex.y + (ex.kind == CombatRoom.INSECURE_SWORD ? 72 : 47);
         shapes.setColor(INK);
-        shapes.rect(ex.x - width / 2, ex.y + 47, width, 7);
+        shapes.rect(ex.x - width / 2, barY, width, 7);
         shapes.setColor(CORAL);
-        shapes.rect(ex.x - width / 2, ex.y + 47,
+        shapes.rect(ex.x - width / 2, barY,
             width * Math.max(0, ex.hp / ex.maxHp), 7);
         if (ex.maxArmor > 0 && ex.armor > 0) {
             shapes.setColor(INK);
-            shapes.rect(ex.x - width / 2, ex.y + 57, width, 6);
+            shapes.rect(ex.x - width / 2, barY + 10, width, 6);
             shapes.setColor(CYAN);
-            shapes.rect(ex.x - width / 2, ex.y + 57,
+            shapes.rect(ex.x - width / 2, barY + 10,
                 width * ex.armor / ex.maxArmor, 6);
         } else if (ex.kind == CombatRoom.ALLERGIC_VACUUM) {
             shapes.setColor(INK);
@@ -492,7 +576,7 @@ final class GameRenderer {
     }
 
     private void drawWarpWarning(CombatRoom.Enemy enemy) {
-        float reach = 75;
+        float reach = enemy.kind == RunPlan.AE_ID ? AjarnBehavior.AE_WARP_RADIUS : 75;
         shapes.setColor(CORAL);
         shapes.circle(enemy.warpX, enemy.warpY, reach, 48);
         shapes.setColor(INK);
@@ -619,12 +703,23 @@ final class GameRenderer {
         if (player.slowTime > 0) font.draw(batch, "SLOWED", 825, 640);
         font.draw(batch, "LOOP " + run.plan.loop() + "  |  STAGE "
             + (run.plan.stage() + 1) + "/4  |  "
-            + (run.room == RunDirector.Room.EX ? "EX ENCOUNTER" : run.plan.stageName()),
+            + (run.room == RunDirector.Room.EX ? "EX ENCOUNTER"
+                : run.room == RunDirector.Room.FINAL_EXAM ? "FINAL EXAM"
+                : run.plan.stageName()),
             490, 685);
         String target = run.room == RunDirector.Room.BOSS ? run.plan.bossName()
             : run.room == RunDirector.Room.EX ? RunPlan.EX_MONSTERS[run.exId]
+            : run.room == RunDirector.Room.FINAL_EXAM
+                ? "Ae / Far / Dome: " + combat.enemies.size + " left"
             : "Monster room: " + combat.enemies.size + " left";
         font.draw(batch, target, 75, 62);
+        for (CombatRoom.Enemy enemy : combat.enemies) {
+            if (enemy.dome == null) continue;
+            if (enemy.dome.phase == DomeBossBehavior.Phase.LIGHTNING_CHARGE)
+                font.draw(batch, "DOME: LIGHTNING - MOVE FROM THE MARK", 350, 106);
+            else if (enemy.dome.phase == DomeBossBehavior.Phase.LASER_CHARGE)
+                font.draw(batch, "DOME: LASER - CLEAR THE LINE", 350, 106);
+        }
         if (run.room == RunDirector.Room.BOSS && run.plan.bossId() == RunPlan.TALGO_ID) {
             for (CombatRoom.Enemy enemy : combat.enemies)
                 if (enemy.kind == RunPlan.TALGO_ID && enemy.talgoCharge > 0) {
@@ -651,14 +746,15 @@ final class GameRenderer {
             CombatRoom.Enemy boss = null;
             for (CombatRoom.Enemy enemy : combat.enemies)
                 if (enemy.kind >= 0) { boss = enemy; break; }
+            int minions = combat.enemies.size - (boss == null ? 0 : 1);
+            String trait = (boss == null ? "BOSS DOWN  |  " : "") + "MINIONS: " + minions + "  ";
             if (boss != null) {
-                String trait = boss.summoner ? "SUMMONS  " : "";
                 if (boss.reflector && boss.armor > 0) trait += "SHIELD/REFLECT  ";
                 if (boss.warper) trait += "WARP  ";
                 if (boss.artillery) trait += "HUGE SHOTS  ";
                 if (boss.waveCaster) trait += "WAVES";
-                if (!trait.isEmpty()) font.draw(batch, trait, 355, 62);
             }
+            font.draw(batch, trait, 355, 62);
         }
         String active = player.activeWeapon() == PlayerCharacter.Weapon.PHYSICAL
             ? "LAN CABLE" : "NOTEBOOK";
@@ -678,7 +774,9 @@ final class GameRenderer {
         if (!effects.isEmpty()) font.draw(batch, effects, 700, 16);
         if (run.room == RunDirector.Room.EX)
             font.draw(batch, "EX POWER: TETHER + HEAT BEAM", 690, 35);
-        font.draw(batch, "WASD move   LEFT CLICK / SPACE attack   SHIFT dash   E skill", 600, 48);
+        font.draw(batch, run.room == RunDirector.Room.FINAL_EXAM
+            ? "A / D: move sideways   CLICK / SPACE: attack   SHIFT: side dash   E: skill"
+            : "WASD move   LEFT CLICK / SPACE attack   SHIFT dash   E skill", 600, 48);
     }
 
     private void drawPanel() {
@@ -702,9 +800,9 @@ final class GameRenderer {
     private void title(String text, float y) { bigFont.draw(batch, text, 205, y); }
     private void line(String text, float y) { font.draw(batch, text, 205, y); }
 
-    void resize(int width, int height) { viewport.update(width, height, true); }
+    public void resize(int width, int height) { viewport.update(width, height, true); }
 
-    boolean skillButtonJustPressed() {
+    public boolean skillButtonJustPressed() {
         if (!Gdx.input.isTouched()) skillPressCaptured = false;
         if (!Gdx.input.justTouched()) return false;
         touchPosition.set(Gdx.input.getX(), Gdx.input.getY());
@@ -715,11 +813,11 @@ final class GameRenderer {
         return skillPressCaptured;
     }
 
-    boolean mouseAttackHeld() {
+    public boolean mouseAttackHeld() {
         return Gdx.input.isButtonPressed(Input.Buttons.LEFT) && !skillPressCaptured;
     }
 
-    boolean mouseAttackJustPressed() {
+    public boolean mouseAttackJustPressed() {
         if (!Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) || skillPressCaptured)
             return false;
         touchPosition.set(Gdx.input.getX(), Gdx.input.getY());
@@ -727,10 +825,10 @@ final class GameRenderer {
         return true;
     }
 
-    float mouseWorldX() { return touchPosition.x; }
-    float mouseWorldY() { return touchPosition.y; }
+    public float mouseWorldX() { return touchPosition.x; }
+    public float mouseWorldY() { return touchPosition.y; }
 
-    int upgradeChoiceJustPressed() {
+    public int upgradeChoiceJustPressed() {
         if (!Gdx.input.justTouched()) return -1;
         touchPosition.set(Gdx.input.getX(), Gdx.input.getY());
         viewport.unproject(touchPosition);
@@ -743,30 +841,35 @@ final class GameRenderer {
         return -1;
     }
 
-    boolean entranceCarJustPressed() {
-        if (!Gdx.input.justTouched()) return false;
-        touchPosition.set(Gdx.input.getX(), Gdx.input.getY());
-        viewport.unproject(touchPosition);
-        return touchPosition.x >= 825 && touchPosition.x <= 1024
-            && touchPosition.y >= 335 && touchPosition.y <= 455;
+    public boolean entranceCarJustPressed() {
+        return touchJustPressed() && CAR_TARGET.contains(touchPosition);
     }
 
-    int carChoiceJustPressed() {
-        if (!Gdx.input.justTouched()) return -1;
-        touchPosition.set(Gdx.input.getX(), Gdx.input.getY());
-        viewport.unproject(touchPosition);
-        if (touchPosition.y < 239 || touchPosition.y > 303) return -1;
-        if (touchPosition.x >= 300 && touchPosition.x <= 615) return 0;
-        if (touchPosition.x >= 665 && touchPosition.x <= 980) return 1;
+    public int carChoiceJustPressed() {
+        if (!touchJustPressed()) return -1;
+        if (CAR_YES_BUTTON.contains(touchPosition)) return 0;
+        if (CAR_NO_BUTTON.contains(touchPosition)) return 1;
         return -1;
     }
 
-    void dispose() {
+    private boolean touchJustPressed() {
+        if (!Gdx.input.justTouched()) return false;
+        touchPosition.set(Gdx.input.getX(), Gdx.input.getY());
+        viewport.unproject(touchPosition);
+        return true;
+    }
+
+    public void dispose() {
         student.dispose();
         sati.dispose();
+        dome.dispose();
+        notebook.dispose();
+        tables.dispose();
         liquidCat.dispose();
+        insecureSword.dispose();
         normalRoom.dispose();
-        bossRoom.dispose();
+        emptyRoom.dispose();
+        serverRoom.dispose();
         building30.dispose();
         carObject.dispose();
         shapes.dispose();

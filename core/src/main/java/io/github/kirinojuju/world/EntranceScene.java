@@ -1,21 +1,22 @@
-package io.github.kirinojuju;
+package io.github.kirinojuju.world;
 
 import com.badlogic.gdx.math.MathUtils;
+import io.github.kirinojuju.player.PlayerCharacter;
 
 /** Walk-only arrival scene in front of Building 30. */
-final class EntranceScene {
-    static final float DRAW_SIZE = 768; // 256px art at an exact 3x scale.
-    static final float DRAW_X = (GameSpace.WIDTH - DRAW_SIZE) / 2f;
-    static final float DRAW_Y = (GameSpace.HEIGHT - DRAW_SIZE) / 2f;
-    static final float DOOR_X = 382, DOOR_Y = 350, DOOR_REACH = 105;
-    static final float CAR_X = 930, CAR_Y = 395, CAR_REACH = 110;
+public final class EntranceScene {
+    public static final float DRAW_SIZE = 768; // 256px art at an exact 3x scale.
+    public static final float DRAW_X = (GameSpace.WIDTH - DRAW_SIZE) / 2f;
+    public static final float DRAW_Y = (GameSpace.HEIGHT - DRAW_SIZE) / 2f;
+    public static final float DOOR_X = 382, DOOR_Y = 350, DOOR_REACH = 105;
+    public static final float CAR_X = 930, CAR_Y = 395, CAR_REACH = 110;
     private static final float LEFT = 345, RIGHT = 945;
     private static final float BOTTOM = 145, TOP = 465;
     private static final float WALK_SPEED = 225;
 
     private EntranceScene() { }
 
-    static void placePlayer(PlayerCharacter player) {
+    public static void placePlayer(PlayerCharacter player) {
         player.x = 640;
         player.y = 255;
         player.faceX = -1;
@@ -26,7 +27,7 @@ final class EntranceScene {
         player.invulnerable = 0;
     }
 
-    static void move(PlayerCharacter player, float dt, float dx, float dy) {
+    public static void move(PlayerCharacter player, float dt, float dx, float dy) {
         float length = (float)Math.sqrt(dx * dx + dy * dy);
         player.moving = length > 0;
         if (length == 0) {
@@ -43,11 +44,11 @@ final class EntranceScene {
         player.y = MathUtils.clamp(player.y + dy * WALK_SPEED * dt, BOTTOM, TOP);
     }
 
-    static boolean atDoor(PlayerCharacter player) {
+    public static boolean atDoor(PlayerCharacter player) {
         return near(player, DOOR_X, DOOR_Y, DOOR_REACH);
     }
 
-    static boolean atCar(PlayerCharacter player) {
+    public static boolean atCar(PlayerCharacter player) {
         return near(player, CAR_X, CAR_Y, CAR_REACH);
     }
 
