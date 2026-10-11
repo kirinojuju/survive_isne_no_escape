@@ -15,6 +15,8 @@
 // Note, the above license and copyright applies to this file only.
 package io.github.kirinojuju.lwjgl3;
 
+// File role: Handles platform-specific JVM startup requirements before the desktop game opens.
+
 import com.badlogic.gdx.Version;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3NativesLoader;
 
@@ -46,6 +48,7 @@ import java.util.Locale;
  */
 public class StartupHelper {
 
+	// Prevent construction of this utility class; use its static helpers.
 	private StartupHelper() {}
 
 	private static final String JVM_RESTARTED_ARG = "jvmIsRestarted";
@@ -215,11 +218,13 @@ public class StartupHelper {
 		return true;
 	}
 
+	// Build an error message explaining missing Java runtime information.
 	private static String getJreErrMsg(boolean isMac) {
 		if (isMac) return MAC_JRE_ERR_MSG;
 		else return LINUX_JRE_ERR_MSG;
 	}
 
+	// Return the current process ID for the platform startup checks.
 	private static long getProcessID(boolean isMac) {
 		if (isMac) return LibC.getpid();
 		else return UNISTD.getpid();

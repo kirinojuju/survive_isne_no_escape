@@ -1,5 +1,7 @@
 package io.github.kirinojuju.render;
 
+// File role: Draws scenes, combat, warnings, health bars and menus; converts pointer input to game coordinates.
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
@@ -16,9 +18,10 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.enemy.boss.DomeBossBehavior;
-import io.github.kirinojuju.enemy.boss.AjarnBehavior;
+import io.github.kirinojuju.enemy.boss.AeBossBehavior;
 import io.github.kirinojuju.enemy.boss.KenBoss;
 import io.github.kirinojuju.enemy.boss.AeBoss;
+import io.github.kirinojuju.enemy.boss.FarBoss;
 import io.github.kirinojuju.enemy.boss.MBoss;
 import io.github.kirinojuju.enemy.AlgoMonster;
 import io.github.kirinojuju.flow.RunDirector;
@@ -60,8 +63,10 @@ public final class GameRenderer {
     private final DomeSprite dome = new DomeSprite();
     private final KenSprite ken = new KenSprite();
     private final AeSprite ae = new AeSprite();
+    private final FarSprite far = new FarSprite();
     private final MSprite m = new MSprite();
     private final AlgoMonSprite algoMon = new AlgoMonSprite();
+    private final MonsterSprite monsters = new MonsterSprite();
     private final NotebookSprite notebook = new NotebookSprite();
     private final TableSprites tables = new TableSprites();
     private final LiquidCatSprite liquidCat = new LiquidCatSprite();
@@ -74,6 +79,7 @@ public final class GameRenderer {
     private final Vector2 touchPosition = new Vector2();
     private boolean skillPressCaptured;
 
+    // Create the camera, viewport, drawing tools, fonts and scene textures.
     public GameRenderer() {
         viewport.apply();
         camera.position.set(GameSpace.WIDTH / 2, GameSpace.HEIGHT / 2, 0);
@@ -84,10 +90,12 @@ public final class GameRenderer {
         bigFont.setColor(PAPER);
     }
 
+    // Load a room background using the optional-asset loader.
     private static Texture loadRoom(String path) {
         return OptionalAssetTexture.load(path);
     }
 
+    // Render the scene and interface that match the run's current phase.
     public void draw(RunDirector run, PlayerCharacter player, CombatRoom combat) {
         ScreenUtils.clear(INK);
         camera.update();
@@ -119,13 +127,14 @@ public final class GameRenderer {
         drawSceneFade(run.sceneFade);
     }
 
+    // Draw arena geometry, attack warnings and effects that use simple shapes.
     private void drawCombatShapes(RunDirector run, PlayerCharacter player, CombatRoom combat) {
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         drawArena(run.room);
         for (CombatRoom.Enemy enemy : combat.enemies)
-            if (enemy.kind == RunPlan.KEN_ID && enemy.hp > 0
-                && (enemy.talgoCharge > 0 || enemy.talgoFlashTime > 0))
-                drawTalgoWarning(enemy);
+            if (enemy.kind == RunPlan.FAR_ID && enemy.hp > 0
+                && (enemy.farCharge > 0 || enemy.farFlashTime > 0))
+                drawFarWarning(enemy);
         for (CombatRoom.Shot shot : combat.shots) {
             if (shot.powerBall || shot.satiSpear || shot.liquidCatBullet || shot.notebook || shot.algoBall) continue;
             if (shot.wave) {
@@ -178,6 +187,7 @@ public final class GameRenderer {
         shapes.end();
     }
 
+    // Draw loaded character, projectile and effect artwork over the combat shapes.
     private void drawCombatSprites(RunDirector run, PlayerCharacter player, CombatRoom combat) {
         for (CombatRoom.Enemy enemy : combat.enemies)
             if (enemy.kind == RunPlan.DOME_ID) dome.drawEffect(batch, enemy);
@@ -192,7 +202,10 @@ public final class GameRenderer {
         for (CombatRoom.NotebookImpact impact : combat.notebookImpacts)
             notebook.drawImpact(batch, impact);
         for (CombatRoom.Enemy enemy : combat.enemies)
-            if (enemy.kind == RunPlan.SATI_ID) sati.drawElement(batch, enemy);
+            if (enemy.kind == RunPlan.SATI_ID) {
+                sati.drawBody(batch, enemy);
+                sati.drawElement(batch, enemy);
+            }
             else if (enemy.kind == CombatRoom.LIQUID_CAT)
                 liquidCat.draw(batch, enemy);
             else if (enemy.kind == CombatRoom.INSECURE_SWORD)
@@ -200,8 +213,10 @@ public final class GameRenderer {
             else if (enemy.kind == RunPlan.DOME_ID) dome.draw(batch, enemy);
             else if (enemy instanceof KenBoss) ken.draw(batch, (KenBoss) enemy);
             else if (enemy instanceof AeBoss) ae.draw(batch, (AeBoss) enemy);
+            else if (enemy instanceof FarBoss) far.draw(batch, (FarBoss) enemy);
             else if (enemy instanceof MBoss) m.draw(batch, enemy);
             else if (enemy instanceof AlgoMonster) algoMon.draw(batch, enemy);
+            else if (monsters.hasBody(enemy)) monsters.draw(batch, enemy);
         for (CombatRoom.Enemy enemy : combat.enemies) {
             if (enemy.kind == CombatRoom.INSECURE_SWORD && enemy.exState == 3)
                 font.draw(batch, "0!", enemy.x - 12, enemy.y + 111);
@@ -211,11 +226,12 @@ public final class GameRenderer {
         }
         if (run.room == RunDirector.Room.FINAL_EXAM)
             for (CombatRoom.Enemy enemy : combat.enemies)
-                font.draw(batch, RunPlan.BOSSES[enemy.kind],
+                font.draw(batch, RunPlan.BOSSES.get(enemy.kind),
                     enemy.x - 48, enemy.y + enemy.radius + 28);
         student.draw(batch, player);
     }
 
+    // Draw the combat HUD and any upgrade, transition or game-over panel.
     private void drawCombatPanel(RunDirector run, PlayerCharacter player, CombatRoom combat) {
         if (player.activeWeapon() == PlayerCharacter.Weapon.MAGICAL)
             notebook.drawIcon(batch, 36, 19);
@@ -245,6 +261,7 @@ public final class GameRenderer {
         }
     }
 
+    // Check whether this phase uses the entrance scene rather than the combat arena.
     private static boolean isEntrancePhase(RunDirector.Phase phase) {
         return phase == RunDirector.Phase.START_SELECT
             || phase == RunDirector.Phase.ENTRANCE
@@ -252,6 +269,7 @@ public final class GameRenderer {
             || phase == RunDirector.Phase.CAR_ENDING;
     }
 
+    // Draw the entrance background, player, overlays and instructions.
     private void drawEntrance(RunDirector run, PlayerCharacter player) {
         if (run.phase == RunDirector.Phase.CAR_ENDING) {
             drawCarEnding();
@@ -267,6 +285,7 @@ public final class GameRenderer {
         batch.end();
     }
 
+    // Draw the go-home ending screen.
     private void drawCarEnding() {
         ScreenUtils.clear(0, 0, 0, 1);
         batch.begin();
@@ -275,6 +294,7 @@ public final class GameRenderer {
         batch.end();
     }
 
+    // Draw the building and car artwork in the entrance scene.
     private void drawEntranceBackground() {
         batch.begin();
         batch.draw(building30, EntranceScene.DRAW_X, EntranceScene.DRAW_Y,
@@ -284,6 +304,7 @@ public final class GameRenderer {
         batch.end();
     }
 
+    // Draw entrance instruction panels or the car choice buttons.
     private void drawEntranceOverlay(RunDirector.Phase phase) {
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         switch (phase) {
@@ -318,6 +339,7 @@ public final class GameRenderer {
         shapes.end();
     }
 
+    // Draw phase-specific entrance instructions and car choice text.
     private void drawEntranceText(RunDirector.Phase phase, PlayerCharacter player) {
         switch (phase) {
             case START_SELECT:
@@ -347,6 +369,7 @@ public final class GameRenderer {
         }
     }
 
+    // Draw a dark overlay with the current scene transition opacity.
     private void drawSceneFade(float alpha) {
         if (alpha <= 0) return;
         Gdx.gl.glEnable(GL20.GL_BLEND);
@@ -358,6 +381,7 @@ public final class GameRenderer {
         Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 
+    // Draw the floor and arena features for the selected room type.
     private void drawArena(RunDirector.Room room) {
         float left = GameSpace.LEFT, right = GameSpace.RIGHT;
         float bottom = GameSpace.BOTTOM, top = GameSpace.TOP;
@@ -373,6 +397,7 @@ public final class GameRenderer {
             ? GameSpace.SERVER_LANE_TOP : GameSpace.WALK_TOP, right - left, 3);
     }
 
+    // Draw the background artwork that matches the current room.
     private void drawScene(RunDirector run) {
         if (run.room == RunDirector.Room.FINAL_EXAM) {
             batch.draw(serverRoom, GameSpace.LEFT, GameSpace.BOTTOM,
@@ -388,6 +413,7 @@ public final class GameRenderer {
             tileWidth, height);
     }
 
+    // Draw Sati's spear charge warning using its locked aim.
     private void drawSatiWarning(CombatRoom.Enemy boss) {
         float x = CombatRoom.satiElementX(boss);
         float y = CombatRoom.satiElementY(boss);
@@ -398,6 +424,7 @@ public final class GameRenderer {
         shapes.circle(boss.satiAimX, boss.satiAimY, 8, 20);
     }
 
+    // Draw the lightning target or laser warning from Dome's current cast state.
     private void drawDomeWarning(CombatRoom.Enemy boss) {
         DomeBossBehavior.State state = boss.dome;
         if (state.phase == DomeBossBehavior.Phase.LIGHTNING_CHARGE) {
@@ -415,23 +442,25 @@ public final class GameRenderer {
         }
     }
 
-    private void drawTalgoWarning(CombatRoom.Enemy boss) {
+    // Draw Far's blast warning and the safe circle where the player can avoid damage.
+    private void drawFarWarning(CombatRoom.Enemy boss) {
         shapes.setColor(CORAL);
         for (float x = GameSpace.LEFT + 18; x < GameSpace.RIGHT; x += 72)
             shapes.rect(x, GameSpace.BOTTOM, 3, GameSpace.WALK_TOP - GameSpace.BOTTOM);
         for (float y = GameSpace.BOTTOM + 18; y < GameSpace.WALK_TOP; y += 72)
             shapes.rect(GameSpace.LEFT, y, GameSpace.RIGHT - GameSpace.LEFT, 3);
-        if (boss.talgoCharge <= 0) return;
+        if (boss.farCharge <= 0) return;
         shapes.setColor(GREEN);
-        shapes.circle(boss.talgoSafeX, boss.talgoSafeY,
-            CombatRoom.TALGO_SAFE_RADIUS + 6, 48);
+        shapes.circle(boss.farSafeX, boss.farSafeY,
+            CombatRoom.FAR_SAFE_RADIUS + 6, 48);
         shapes.setColor(SAFE_FILL);
-        shapes.circle(boss.talgoSafeX, boss.talgoSafeY,
-            CombatRoom.TALGO_SAFE_RADIUS, 48);
+        shapes.circle(boss.farSafeX, boss.farSafeY,
+            CombatRoom.FAR_SAFE_RADIUS, 48);
         shapes.setColor(GREEN);
-        shapes.circle(boss.talgoSafeX, boss.talgoSafeY, 10, 20);
+        shapes.circle(boss.farSafeX, boss.farSafeY, 10, 20);
     }
 
+    // Draw enemy placeholders, state indicators and combat bars.
     private void drawEnemy(CombatRoom.Enemy enemy, boolean finalExam) {
         if (enemy.kind >= CombatRoom.LIQUID_CAT) {
             drawExEnemy(enemy);
@@ -444,8 +473,11 @@ public final class GameRenderer {
             shapes.circle(enemy.x, enemy.y, enemy.radius + 5, 32);
         }
         if (enemy.kind != RunPlan.DOME_ID && !(enemy instanceof KenBoss)
+            && !(enemy.kind == RunPlan.SATI_ID && sati.hasBody())
             && !(enemy instanceof AeBoss && ae.hasBody())
-            && !(enemy instanceof MBoss) && !(enemy instanceof AlgoMonster)) {
+            && !(enemy instanceof FarBoss && far.hasBody())
+            && !(enemy instanceof MBoss) && !(enemy instanceof AlgoMonster)
+            && !monsters.hasBody(enemy)) {
             shapes.setColor(finalExam && enemy.kind == RunPlan.AE_ID ? CYAN
                 : finalExam && enemy.kind == RunPlan.FINAL_EXAM_FAR_ID ? GOLD
                 : enemy.kind == CombatRoom.BINDER ? CYAN
@@ -487,6 +519,7 @@ public final class GameRenderer {
         }
     }
 
+    // Draw dust, notes and slime patches used by EX encounters.
     private void drawExObjects(CombatRoom combat) {
         for (CombatRoom.ExObject object : combat.exObjects) {
             if (object.kind == CombatRoom.DUST) {
@@ -507,6 +540,7 @@ public final class GameRenderer {
         }
     }
 
+    // Draw the active EX enemy's attack warning before its attack lands.
     private void drawExTelegraph(CombatRoom.Enemy ex) {
         if (ex.kind == CombatRoom.LIQUID_CAT && ex.exFlashTime > 0
             && ex.exState == 0 && ex.exMeter == 0) {
@@ -542,6 +576,7 @@ public final class GameRenderer {
         shapes.circle(warningX, warningY, radius - 5, 48);
     }
 
+    // Draw the EX enemy's shape representation and state details.
     private void drawExEnemy(CombatRoom.Enemy ex) {
         if (ex.kind == CombatRoom.LIQUID_CAT) {
             if (ex.exState == 1) {
@@ -571,6 +606,7 @@ public final class GameRenderer {
         drawExBars(ex);
     }
 
+    // Draw EX health, SP and encounter-specific meters.
     private void drawExBars(CombatRoom.Enemy ex) {
         float width = 80;
         float barY = ex.y + (ex.kind == CombatRoom.INSECURE_SWORD ? 72 : 47);
@@ -594,8 +630,9 @@ public final class GameRenderer {
         }
     }
 
+    // Mark the enemy's teleport destination during its warning timer.
     private void drawWarpWarning(CombatRoom.Enemy enemy) {
-        float reach = enemy.kind == RunPlan.AE_ID ? AjarnBehavior.AE_WARP_RADIUS : 75;
+        float reach = enemy.kind == RunPlan.AE_ID ? AeBossBehavior.AE_WARP_RADIUS : 75;
         shapes.setColor(CORAL);
         shapes.circle(enemy.warpX, enemy.warpY, reach, 48);
         shapes.setColor(INK);
@@ -605,6 +642,7 @@ public final class GameRenderer {
         shapes.rect(enemy.warpX - 2, enemy.warpY - 23, 4, 46);
     }
 
+    // Draw the brief flash left by a teacher boss teleport.
     private void drawBossWarpFlash(CombatRoom.Enemy boss) {
         shapes.setColor(PURPLE);
         shapes.circle(boss.x, boss.y, boss.radius + 14, 36);
@@ -612,6 +650,7 @@ public final class GameRenderer {
         shapes.circle(boss.x, boss.y, boss.radius + 8, 36);
     }
 
+    // Draw the expanding visual effect of a PowerBall explosion.
     private void drawPowerBlast(CombatRoom combat) {
         float progress = 1 - combat.blastTime / .30f;
         float radius = CombatRoom.POWER_BALL_BLAST_RADIUS * (.25f + .75f * progress);
@@ -621,6 +660,7 @@ public final class GameRenderer {
         shapes.circle(combat.blastX, combat.blastY, Math.max(0, radius - 10), 56);
     }
 
+    // Draw the short visual effect of a Notebook splash hit.
     private void drawNotebookSplash(CombatRoom combat) {
         float radius = 72 * (1 - combat.splashTime / .24f);
         shapes.setColor(GREEN);
@@ -629,6 +669,7 @@ public final class GameRenderer {
         shapes.circle(combat.splashX, combat.splashY, Math.max(0, radius - 7), 36);
     }
 
+    // Draw the active Notebook beam using its stored origin and direction.
     private void drawNotebookBeam(CombatRoom combat) {
         shapes.setColor(BLUE);
         shapes.rectLine(combat.beamX, combat.beamY,
@@ -641,6 +682,7 @@ public final class GameRenderer {
             combat.beamEndX, combat.beamEndY, 17);
     }
 
+    // Mark the living enemy currently locked by the player's normal attack.
     private void drawAttackLock(PlayerCharacter player) {
         CombatRoom.Enemy target = player.attackTarget();
         if (target == null || player.skillPlaying) return;
@@ -650,6 +692,7 @@ public final class GameRenderer {
         shapes.circle(target.x, target.y, target.radius + 7, 36);
     }
 
+    // Draw the player's active melee swing or casting effect.
     private void drawAttackEffect(PlayerCharacter player) {
         if (player.swingTimer > 0) {
             float progress = 1 - player.swingTimer / PlayerCharacter.LAN_SWING_DURATION;
@@ -681,6 +724,7 @@ public final class GameRenderer {
         }
     }
 
+    // Draw the player's HP and SP bars.
     private void drawBars(PlayerCharacter player) {
         shapes.setColor(.23f, .27f, .32f, 1);
         shapes.rect(73, 652, 205, 17);
@@ -703,6 +747,7 @@ public final class GameRenderer {
         }
     }
 
+    // Draw the skill button and its ready or cooldown state.
     private void drawSkillButton(PlayerCharacter player) {
         shapes.setColor(INK);
         shapes.circle(SKILL_X, SKILL_Y, SKILL_RADIUS + 4, 40);
@@ -711,6 +756,7 @@ public final class GameRenderer {
         shapes.circle(SKILL_X, SKILL_Y, SKILL_RADIUS, 40);
     }
 
+    // Draw combat labels, stage and boss information, and control instructions.
     private void drawHud(RunDirector run, PlayerCharacter player, CombatRoom combat) {
         font.draw(batch, "HP " + (int)Math.ceil(player.hp) + "/" + (int)player.maxHp, 73, 690);
         font.draw(batch, "SP " + (int)player.sp + "/100", 292, 690);
@@ -739,11 +785,11 @@ public final class GameRenderer {
             else if (enemy.dome.phase == DomeBossBehavior.Phase.LASER_CHARGE)
                 font.draw(batch, "DOME: LASER - CLEAR THE LINE", 350, 106);
         }
-        if (run.room == RunDirector.Room.BOSS && run.plan.bossId() == RunPlan.KEN_ID) {
+        if (run.room == RunDirector.Room.BOSS && run.plan.bossId() == RunPlan.FAR_ID) {
             for (CombatRoom.Enemy enemy : combat.enemies)
-                if (enemy.kind == RunPlan.KEN_ID && enemy.talgoCharge > 0) {
+                if (enemy.kind == RunPlan.FAR_ID && enemy.farCharge > 0) {
                     font.draw(batch, "FULL ROOM AOE IN "
-                        + (int)Math.ceil(enemy.talgoCharge * 10) / 10f
+                        + (int)Math.ceil(enemy.farCharge * 10) / 10f
                         + "s: GREEN CIRCLE OR DASH AT IMPACT", 350, 106);
                     break;
                 }
@@ -798,6 +844,7 @@ public final class GameRenderer {
             : "WASD move   LEFT CLICK / SPACE attack   SHIFT dash   E skill", 600, 48);
     }
 
+    // Draw the shared background used by centered interface panels.
     private void drawPanel() {
         shapes.setColor(.07f, .10f, .15f, 1);
         shapes.rect(165, 175, 950, 310);
@@ -806,6 +853,7 @@ public final class GameRenderer {
         shapes.rect(165, 175, 950, 5);
     }
 
+    // Draw the three numbered upgrade choice boxes.
     private void drawUpgradeChoices() {
         for (int i = 0; i < 3; i++) {
             float bottom = 307 - i * 65;
@@ -816,11 +864,15 @@ public final class GameRenderer {
         }
     }
 
+    // Draw a large panel heading at the requested vertical position.
     private void title(String text, float y) { bigFont.draw(batch, text, 205, y); }
+    // Draw a normal-sized panel text line at the requested vertical position.
     private void line(String text, float y) { font.draw(batch, text, 205, y); }
 
+    // Update the viewport and camera when the window size changes.
     public void resize(int width, int height) { viewport.update(width, height, true); }
 
+    // Detect a fresh pointer press inside the skill button.
     public boolean skillButtonJustPressed() {
         if (!Gdx.input.isTouched()) skillPressCaptured = false;
         if (!Gdx.input.justTouched()) return false;
@@ -832,10 +884,12 @@ public final class GameRenderer {
         return skillPressCaptured;
     }
 
+    // Check whether the attack mouse button is currently held.
     public boolean mouseAttackHeld() {
         return Gdx.input.isButtonPressed(Input.Buttons.LEFT) && !skillPressCaptured;
     }
 
+    // Detect a fresh attack click for acquiring an attack target.
     public boolean mouseAttackJustPressed() {
         if (!Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) || skillPressCaptured)
             return false;
@@ -844,9 +898,12 @@ public final class GameRenderer {
         return true;
     }
 
+    // Return the pointer's horizontal position in game coordinates.
     public float mouseWorldX() { return touchPosition.x; }
+    // Return the pointer's vertical position in game coordinates.
     public float mouseWorldY() { return touchPosition.y; }
 
+    // Return the clicked upgrade choice, or no choice when outside its buttons.
     public int upgradeChoiceJustPressed() {
         if (!Gdx.input.justTouched()) return -1;
         touchPosition.set(Gdx.input.getX(), Gdx.input.getY());
@@ -860,10 +917,12 @@ public final class GameRenderer {
         return -1;
     }
 
+    // Detect a fresh pointer press on the entrance car interaction area.
     public boolean entranceCarJustPressed() {
         return touchJustPressed() && CAR_TARGET.contains(touchPosition);
     }
 
+    // Read a click on the car prompt's yes or no choice.
     public int carChoiceJustPressed() {
         if (!touchJustPressed()) return -1;
         if (CAR_YES_BUTTON.contains(touchPosition)) return 0;
@@ -871,6 +930,7 @@ public final class GameRenderer {
         return -1;
     }
 
+    // Detect a fresh pointer press and convert its position through the viewport.
     private boolean touchJustPressed() {
         if (!Gdx.input.justTouched()) return false;
         touchPosition.set(Gdx.input.getX(), Gdx.input.getY());
@@ -878,14 +938,17 @@ public final class GameRenderer {
         return true;
     }
 
+    // Release renderer textures, sprites, fonts and drawing tools.
     public void dispose() {
         student.dispose();
         sati.dispose();
         dome.dispose();
         ken.dispose();
         ae.dispose();
+        far.dispose();
         m.dispose();
         algoMon.dispose();
+        monsters.dispose();
         notebook.dispose();
         tables.dispose();
         liquidCat.dispose();

@@ -1,5 +1,7 @@
 package io.github.kirinojuju.enemy;
 
+// File role: Programming monster teleport warnings, jumps and attacks.
+
 import com.badlogic.gdx.math.MathUtils;
 import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.flow.RunPlan;
@@ -8,6 +10,7 @@ import io.github.kirinojuju.world.GameSpace;
 
 /** Warpers override the movement step with a warned teleport. */
 public final class WarperMonsterBehavior extends StandardEnemyBehavior {
+    // Warn at a locked destination, then teleport the monster and resolve its attack.
     @Override
     protected boolean tryWarp(CombatRoom room, CombatRoom.Enemy enemy, float dt,
                               PlayerCharacter player, RunPlan plan) {

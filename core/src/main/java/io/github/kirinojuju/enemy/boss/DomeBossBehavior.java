@@ -1,5 +1,7 @@
 package io.github.kirinojuju.enemy.boss;
 
+// File role: Dome's lightning and laser phase logic; DomeSprite displays the same phase state.
+
 import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.flow.RunPlan;
 import io.github.kirinojuju.player.PlayerCharacter;
@@ -14,6 +16,12 @@ public final class DomeBossBehavior extends AjarnBehavior {
     public static final float LASER_CHARGE = 1f;
     public static final float LASER_FIRE = .6f;
     public static final float LASER_HALF_WIDTH = 22;
+    // Hand positions in the 64x64 source frames, measured from the image's left/top edges.
+    // Fractions scale with the sprite; right-facing frames mirror the side hand horizontally.
+    public static final float LASER_SIDE_HAND_X = 11.5f / 64f;
+    public static final float LASER_SIDE_HAND_Y = 40.5f / 64f;
+    public static final float LASER_DOWN_HAND_X = 27f / 64f;
+    public static final float LASER_DOWN_HAND_Y = 52f / 64f;
     public static final float RECOVERY = .3f;
     private static final float LIGHTNING_SP_COST = 28;
     private static final float LIGHTNING_DAMAGE = 22;
@@ -33,6 +41,7 @@ public final class DomeBossBehavior extends AjarnBehavior {
         public boolean nextLaser, castingLaser, downward, facingRight;
     }
 
+    // Advance Dome's cast timer and active laser damage unless the boss is stunned.
     @Override
     public void update(CombatRoom room, CombatRoom.Enemy boss, float dt,
                        PlayerCharacter player, RunPlan plan) {
@@ -51,6 +60,7 @@ public final class DomeBossBehavior extends AjarnBehavior {
         if (state.remaining == 0) advancePhase(room, boss, player, plan);
     }
 
+    // Move between idle, charge, strike or fire, and recovery phases.
     private static void advancePhase(CombatRoom room, CombatRoom.Enemy boss,
                                      PlayerCharacter player, RunPlan plan) {
         State state = boss.dome;
@@ -77,6 +87,7 @@ public final class DomeBossBehavior extends AjarnBehavior {
         }
     }
 
+    // Spend SP and snapshot the player's position for the next lightning or laser attack.
     private static void startCast(CombatRoom room, CombatRoom.Enemy boss, PlayerCharacter player) {
         State state = boss.dome;
         float cost = state.nextLaser ? LASER_SP_COST : LIGHTNING_SP_COST;
@@ -96,6 +107,7 @@ public final class DomeBossBehavior extends AjarnBehavior {
         }
     }
 
+    // Damage the player if still inside the marked lightning circle when it strikes.
     private static void damageLightning(State state, PlayerCharacter player, RunPlan plan) {
         float dx = player.x - state.aimX;
         float dy = player.y - state.aimY;
@@ -103,11 +115,13 @@ public final class DomeBossBehavior extends AjarnBehavior {
             player.hurt(LIGHTNING_DAMAGE * plan.damageScale());
     }
 
+    // Damage the player when their circle overlaps Dome's active beam.
     private static void damageLaser(State state, PlayerCharacter player, RunPlan plan) {
         if (onBeam(state, player.x, player.y, PLAYER_RADIUS))
             player.hurt(LASER_DAMAGE * plan.damageScale());
     }
 
+    // Start a new cast phase, reset its timers and play its phase sound once.
     private static void enter(CombatRoom room, State state, Phase phase, float duration) {
         state.phase = phase;
         state.remaining = duration;
@@ -123,14 +137,18 @@ public final class DomeBossBehavior extends AjarnBehavior {
         }
     }
 
+    // Calculate Dome's beam origin and direction, stopping its endpoint at the arena edge.
     private static void updateBeam(CombatRoom.Enemy boss, State state) {
-        // The exported frames place Dome's hand differently for side/down shots.
+        // Use the same top edge and size as DomeSprite, rather than the old boss-center offsets.
+        float size = BossBody.DOME_DRAW_SIZE;
+        float top = boss.y + boss.radius;
         if (state.downward) {
-            state.originX = boss.x - 10;
-            state.originY = boss.y - 40;
+            state.originX = boss.x + (LASER_DOWN_HAND_X - .5f) * size;
+            state.originY = top - LASER_DOWN_HAND_Y * size;
         } else {
-            state.originX = boss.x + (state.facingRight ? 46 : -46);
-            state.originY = boss.y - 12;
+            float handOffset = (LASER_SIDE_HAND_X - .5f) * size;
+            state.originX = boss.x + (state.facingRight ? -handOffset : handOffset);
+            state.originY = top - LASER_SIDE_HAND_Y * size;
         }
         float dx = state.downward ? 0 : state.aimX - state.originX;
         float dy = state.downward ? -1 : state.aimY - state.originY;
@@ -152,6 +170,7 @@ public final class DomeBossBehavior extends AjarnBehavior {
         state.endY = state.originY + dy * distance;
     }
 
+    // Check whether a circle overlaps the finite beam used by laser damage.
     public static boolean onBeam(State state, float x, float y, float radius) {
         float dx = state.endX - state.originX, dy = state.endY - state.originY;
         float length = (float)Math.sqrt(dx * dx + dy * dy);

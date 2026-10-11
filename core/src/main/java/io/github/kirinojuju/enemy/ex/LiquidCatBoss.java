@@ -1,5 +1,7 @@
 package io.github.kirinojuju.enemy.ex;
 
+// File role: Custom Liquid Cat state and skills: form changes, leaps, slime trails and bullets.
+
 import com.badlogic.gdx.math.MathUtils;
 import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.combat.CombatRoom.Enemy;
@@ -9,6 +11,7 @@ import io.github.kirinojuju.world.GameSpace;
 
 public class LiquidCatBoss extends Enemy {
 
+    // Advance the custom cat skill logic for this frame unless stunned.
     @Override
     public void updateBehavior(CombatRoom room, float dt, PlayerCharacter player, RunPlan plan) {
         if (stunTime > 0) return;
@@ -20,6 +23,7 @@ public class LiquidCatBoss extends Enemy {
     public static final float DIVIDE_DURATION = .65f;
 
 
+    // Create LiquidCatBoss with its starting stats and state for this encounter.
     public LiquidCatBoss(RunPlan plan) {
         super(GameSpace.RIGHT - 75,
             GameSpace.WALK_TOP - 75,
@@ -34,6 +38,7 @@ public class LiquidCatBoss extends Enemy {
         exStateTime = 3.5f;
     }
 
+    // Switch cat forms and handle leap warnings, small-form shots, slime trails and contact damage.
     public void updateSkill(CombatRoom room, float dt, PlayerCharacter player,
                      RunPlan plan) {
 
@@ -118,6 +123,7 @@ public class LiquidCatBoss extends Enemy {
         }
     }
 
+    // Reduce incoming damage while the cat is in its small form.
     public float damageMultiplier() {
         return exState == 1 ? .55f : 1f;
     }

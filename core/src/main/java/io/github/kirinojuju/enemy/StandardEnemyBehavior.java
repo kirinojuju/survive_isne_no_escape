@@ -1,5 +1,7 @@
 package io.github.kirinojuju.enemy;
 
+// File role: Shared enemy movement, contact damage, special attack hooks and projectile patterns.
+
 import com.badlogic.gdx.math.MathUtils;
 import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.flow.RunPlan;
@@ -8,12 +10,14 @@ import io.github.kirinojuju.world.GameSpace;
 
 /** Movement, contact damage, SP and ordinary attacks shared by monsters and Ajarns. */
 public class StandardEnemyBehavior implements EnemyBehavior {
+    // Run the shared monster update for this frame.
     @Override
     public void update(CombatRoom room, CombatRoom.Enemy enemy, float dt,
                        PlayerCharacter player, RunPlan plan) {
         updateStandard(room, enemy, dt, player, plan);
     }
 
+    // Handle movement, contact damage and SP-funded attacks unless stunned or using a special.
     protected final void updateStandard(CombatRoom room, CombatRoom.Enemy enemy, float dt,
                                         PlayerCharacter player, RunPlan plan) {
         if (enemy.stunTime > 0) return;
@@ -59,9 +63,11 @@ public class StandardEnemyBehavior implements EnemyBehavior {
         }
     }
 
+    // Optional teleport hook; the base behavior does not teleport.
     protected boolean tryWarp(CombatRoom room, CombatRoom.Enemy enemy, float dt,
                               PlayerCharacter player, RunPlan plan) { return false; }
 
+    // Optional special-skill hook; the base behavior leaves ordinary attacks active.
     protected boolean useSpecial(CombatRoom room, CombatRoom.Enemy enemy, float dt,
                                  PlayerCharacter player, RunPlan plan) { return false; }
 
@@ -69,8 +75,10 @@ public class StandardEnemyBehavior implements EnemyBehavior {
 
 /** Projectile patterns shared by ordinary monsters and Ajarn combat families. */
 final class EnemyProjectilePatterns {
+    // Prevent construction of this utility class; use its static helpers.
     private EnemyProjectilePatterns() { }
 
+    // Choose binding, wave, giant or ordinary projectile patterns from the enemy's kind and traits.
     static void fire(CombatRoom room, CombatRoom.Enemy enemy,
                      PlayerCharacter player, RunPlan plan) {
         float angle = MathUtils.atan2(player.y - enemy.y, player.x - enemy.x);
@@ -127,6 +135,7 @@ final class EnemyProjectilePatterns {
         }
     }
 
+    // Launch one enemy shot and mark Algorithm projectiles for their special artwork.
     private static void fireSingle(CombatRoom room, CombatRoom.Enemy enemy,
                                    float angle, float speed, float damage) {
         CombatRoom.Shot shot = new CombatRoom.Shot(enemy.x, enemy.y,

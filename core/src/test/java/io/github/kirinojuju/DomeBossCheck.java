@@ -7,6 +7,7 @@ import io.github.kirinojuju.flow.RunDirector;
 import io.github.kirinojuju.player.PlayerCharacter;
 import io.github.kirinojuju.world.GameSpace;
 import io.github.kirinojuju.enemy.boss.DomeBossBehavior;
+import io.github.kirinojuju.enemy.boss.BossBody;
 import io.github.kirinojuju.render.DomeSprite;
 
 import com.badlogic.gdx.Files;
@@ -26,6 +27,7 @@ public final class DomeBossCheck {
         checkLightning(true);
         checkLightning(false);
         checkLaser();
+        checkLaserHandOrigins();
         checkMissingArt();
         System.out.println("Dome boss verified");
     }
@@ -90,7 +92,7 @@ public final class DomeBossCheck {
         boss.dome.nextLaser = true;
         PlayerCharacter player = new PlayerCharacter();
         player.x = 600;
-        player.y = boss.y - 12;
+        player.y = boss.y + boss.radius - DomeBossBehavior.LASER_SIDE_HAND_Y * BossBody.DOME_DRAW_SIZE;
         player.invulnerable = 0;
         boss.updateBehavior(new CombatRoom(new Random(5)), .91f, player, plan);
         DomeBossBehavior.State state = boss.dome;
@@ -112,6 +114,37 @@ public final class DomeBossCheck {
         float remaining = state.remaining;
         boss.updateBehavior(new CombatRoom(new Random(5)), .2f, player, plan);
         check(state.remaining == remaining, "Stun must pause Dome's cast");
+    }
+
+    // The warning, effect and damage all use this origin, which must match the rendered hand.
+    private static void checkLaserHandOrigins() {
+        RunPlan plan = new RunPlan(new Random(20));
+        for (int direction = 0; direction < 3; direction++) {
+            Enemy boss = dome(plan);
+            boss.anchored = direction == 2;
+            boss.sp = boss.maxSp;
+            boss.dome.nextLaser = true;
+            PlayerCharacter player = new PlayerCharacter();
+            player.x = direction == 1 ? GameSpace.RIGHT : GameSpace.LEFT + 100;
+            player.y = GameSpace.BOTTOM + 100;
+            boss.updateBehavior(new CombatRoom(new Random(21)), .91f, player, plan);
+            DomeBossBehavior.State state = boss.dome;
+            float size = BossBody.DOME_DRAW_SIZE;
+            float left = boss.x - size / 2, top = boss.y + boss.radius;
+            float expectedX = direction == 2 ? left + 27f / 64f * size
+                : direction == 1 ? left + (1 - 11.5f / 64f) * size : left + 11.5f / 64f * size;
+            float expectedY = top - (direction == 2 ? 52f : 40.5f) / 64f * size;
+            check(Math.abs(state.originX - expectedX) < .01f && Math.abs(state.originY - expectedY) < .01f,
+                "Dome's laser must start at the scaled sprite hand for direction " + direction);
+            check(state.originY < top - size / 2, "Laser must start below the head, within the body artwork");
+            float originX = state.originX, originY = state.originY;
+            boss.updateBehavior(new CombatRoom(new Random(22)), 1.01f, player, plan);
+            check(state.phase == DomeBossBehavior.Phase.LASER_FIRE
+                && state.originX == originX && state.originY == originY,
+                "Laser warning and firing must use the same hand origin");
+            if (direction == 2) check(Math.abs(state.endY - GameSpace.BOTTOM) < .01f,
+                "Downward laser must still stop at the arena bottom");
+        }
     }
 
     private static void checkMissingArt() {

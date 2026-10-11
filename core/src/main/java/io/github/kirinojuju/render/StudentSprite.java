@@ -1,5 +1,7 @@
 package io.github.kirinojuju.render;
 
+// File role: Loads and draws the player's idle, walking, skill and PowerBall artwork.
+
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -23,10 +25,12 @@ public final class StudentSprite {
     private final Texture[] skillRight = loadFrames("skill_case", "s_skill_r", 9);
     private final Texture powerBall = load(ROOT + "skill_case/power_ball.png");
 
+    // Load a texture from this sprite's asset folder.
     private static Texture load(String path) {
         return OptionalAssetTexture.load(path);
     }
 
+    // Load the numbered image files used by this animation.
     private static Texture[] loadFrames(String folder, String prefix, int count) {
         Texture[] frames = new Texture[count];
         for (int i = 0; i < count; i++)
@@ -35,6 +39,7 @@ public final class StudentSprite {
         return frames;
     }
 
+    // Choose the player's skill, walk or idle frame and facing direction.
     private Texture currentFrame(PlayerCharacter player) {
         if (player.skillPlaying) {
             Texture[] frames = player.facingRight ? skillRight : skillLeft;
@@ -50,6 +55,7 @@ public final class StudentSprite {
         return player.facingRight ? idleRight : idleLeft;
     }
 
+    // Draw Student artwork using the current animation and combat state.
     public void draw(SpriteBatch batch, PlayerCharacter player) {
         float alpha = player.invulnerable > 0
             && (int)(player.invulnerable * 18) % 2 == 0 ? .45f : 1f;
@@ -59,11 +65,13 @@ public final class StudentSprite {
         batch.setColor(Color.WHITE);
     }
 
+    // Draw the player's PowerBall artwork at the projectile position.
     public void drawPowerBall(SpriteBatch batch, CombatRoom.Shot shot) {
         batch.draw(powerBall, shot.x - POWER_BALL_SIZE / 2,
             shot.y - POWER_BALL_SIZE / 2, POWER_BALL_SIZE, POWER_BALL_SIZE);
     }
 
+    // Release textures and drawing resources owned by this sprite.
     public void dispose() {
         idleLeft.dispose();
         idleRight.dispose();
@@ -74,6 +82,7 @@ public final class StudentSprite {
         powerBall.dispose();
     }
 
+    // Release textures and drawing resources owned by this sprite.
     private static void dispose(Texture[] frames) {
         for (Texture frame : frames) frame.dispose();
     }

@@ -1,5 +1,7 @@
 package io.github.kirinojuju.enemy.ex;
 
+// File role: Liquid Cat behavior for a generic Enemy, including form changes and leaps.
+
 import com.badlogic.gdx.math.MathUtils;
 import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.enemy.ex.ExBehavior.ExEnvironment;
@@ -9,6 +11,7 @@ import io.github.kirinojuju.world.GameSpace;
 
 /** The cat alternates between an orbital leap and a compact, splitting form. */
 public final class LiquidCatBehavior extends ExBehavior {
+    // Run the generic cat's form changes, leaps, slime trail and contact attacks.
     @Override
     protected void act(CombatRoom room, CombatRoom.Enemy cat, float dt,
                        PlayerCharacter player, RunPlan plan) {

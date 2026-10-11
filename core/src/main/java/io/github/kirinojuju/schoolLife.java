@@ -1,5 +1,7 @@
 package io.github.kirinojuju;
 
+// File role: Game entry point: creates the systems, updates each frame and draws the result.
+
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import io.github.kirinojuju.audio.GameAudio;
@@ -20,10 +22,13 @@ public class schoolLife extends ApplicationAdapter {
     private GameRenderer renderer;
     private GameAudio audio;
 
+    // Choose whether the game starts normally or through a desktop test mode.
     public schoolLife() { this(TestMode.NONE); }
 
+    // Choose whether the game starts normally or through a desktop test mode.
     public schoolLife(TestMode testMode) { this.testMode = testMode; }
 
+    // Create rendering and audio resources, then initialize a fresh run.
     @Override
     public void create() {
         renderer = new GameRenderer();
@@ -31,6 +36,7 @@ public class schoolLife extends ApplicationAdapter {
         newRun();
     }
 
+    // Create a new player, run director and combat room and connect their audio.
     private void newRun() {
         player = new PlayerCharacter();
         combat = new CombatRoom(random);
@@ -42,6 +48,7 @@ public class schoolLife extends ApplicationAdapter {
         else if (testMode == TestMode.OBSTACLES) run.startObstaclesTest(player, combat);
     }
 
+    // Advance the game, route pointer input and draw the current frame.
     @Override
     public void render() {
         float dt = Math.min(Gdx.graphics.getDeltaTime(), 1f / 30f);
@@ -66,9 +73,11 @@ public class schoolLife extends ApplicationAdapter {
         renderer.draw(run, player, combat);
     }
 
+    // Update the renderer's viewport when the window size changes.
     @Override
     public void resize(int width, int height) { renderer.resize(width, height); }
 
+    // Release graphics and audio resources when the application closes.
     @Override
     public void dispose() {
         renderer.dispose();

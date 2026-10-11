@@ -1,5 +1,7 @@
 package io.github.kirinojuju.player;
 
+// File role: Stores player stats and handles movement, targeting, weapons, skills and status effects.
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.MathUtils;
@@ -50,13 +52,19 @@ public final class PlayerCharacter {
     private boolean horizontalOnly;
     private RoomObstacles obstacles;
 
+    // Return the weapon currently equipped by the player.
     public Weapon activeWeapon() { return active; }
+    // Check whether the player has unlocked the requested weapon.
     public boolean owns(Weapon weapon) { return owned[weapon.ordinal()]; }
+    // Check whether both LAN and Notebook weapons are available.
     public boolean hasBothWeapons() { return owns(Weapon.PHYSICAL) && owns(Weapon.MAGICAL); }
+    // Return the current attack target only while it is still alive.
     public CombatRoom.Enemy attackTarget() {
         return attackTarget != null && attackTarget.hp > 0 ? attackTarget : null;
     }
+    // Connect this system to the shared game sound player.
     public void setAudio(GameAudio audio) { this.audio = audio; }
+    // Connect movement and dash collision to the tables in the current room.
     public void setObstacles(RoomObstacles obstacles) { this.obstacles = obstacles; }
 
     /** Teammates can attach an ability to one weapon without changing input handling. */
@@ -64,11 +72,13 @@ public final class PlayerCharacter {
         attacks[weapon.ordinal()].addAbility(ability);
     }
 
+    // Unlock a weapon and equip it immediately.
     public void acquire(Weapon weapon) {
         owned[weapon.ordinal()] = true;
         active = weapon;
     }
 
+    // Equip an owned weapon and play the switch sound if the selection changes.
     public void switchTo(Weapon weapon) {
         if (owns(weapon) && active != weapon) {
             active = weapon;
@@ -76,6 +86,7 @@ public final class PlayerCharacter {
         }
     }
 
+    // Reset position and temporary combat state; Final Exam restricts movement to one row.
     public void startRoom(boolean horizontalOnly) {
         obstacles = null;
         this.horizontalOnly = horizontalOnly;
@@ -92,12 +103,14 @@ public final class PlayerCharacter {
         skillTarget = attackTarget = null;
     }
 
+    // Enable EX-only LAN tether and Notebook heat beam, or clear them after the fight.
     public void setExTechniques(boolean enabled) {
         lanTether = enabled;
         notebookHeatBeam = enabled;
         notebookHeat = 0;
     }
 
+    // Read combat input and advance movement, resources, targeting and attack timers.
     public void update(float dt, CombatRoom combat, boolean touchSkill, boolean mouseAttack) {
         attackTimer = Math.max(0, attackTimer - dt);
         dashTimer = Math.max(0, dashTimer - dt);
@@ -166,6 +179,7 @@ public final class PlayerCharacter {
         if (attacking && attackTimer <= 0) attack(combat);
     }
 
+    // Spend SP for a quick move with brief invulnerability, stopping before tables.
     public boolean dash(float directionX, float directionY) {
         if (dashTimer > 0 || sp < 25) return false;
         if (horizontalOnly) {
@@ -189,6 +203,7 @@ public final class PlayerCharacter {
         return true;
     }
 
+    // Move the player by an offset while respecting arena, table and horizontal-only limits.
     public void moveBy(float dx, float dy) {
         float nextX = MathUtils.clamp(x + dx,
             GameSpace.LEFT + EDGE_X, GameSpace.RIGHT - EDGE_X);
@@ -201,18 +216,20 @@ public final class PlayerCharacter {
         y = nextY;
     }
 
+    // Pick an enemy near the pointer, or the closest enemy if nothing was pointed at.
     public void lockAttackTarget(CombatRoom combat, float aimX, float aimY) {
         attackTarget = null;
         CombatRoom.Enemy pointed = combat.closestEnemy(aimX, aimY);
         if (pointed != null) {
-            float dx = pointed.x - aimX, dy = pointed.y - aimY;
-            float pickRadius = pointed.radius + 40;
+            float dx = pointed.damageX(aimX) - aimX, dy = pointed.damageY(aimY) - aimY;
+            float pickRadius = pointed.damageRadius() + 40;
             if (dx * dx + dy * dy <= pickRadius * pickRadius) attackTarget = pointed;
         }
         if (attackTarget == null) attackTarget = combat.closestEnemy(x, y);
         faceAttackTarget();
     }
 
+    // Keep a living target while attacking and clear the lock when attacks stop.
     private void followAttackTarget(CombatRoom combat, boolean attacking) {
         if (!attacking) {
             attackTarget = null;
@@ -223,9 +240,10 @@ public final class PlayerCharacter {
         faceAttackTarget();
     }
 
+    // Turn the player's facing direction toward the locked target's aim point.
     private void faceAttackTarget() {
         if (attackTarget == null || attackTarget.hp <= 0) return;
-        float dx = attackTarget.x - x, dy = attackTarget.y - y;
+        float dx = attackTarget.aimX() - x, dy = attackTarget.aimY() - y;
         float distance = (float)Math.sqrt(dx * dx + dy * dy);
         if (distance < .001f) return;
         faceX = dx / distance;
@@ -233,10 +251,12 @@ public final class PlayerCharacter {
         if (Math.abs(dx) > .001f) facingRight = dx > 0;
     }
 
+    // Run the attack implementation of the currently equipped weapon.
     public void attack(CombatRoom combat) {
         if (active != null) attacks[active.ordinal()].attack(this, combat, audio);
     }
 
+    // Check SP, cooldown and a living target before starting the PowerBall cast.
     public boolean tryStartSkill(CombatRoom combat) {
         if (skillPlaying || skillCooldown > 0 || sp < SKILL_SP_COST) return false;
         skillTarget = combat.closestEnemy(x, y);
@@ -254,6 +274,7 @@ public final class PlayerCharacter {
         return true;
     }
 
+    // Advance the cast animation, release PowerBall once and finish the skill.
     public void advanceSkill(float dt, CombatRoom combat) {
         if (!skillPlaying) return;
         faceSkillTarget(combat);
@@ -270,11 +291,12 @@ public final class PlayerCharacter {
         }
     }
 
+    // Aim the cast at its living target, choosing another enemy if necessary.
     private void faceSkillTarget(CombatRoom combat) {
         if (skillTarget == null || skillTarget.hp <= 0)
             skillTarget = combat.closestEnemy(x, y);
         if (skillTarget == null) return;
-        float dx = skillTarget.x - x, dy = skillTarget.y - y;
+        float dx = skillTarget.aimX() - x, dy = skillTarget.aimY() - y;
         float length = (float)Math.sqrt(dx * dx + dy * dy);
         if (length < .001f) return;
         faceX = dx / length;
@@ -282,6 +304,7 @@ public final class PlayerCharacter {
         if (Math.abs(dx) > .001f) facingRight = dx > 0;
     }
 
+    // Reduce HP unless invulnerable, then play the hit sound and grant brief protection.
     public void hurt(float damage) {
         if (invulnerable > 0) return;
         hp = Math.max(0, hp - damage);
@@ -289,8 +312,10 @@ public final class PlayerCharacter {
         invulnerable = .65f;
     }
 
+    // Check whether binding currently prevents player movement.
     public boolean isBound() { return boundTime > 0; }
 
+    // Start binding unless already bound or protected by bind immunity.
     public void bind(float duration) {
         if (boundTime > 0 || bindImmunity > 0) return;
         boundTime = duration;
@@ -299,6 +324,7 @@ public final class PlayerCharacter {
         moving = false;
     }
 
+    // Count alternating left and right presses to escape binding.
     public void escapePress(int direction) {
         if (boundTime <= 0 || (direction != -1 && direction != 1)) return;
         if (direction != lastBindDirection) {
@@ -308,6 +334,7 @@ public final class PlayerCharacter {
         }
     }
 
+    // Clear binding and grant a short immunity period against being bound again.
     private void releaseBind() {
         boundTime = 0;
         bindProgress = 0;
@@ -315,9 +342,12 @@ public final class PlayerCharacter {
         bindImmunity = 1.2f;
     }
 
+    // Restore HP without exceeding the player's maximum health.
     public void heal(float amount) { hp = Math.min(maxHp, hp + amount); }
+    // Restore SP without exceeding the resource cap.
     public void recoverSp(float amount) { sp = Math.min(100, sp + amount); }
 
+    // Grant the permanent stat reward and healing for the defeated EX enemy.
     public void applyExBuff(int exId) {
         if (exId == 0) {
             maxHp += 25;

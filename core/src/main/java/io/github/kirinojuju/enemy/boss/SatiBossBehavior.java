@@ -1,11 +1,14 @@
 package io.github.kirinojuju.enemy.boss;
 
+// File role: Sati's element transformation, spear charge and spear release.
+
 import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.flow.RunPlan;
 import io.github.kirinojuju.player.PlayerCharacter;
 
 /** Sati's charge, target snapshot and spear attack; cast state stays on the boss. */
 public final class SatiBossBehavior extends AjarnBehavior {
+    // Charge Sati's element transformation and launch its aimed spear when ready.
     @Override
     protected boolean useSpecial(CombatRoom room, CombatRoom.Enemy boss, float dt,
                                  PlayerCharacter player, RunPlan plan) {

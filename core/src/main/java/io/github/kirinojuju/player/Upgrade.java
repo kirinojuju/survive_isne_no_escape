@@ -1,5 +1,7 @@
 package io.github.kirinojuju.player;
 
+// File role: Lists player upgrades, their availability rules and stat or attack changes.
+
 /** One permanent choice earned after defeating an Ajarn. */
 public enum Upgrade {
     LAN_DAMAGE("LAN DAMAGE +7", "The cable hits harder."),
@@ -14,11 +16,13 @@ public enum Upgrade {
 
     public final String title, detail;
 
+    // Create Upgrade with its starting stats and state for this encounter.
     Upgrade(String title, String detail) {
         this.title = title;
         this.detail = detail;
     }
 
+    // Check whether this upgrade can currently be offered to the player.
     public boolean available(PlayerCharacter player) {
         switch (this) {
             case LAN_SLOW: return !player.lanSlow;
@@ -31,6 +35,7 @@ public enum Upgrade {
         }
     }
 
+    // Apply this upgrade's stat increase or weapon effect to the player.
     public void apply(PlayerCharacter player) {
         switch (this) {
             case LAN_DAMAGE: player.physicalBonus += 7; break;

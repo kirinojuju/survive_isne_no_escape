@@ -1,5 +1,7 @@
 package io.github.kirinojuju.flow;
 
+// File role: Controls screens, room transitions, upgrades, EX rewards and Final Exam progression.
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import io.github.kirinojuju.audio.GameAudio;
@@ -36,10 +38,12 @@ public final class RunDirector {
     private final Random random;
     private GameAudio audio;
 
+    // Create the run plan and keep the random generator for rewards and encounters.
     public RunDirector(Random random) {
         this.random = random;
         plan = new RunPlan(random);
     }
+    // Connect this system to the shared game sound player.
     public void setAudio(GameAudio audio) { this.audio = audio; }
 
     /** Desktop test entry: skip progression and keep the real cutscene and fight. */
@@ -131,18 +135,21 @@ public final class RunDirector {
         return false;
     }
 
+    // Start fading from the start screen into the entrance scene.
     public void startRun(PlayerCharacter player, CombatRoom combat) {
         if (phase != Phase.START_SELECT) return;
         if (audio != null) audio.click();
         fadeDestination = Phase.ENTRANCE;
     }
 
+    // Start entering combat when the player reaches the entrance door.
     public void requestDoor(PlayerCharacter player) {
         if (phase != Phase.ENTRANCE || sceneFade > 0 || fadeDestination != null
             || !EntranceScene.atDoor(player)) return;
         fadeDestination = Phase.FIGHT;
     }
 
+    // Show the go-home choice when the player interacts near the car.
     public void openCarPrompt(PlayerCharacter player) {
         if (phase != Phase.ENTRANCE || sceneFade > 0 || fadeDestination != null
             || !EntranceScene.atCar(player)) return;
@@ -151,6 +158,7 @@ public final class RunDirector {
         if (audio != null) audio.click();
     }
 
+    // Choose the home ending or return to walking around the entrance.
     public void chooseCar(boolean goHome) {
         if (phase != Phase.CAR_PROMPT || fadeDestination != null) return;
         if (audio != null) audio.click();
@@ -158,6 +166,7 @@ public final class RunDirector {
         else phase = Phase.ENTRANCE;
     }
 
+    // Advance scene fades and switch scenes when the screen becomes fully dark.
     public boolean advanceSceneFade(float dt, PlayerCharacter player, CombatRoom combat) {
         if (fadeDestination != null) {
             sceneFade = Math.min(1, sceneFade + dt / SCENE_FADE_DURATION);
@@ -183,6 +192,7 @@ public final class RunDirector {
         return false;
     }
 
+    // Apply the selected available upgrade and continue to the next room.
     public void chooseUpgrade(int index, PlayerCharacter player, CombatRoom combat) {
         if (phase != Phase.UPGRADE || index < 0 || index >= offeredUpgrades.length) return;
         Upgrade choice = offeredUpgrades[index];
@@ -193,6 +203,7 @@ public final class RunDirector {
         continueAfterRoom(player, combat);
     }
 
+    // Start the queued room or Final Exam cutscene, advancing the loop if required.
     public void continueAfterRoom(PlayerCharacter player, CombatRoom combat) {
         if (phase != Phase.TRANSITION) return;
         if (nextRoom == Room.FINAL_EXAM) {
@@ -207,12 +218,14 @@ public final class RunDirector {
         beginRoom(nextRoom, player, combat);
     }
 
+    // Start the three-boss Final Exam fight after its introduction.
     public void continueAfterCutscene(PlayerCharacter player, CombatRoom combat) {
         if (phase != Phase.CUTSCENE) return;
         if (audio != null) audio.nextStage();
         beginRoom(Room.FINAL_EXAM, player, combat);
     }
 
+    // Reset player combat state, spawn the room and connect its table collisions.
     private void beginRoom(Room next, PlayerCharacter player, CombatRoom combat) {
         room = next;
         phase = Phase.FIGHT;
@@ -223,6 +236,7 @@ public final class RunDirector {
         sceneFade = 1;
     }
 
+    // Grant room-clear rewards and choose the next screen or encounter.
     public void finishRoom(PlayerCharacter player) {
         clearedRooms++;
         phase = Phase.TRANSITION;
@@ -250,6 +264,7 @@ public final class RunDirector {
         }
     }
 
+    // Record the boss defeat, advance the stage and offer upgrades or queue special rooms.
     private void finishBossRoom(PlayerCharacter player) {
         String defeated = plan.bossName();
         plan.recordBossDefeat(plan.bossId());
@@ -280,6 +295,7 @@ public final class RunDirector {
         }
     }
 
+    // Grant the EX reward and queue the next loop or a pending Final Exam.
     private void finishExRoom(PlayerCharacter player) {
         player.setExTechniques(false);
         player.applyExBuff(exId);
@@ -292,6 +308,7 @@ public final class RunDirector {
         if (finalExamQueued) queueFinalExam();
     }
 
+    // Insert Final Exam while remembering which room and loop should follow it.
     private void queueFinalExam() {
         roomAfterFinalExam = nextRoom;
         nextLoopAfterFinalExam = nextLoopOnContinue;
@@ -299,6 +316,7 @@ public final class RunDirector {
         nextLoopOnContinue = false;
     }
 
+    // Shuffle available upgrades and fill the three choices shown to the player.
     private void offerUpgrades(PlayerCharacter player) {
         ArrayList<Upgrade> choices = new ArrayList<Upgrade>();
         for (Upgrade upgrade : Upgrade.values())

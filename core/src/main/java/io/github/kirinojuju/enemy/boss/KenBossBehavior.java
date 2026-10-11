@@ -1,5 +1,7 @@
 package io.github.kirinojuju.enemy.boss;
 
+// File role: Ken's random bomb placement, warning timers and explosion damage.
+
 import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.flow.RunPlan;
 import io.github.kirinojuju.player.PlayerCharacter;
@@ -7,6 +9,7 @@ import io.github.kirinojuju.world.GameSpace;
 
 /** Ken's bomb placement, warnings, explosions and ordinary boss attacks. */
 public final class KenBossBehavior extends AjarnBehavior {
+    // Advance existing bombs and start new casts when allowed, then run shared boss attacks.
     @Override
     public void update(CombatRoom room, CombatRoom.Enemy enemy, float dt,
                        PlayerCharacter player, RunPlan plan) {
@@ -15,6 +18,7 @@ public final class KenBossBehavior extends AjarnBehavior {
         super.update(room, boss, dt, player, plan);
     }
 
+    // Warn, explode and remove bombs; each new cast places 7-9 bombs inside the arena.
     public static void updateBombSkill(KenBoss boss, float dt, PlayerCharacter player,
                          RunPlan plan, boolean canStartSkill) {
 
@@ -50,7 +54,7 @@ public final class KenBossBehavior extends AjarnBehavior {
 
         boss.bombAttackTime = KenBoss.BOMB_ATTACK_DURATION;
 
-        int count = 3 + boss.random.nextInt(3);
+        int count = 7 + boss.random.nextInt(3);
 
         for (int i = 0; i < count; i++) {
             float x = GameSpace.LEFT + KenBoss.BOMB_RADIUS

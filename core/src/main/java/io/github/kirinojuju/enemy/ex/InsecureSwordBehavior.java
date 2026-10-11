@@ -1,5 +1,7 @@
 package io.github.kirinojuju.enemy.ex;
 
+// File role: Sword EX logic: confidence, notes and charged attacks.
+
 import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.enemy.ex.ExBehavior.ExEnvironment;
 import io.github.kirinojuju.flow.RunPlan;
@@ -10,6 +12,7 @@ public final class InsecureSwordBehavior extends ExBehavior {
     public static final float SLASH_ANIMATION_DURATION = .5f;
     public static final float WHIFF_DURATION = .6f;
 
+    // Advance Sword's confidence, note objects and attack timing.
     @Override
     protected void act(CombatRoom room, CombatRoom.Enemy sword, float dt,
                        PlayerCharacter player, RunPlan plan) {

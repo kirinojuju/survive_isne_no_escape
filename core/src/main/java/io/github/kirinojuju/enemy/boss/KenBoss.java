@@ -1,5 +1,7 @@
 package io.github.kirinojuju.enemy.boss;
 
+// File role: Ken's stats, bomb data and full-body damage geometry; KenBossBehavior runs the skills.
+
 import com.badlogic.gdx.utils.Array;
 import io.github.kirinojuju.combat.CombatRoom.Enemy;
 import io.github.kirinojuju.flow.RunPlan;
@@ -7,6 +9,7 @@ import io.github.kirinojuju.world.GameSpace;
 import java.util.Random;
 
 public class KenBoss extends Enemy {
+    public static final float DRAW_SIZE = BossBody.KEN_DRAW_SIZE;
 
     public static final float WARNING_TIME = 3f;
     public static final float BOMB_RADIUS = 68f;
@@ -19,6 +22,7 @@ public class KenBoss extends Enemy {
         public float x, y, warningTime, blastTime;
         public boolean exploded;
 
+        // Create a bomb at this position and start its warning countdown.
         Bomb(float x, float y) {
             this.x = x;
             this.y = y;
@@ -30,6 +34,7 @@ public class KenBoss extends Enemy {
     final Random random;
     private static final KenBossBehavior BEHAVIOR = new KenBossBehavior();
 
+    // Create KenBoss with its starting stats and state for this encounter.
     public KenBoss(RunPlan plan, Random random) {
         super(GameSpace.RIGHT - 60, GameSpace.WALK_TOP - 75, 36,
             (190 + plan.stage() * 22 + (1 % 3) * 12) * plan.healthScale(),
@@ -41,5 +46,7 @@ public class KenBoss extends Enemy {
         this.random = random;
         skillTimer = 1.8f;
     }
+
+    // Full-body damage and aiming use CombatRoom.Enemy's shared BossBody geometry.
 
 }

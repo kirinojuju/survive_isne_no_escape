@@ -1,5 +1,7 @@
 package io.github.kirinojuju.enemy.ex;
 
+// File role: Vacuum EX logic: dust, suction, stored dust and attacks.
+
 import com.badlogic.gdx.math.MathUtils;
 import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.enemy.ex.ExBehavior.ExEnvironment;
@@ -9,6 +11,7 @@ import io.github.kirinojuju.world.GameSpace;
 
 /** The vacuum collects dust, warns before sneezing, then ejects the dust. */
 public final class AllergicVacuumBehavior extends ExBehavior {
+    // Advance Vacuum's suction and release cycle, collecting dust and firing stored dust.
     @Override
     protected void act(CombatRoom room, CombatRoom.Enemy vacuum, float dt,
                        PlayerCharacter player, RunPlan plan) {

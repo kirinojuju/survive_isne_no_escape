@@ -1,5 +1,7 @@
 package io.github.kirinojuju.enemy;
 
+// File role: Creates monsters, bosses and EX enemies, including spawn positions and difficulty-scaled stats.
+
 import com.badlogic.gdx.math.MathUtils;
 import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.enemy.ex.ExBehavior.ExEnvironment;
@@ -7,6 +9,7 @@ import io.github.kirinojuju.enemy.ex.LiquidCatBoss;
 import io.github.kirinojuju.enemy.boss.KenBoss;
 import io.github.kirinojuju.enemy.boss.MBoss;
 import io.github.kirinojuju.enemy.boss.AeBoss;
+import io.github.kirinojuju.enemy.boss.FarBoss;
 import io.github.kirinojuju.enemy.boss.SatiBoss;
 import io.github.kirinojuju.flow.RunDirector;
 import io.github.kirinojuju.flow.RunPlan;
@@ -24,8 +27,10 @@ public final class EnemyFactory {
     };
     private final Random random;
 
+    // Keep the random generator used to select enemies and spawn positions.
     public EnemyFactory(Random random) { this.random = random; }
 
+    // Spawn the appropriate enemy group for a monster, boss, EX or Final Exam room.
     public void populate(CombatRoom combat, RunDirector.Room room, RunPlan plan, int exId) {
         switch (room) {
             case MOBS:
@@ -45,13 +50,14 @@ public final class EnemyFactory {
         }
     }
 
+    // Arrange the room's monsters around the arena and choose their kinds by stage and loop.
     private void populateMonsters(CombatRoom combat, RunPlan plan) {
         int count = 4 + plan.stage() + Math.min(2, plan.loop() - 1);
         for (int i = 0; i < count; i++) {
             float angle = MathUtils.PI2 * i / count + random.nextFloat() * .25f;
             float x = GameSpace.WIDTH / 2 + MathUtils.cos(angle) * (330 + random.nextInt(90));
             float y = GameSpace.HEIGHT / 2 + MathUtils.sin(angle) * (95 + random.nextInt(50));
-            combat.enemies.add(createMonster(x, y, mobKind(i, plan), plan, i == 0));
+            combat.enemies.add(createMonster(x, y, mobKind(i, plan), plan));
         }
     }
 
@@ -69,6 +75,7 @@ public final class EnemyFactory {
         }
     }
 
+    // Choose a monster kind using stage introductions and the later-loop random chance.
     private int mobKind(int index, RunPlan plan) {
         if (index == 0) return CombatRoom.RANGED;
         if (index == 1 && plan.stage() >= 1) return CombatRoom.WAVE;
@@ -77,18 +84,15 @@ public final class EnemyFactory {
         if (index == 4 && plan.stage() >= 3) return CombatRoom.WARPER;
         float extraChance = Math.min(.50f, .12f * (plan.loop() - 1));
         if (plan.loop() >= 2 && random.nextFloat() < extraChance) {
-            int[] specials = {CombatRoom.RANGED, CombatRoom.WAVE,
-                CombatRoom.SHIELDED, CombatRoom.BINDER, CombatRoom.WARPER};
+            int[] specials = {CombatRoom.RANGED, CombatRoom.WAVE, CombatRoom.SHIELDED,
+                CombatRoom.BINDER, CombatRoom.WARPER};
             return specials[random.nextInt(specials.length)];
         }
         return CombatRoom.BASIC;
     }
 
+    // Build the correct monster subclass with scaled stats and shield armor when needed.
     public CombatRoom.Enemy createMonster(float x, float y, int kind, RunPlan plan) {
-        return createMonster(x, y, kind, plan, false);
-    }
-
-    private CombatRoom.Enemy createMonster(float x, float y, int kind, RunPlan plan, boolean algorithm) {
         float hp = 42 + plan.stage() * 5;
         float sp = 37;
         float speed = 80;
@@ -125,10 +129,16 @@ public final class EnemyFactory {
         }
         float spawnX = MathUtils.clamp(x, GameSpace.LEFT + 17, GameSpace.RIGHT - 17);
         float spawnY = MathUtils.clamp(y, GameSpace.BOTTOM + 17, GameSpace.WALK_TOP - 17);
-        CombatRoom.Enemy enemy = algorithm
+        CombatRoom.Enemy enemy = kind == CombatRoom.BASIC
             ? new AlgoMonster(spawnX, spawnY, 17, hp * plan.healthScale(), sp * plan.spScale(),
                 speed * plan.speedScale(), damage * plan.damageScale(), kind)
-            : new NetworkMonster(spawnX, spawnY, 17, hp * plan.healthScale(), sp * plan.spScale(),
+            : kind == CombatRoom.WARPER
+            ? new ProgramMonster(spawnX, spawnY, 17, hp * plan.healthScale(), sp * plan.spScale(),
+                speed * plan.speedScale(), damage * plan.damageScale(), kind)
+            : kind == CombatRoom.SHIELDED
+            ? new NetworkMonster(spawnX, spawnY, 17, hp * plan.healthScale(), sp * plan.spScale(),
+                speed * plan.speedScale(), damage * plan.damageScale(), kind)
+            : new SlimeMonster(spawnX, spawnY, 17, hp * plan.healthScale(), sp * plan.spScale(),
                 speed * plan.speedScale(), damage * plan.damageScale(), kind);
         if (kind == CombatRoom.SHIELDED) {
             enemy.maxArmor = (36 + plan.stage() * 7) * plan.healthScale();
@@ -137,6 +147,7 @@ public final class EnemyFactory {
         return enemy;
     }
 
+    // Create the selected teacher boss and assign its shared attack traits and summons.
     private CombatRoom.Enemy createBoss(RunPlan plan) {
         int id = plan.bossId();
         int family = id % 4;
@@ -149,6 +160,7 @@ public final class EnemyFactory {
         else if (id == RunPlan.M_ID) boss = new MBoss(plan);
         else if (id == RunPlan.SATI_ID) boss = new SatiBoss(plan, random);
         else if (id == RunPlan.AE_ID) boss = new AeBoss(plan);
+        else if (id == RunPlan.FAR_ID) boss = new FarBoss(plan);
         boss.reflector = family == 0 || family == 3;
         boss.warper = family == 1;
         boss.artillery = family == 2;
@@ -157,7 +169,7 @@ public final class EnemyFactory {
         boss.warpCooldown = plan.loop() == 1 ? 4f : 2.8f;
         if (id == RunPlan.AE_ID) boss.warpCooldown = 6f;
         if (id == RunPlan.SATI_ID) boss.satiCooldown = 3.4f;
-        if (id == RunPlan.KEN_ID) boss.talgoCooldown = 3.4f;
+        if (id == RunPlan.FAR_ID) boss.farCooldown = 3.4f;
         if (plan.loop() >= 3) {
             if (random.nextBoolean()) boss.reflector = true;
             else boss.warper = true;
@@ -173,7 +185,6 @@ public final class EnemyFactory {
         }
         if (boss instanceof KenBoss) {
             boss.warper = false;
-            boss.talgoCooldown = 0;
         }
         if (boss.reflector) {
             boss.maxArmor = ((plan.loop() == 1 ? 75 : 110)
@@ -183,6 +194,7 @@ public final class EnemyFactory {
         return boss;
     }
 
+    // Create the selected EX enemy and initialize its special state and room objects.
     private CombatRoom.Enemy createEx(CombatRoom combat, RunPlan plan, int exId) {
         CombatRoom.Enemy ex = new CombatRoom.Enemy(
             GameSpace.RIGHT - 75, GameSpace.WALK_TOP - 75, 34,
@@ -203,6 +215,7 @@ public final class EnemyFactory {
         return ex;
     }
 
+    // Create an anchored server boss with the original Final Exam firing setup.
     private CombatRoom.Enemy createFinalExamBoss(int id, int slot, RunPlan plan) {
         CombatRoom.Enemy boss = new CombatRoom.Enemy(
             GameSpace.serverBossX(slot), GameSpace.SERVER_BOSS_Y, 36,

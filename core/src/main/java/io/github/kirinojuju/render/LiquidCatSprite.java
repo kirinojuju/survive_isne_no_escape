@@ -1,5 +1,9 @@
 package io.github.kirinojuju.render;
 
+import io.github.kirinojuju.enemy.boss.BossBody;
+
+// File role: Loads and draws Liquid Cat forms, transformation, attacks and bullets.
+
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
@@ -8,8 +12,8 @@ import java.util.Locale;
 
 /** The team's separate Liquid Cat animation and attack frames. */
 public final class LiquidCatSprite {
-    private static final float DRAW_SIZE = 128;
-    private static final float SMALL_DRAW_SIZE = 96;
+    private static final float DRAW_SIZE = BossBody.CAT_DRAW_SIZE;
+    private static final float SMALL_DRAW_SIZE = BossBody.SMALL_CAT_DRAW_SIZE;
     private static final float BULLET_SIZE = 128;
     private static final String ROOT = "characters/boss_ex/liquid-cat/";
 
@@ -24,10 +28,12 @@ public final class LiquidCatSprite {
     private final Texture strikeObject = load("attack/liquid_orbital_strike_object.png");
     private final Texture bullet = load("attack/liquid_bullet.png");
 
+    // Load a texture from this sprite's asset folder.
     private static Texture load(String name) {
         return OptionalAssetTexture.load(ROOT + name);
     }
 
+    // Load the numbered image files used by this animation.
     private static Texture[] loadFrames(String prefix, int first, int count) {
         Texture[] frames = new Texture[count];
         for (int i = 0; i < count; i++)
@@ -37,12 +43,14 @@ public final class LiquidCatSprite {
         return frames;
     }
 
+    // Select a frame using the progress of a transformation or attack timer.
     private static Texture timedFrame(Texture[] frames, float remaining, float duration) {
         float progress = 1 - MathUtils.clamp(remaining / duration, 0, 1);
         int index = MathUtils.clamp((int)(progress * frames.length), 0, frames.length - 1);
         return frames[index];
     }
 
+    // Draw LiquidCat artwork using the current animation and combat state.
     public void draw(SpriteBatch batch, CombatRoom.Enemy cat) {
         Texture frame;
         if (cat.catTransformTime > 0) {
@@ -66,18 +74,20 @@ public final class LiquidCatSprite {
         }
         float size = cat.exState == 1 && cat.catTransformTime <= 0
             ? SMALL_DRAW_SIZE : DRAW_SIZE;
-        batch.draw(frame, cat.x - size / 2, cat.y - size / 2,
+        batch.draw(frame, cat.x - size / 2, cat.y + cat.radius - size,
             size, size);
         if (cat.exState == 0 && cat.exMeter > 0)
             batch.draw(strikeObject, cat.exAimX - DRAW_SIZE / 2,
                 cat.exAimY - DRAW_SIZE / 2, DRAW_SIZE, DRAW_SIZE);
     }
 
+    // Draw a Liquid Cat bullet at its projectile position.
     public void drawBullet(SpriteBatch batch, CombatRoom.Shot shot) {
         batch.draw(bullet, shot.x - BULLET_SIZE / 2, shot.y - BULLET_SIZE / 2,
             BULLET_SIZE, BULLET_SIZE);
     }
 
+    // Release textures and drawing resources owned by this sprite.
     public void dispose() {
         dispose(idleLeft);
         dispose(idleRight);
@@ -91,6 +101,7 @@ public final class LiquidCatSprite {
         bullet.dispose();
     }
 
+    // Release textures and drawing resources owned by this sprite.
     private static void dispose(Texture[] frames) {
         for (Texture frame : frames) frame.dispose();
     }

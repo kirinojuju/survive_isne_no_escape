@@ -1,5 +1,7 @@
 package io.github.kirinojuju.enemy.boss;
 
+// File role: Sati's initial stats and skill setup; SatiBossBehavior controls the element and spear attack.
+
 import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.combat.CombatRoom.Enemy;
 import io.github.kirinojuju.flow.RunPlan;
@@ -12,6 +14,7 @@ public class SatiBoss extends Enemy {
     public static final float SPEAR_SPEED = 500f;
     public static final float SPEAR_RADIUS = 36f;
 
+    // Create SatiBoss with its starting stats and state for this encounter.
     public SatiBoss(RunPlan plan, Random random) {
         super(GameSpace.RIGHT - 60,
             GameSpace.WALK_TOP - 75,

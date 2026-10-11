@@ -1,5 +1,7 @@
 package io.github.kirinojuju.world;
 
+// File role: Shared game dimensions, arena limits and Final Exam server positions.
+
 /** Shared logical screen size and arena bounds. */
 public final class GameSpace {
     public static final float WIDTH = 1280, HEIGHT = 720;
@@ -10,9 +12,11 @@ public final class GameSpace {
     public static final float SERVER_LANE_TOP = 220;
     public static final float SERVER_BOSS_Y = 465;
 
+    // Return the horizontal position of a Final Exam server boss slot.
     public static float serverBossX(int slot) {
         return LEFT + (RIGHT - LEFT) * (slot + .5f) / 3f;
     }
 
+    // Prevent construction of this utility class; use its static helpers.
     private GameSpace() { }
 }

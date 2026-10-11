@@ -1,5 +1,7 @@
 package io.github.kirinojuju.weapon;
 
+// File role: Runs Notebook shots or heat beams and draws its projectile and impact artwork.
+
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
@@ -11,6 +13,7 @@ import io.github.kirinojuju.weapon.WeaponAttack.WeaponAttackSpec;
 
 /** Thrown notebook and EX heat beam, separate from input and movement. */
 public final class NotebookWeaponAttack extends AbstractWeaponAttack {
+    // Spend SP to fire a Notebook projectile or the upgraded heat beam.
     @Override
     public boolean attack(PlayerCharacter player, CombatRoom combat, GameAudio audio) {
         boolean beamReady = player.notebookHeatBeam && player.notebookHeat >= 100;
@@ -28,8 +31,8 @@ public final class NotebookWeaponAttack extends AbstractWeaponAttack {
         player.sp -= spec.spCost;
         player.attackTimer = spec.interval / (1 + player.attackSpeedBonus);
         CombatRoom.Enemy target = player.attackTarget();
-        float dx = target == null ? player.faceX : target.x - player.x;
-        float dy = target == null ? player.faceY : target.y - player.y;
+        float dx = target == null ? player.faceX : target.aimX() - player.x;
+        float dy = target == null ? player.faceY : target.aimY() - player.y;
         float length = Math.max(.001f, (float)Math.sqrt(dx * dx + dy * dy));
         if (spec.beam) {
             player.notebookHeat = 0;
@@ -60,6 +63,7 @@ public final class NotebookWeaponAttack extends AbstractWeaponAttack {
         private final Texture[] flying = loadFrames("notebook_flying", 9);
         private final Texture[] explode = loadFrames("notebook_explode", 6);
 
+        // Load the numbered image files used by this animation.
         private static Texture[] loadFrames(String prefix, int count) {
             Texture[] frames = new Texture[count];
             for (int i = 0; i < count; i++)
@@ -67,12 +71,14 @@ public final class NotebookWeaponAttack extends AbstractWeaponAttack {
             return frames;
         }
 
+        // Draw the moving Notebook projectile using its animation frame.
         public void drawShot(SpriteBatch batch, CombatRoom.Shot shot) {
             int index = (int)(shot.animationTime / FLYING_FRAME_TIME) % flying.length;
             batch.draw(flying[index], shot.x - PROJECTILE_SIZE / 2,
                 shot.y - PROJECTILE_SIZE / 2, PROJECTILE_SIZE, PROJECTILE_SIZE);
         }
 
+        // Draw a Notebook hit animation at the stored impact position.
         public void drawImpact(SpriteBatch batch, CombatRoom.NotebookImpact impact) {
             int index = MathUtils.clamp((int)(impact.time / CombatRoom.NOTEBOOK_IMPACT_DURATION
                 * explode.length), 0, explode.length - 1);
@@ -80,10 +86,12 @@ public final class NotebookWeaponAttack extends AbstractWeaponAttack {
                 impact.y - IMPACT_SIZE / 2, IMPACT_SIZE, IMPACT_SIZE);
         }
 
+        // Draw the Notebook weapon icon in the interface.
         public void drawIcon(SpriteBatch batch, float x, float y) {
             batch.draw(icon, x, y, 32, 32);
         }
 
+        // Release textures and drawing resources owned by this sprite.
         public void dispose() {
             icon.dispose();
             for (Texture frame : flying) frame.dispose();

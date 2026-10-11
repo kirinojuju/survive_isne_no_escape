@@ -1,5 +1,7 @@
 package io.github.kirinojuju.render;
 
+// File role: Loads artwork and creates placeholders; optional numbered frames can stay missing.
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
@@ -8,8 +10,33 @@ import com.badlogic.gdx.graphics.Texture;
 
 /** Uses local art when available and a small code-drawn stand-in in fresh clones. */
 public final class OptionalAssetTexture {
+    // Prevent construction of this utility class; use its static helpers.
     private OptionalAssetTexture() { }
 
+    /** Exported frames numbered 1..count; absent frames never become unrelated placeholder art. */
+    public static Texture[] loadNumberedFrames(String root, String prefix, int count) {
+        Texture[] frames = new Texture[count];
+        for (int i = 0; i < count; i++) {
+            String path = root + prefix + (i + 1) + ".png";
+            if (Gdx.files.internal(path).exists()) frames[i] = load(path);
+        }
+        return frames;
+    }
+
+    // Choose a bounded frame index and fall back to the first available frame if needed.
+    public static Texture frame(Texture[] frames, int index) {
+        Texture selected = frames[Math.max(0, Math.min(index, frames.length - 1))];
+        if (selected != null) return selected;
+        for (Texture frame : frames) if (frame != null) return frame;
+        return null;
+    }
+
+    // Release each available texture in an animation array.
+    public static void disposeFrames(Texture[] frames) {
+        for (Texture frame : frames) if (frame != null) frame.dispose();
+    }
+
+    // Load the requested image or create the matching placeholder when it is missing.
     public static Texture load(String path) {
         FileHandle file = Gdx.files.internal(path);
         Texture texture;
@@ -23,6 +50,7 @@ public final class OptionalAssetTexture {
         return texture;
     }
 
+    // Choose and create placeholder artwork based on the requested asset path.
     private static Pixmap placeholder(String path) {
         Pixmap pixels = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
         pixels.setColor(0, 0, 0, 0);
@@ -37,6 +65,7 @@ public final class OptionalAssetTexture {
         return pixels;
     }
 
+    // Paint fallback Notebook or Notebook effect pixels.
     private static void drawNotebook(Pixmap pixels, String path) {
         pixels.setColor(Color.GRAY);
         pixels.fillRectangle(18, 17, 28, 20);
@@ -52,6 +81,7 @@ public final class OptionalAssetTexture {
         }
     }
 
+    // Paint fallback scene pixels for the requested background.
     private static void drawScene(Pixmap pixels, String path) {
         if (path.contains("/table")) {
             pixels.setColor(Color.LIGHT_GRAY);
@@ -98,6 +128,7 @@ public final class OptionalAssetTexture {
         pixels.fillRectangle(38, 4, 18, 9);
     }
 
+    // Paint fallback player pixels for the requested animation or direction.
     private static void drawStudent(Pixmap pixels, String path) {
         if (path.contains("power_ball")) {
             pixels.setColor(.08f, .52f, .93f, .7f);
@@ -123,6 +154,7 @@ public final class OptionalAssetTexture {
         }
     }
 
+    // Paint fallback Liquid Cat pixels.
     private static void drawCat(Pixmap pixels, String path) {
         pixels.setColor(.25f, .82f, .27f, 1);
         pixels.fillCircle(32, 37, path.contains("bullet") ? 13 : 20);
@@ -134,6 +166,7 @@ public final class OptionalAssetTexture {
         pixels.fillRectangle(36, 34, 6, 4);
     }
 
+    // Paint fallback Sword EX pixels.
     private static void drawSword(Pixmap pixels) {
         pixels.setColor(Color.CORAL);
         pixels.fillRectangle(29, 7, 6, 13);
@@ -145,6 +178,7 @@ public final class OptionalAssetTexture {
         pixels.drawLine(29, 24, 29, 49);
     }
 
+    // Paint fallback Sati or C++ element pixels.
     private static void drawSati(Pixmap pixels, String path) {
         pixels.setColor(.60f, .45f, .91f, 1);
         if (path.contains("spear")) {
@@ -158,6 +192,7 @@ public final class OptionalAssetTexture {
         }
     }
 
+    // Paint fallback Dome or Dome effect pixels.
     private static void drawDome(Pixmap pixels, String path) {
         if (path.contains("Elements/")) {
             pixels.setColor(path.contains("Laser") ? Color.CYAN : Color.YELLOW);

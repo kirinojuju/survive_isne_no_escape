@@ -32,6 +32,7 @@ public final class GameRulesCheck {
         for (int i = 0; i < 4; i++) {
             stages.add(order.stageId());
             bosses.add(order.bossId());
+            check(RunPlan.BOSSES.containsKey(order.bossId()), "Every chosen boss must have an active identity");
             bossFamilies.add(order.bossId() % 4);
             order.completeStage();
         }
@@ -165,7 +166,7 @@ public final class GameRulesCheck {
         checkExMechanics();
         checkSatiSkill();
         checkPowerBallKnockback();
-        checkTalgoCast();
+        checkFarCast();
         checkDomeSkills();
         checkFinalExamMechanics();
         System.out.println("Game rules verified");
@@ -498,10 +499,10 @@ public final class GameRulesCheck {
         player.y = GameSpace.HEIGHT / 2;
         plan.completeStage();
         combat.begin(RunDirector.Room.MOBS, plan, 0);
-        boolean wave = false;
+        boolean waveIntroduced = false;
         for (CombatRoom.Enemy enemy : combat.enemies)
-            if (enemy.kind == CombatRoom.WAVE) wave = true;
-        check(wave, "The wave monster should appear in the second stage");
+            if (enemy.kind == CombatRoom.WAVE) waveIntroduced = true;
+        check(waveIntroduced, "The wave monster should appear in the second stage");
         plan.completeStage();
         combat.begin(RunDirector.Room.MOBS, plan, 0);
         CombatRoom.Enemy shield = null;
@@ -531,8 +532,8 @@ public final class GameRulesCheck {
                     "Ken must retain his original bomb/summon traits");
                 boss.skillTimer = 0;
                 combat.update(.01f, player, bossPlan);
-                check(((KenBoss) boss).bombs.size >= 3 && boss.talgoCharge == 0,
-                    "Ken must use bombs rather than the generic Talgo grid");
+                check(((KenBoss) boss).bombs.size >= 3 && boss.farCharge == 0,
+                    "Ken must use bombs rather than the generic Far grid");
             } else if (family == 0)
                 check(boss.reflector && boss.armor > 0,
                     "Shield boss missing its reflecting armor");
@@ -716,8 +717,8 @@ public final class GameRulesCheck {
                 plan.nextLoop();
             }
         }
-        check(bossKinds.size() == RunPlan.BOSSES.length && monsterKinds.size() == 6,
-            "The shared room rule must cover every boss and all six existing monster types");
+        check(bossKinds.equals(RunPlan.BOSSES.keySet()) && monsterKinds.size() == 6,
+            "The shared room rule must cover every boss and all six monster types");
 
         RunPlan plan = new RunPlan(new Random(91));
         PlayerCharacter player = new PlayerCharacter();
@@ -1064,6 +1065,7 @@ public final class GameRulesCheck {
             CombatRoom.Enemy boss = new CombatRoom.Enemy(250, 300, 36, 200, 100, 0, 12, kind);
             boss.sp = 100;
             boss.satiCooldown = 100;
+            boss.farCooldown = 100; // Isolate ordinary projectile collision from Far's room blast.
             boss.artillery = pattern == 2;
             boss.waveCaster = pattern == 3;
             combat.enemies.add(boss);
@@ -1188,7 +1190,8 @@ public final class GameRulesCheck {
             17, 200, 999, 0, 0, CombatRoom.BASIC);
         CombatRoom.Enemy second = new CombatRoom.Enemy(player.x + 130, player.y + 30,
             17, 200, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy ajarn = new CombatRoom.Enemy(player.x + 100, player.y - 65,
+        // Place the enlarged boss body across the swing, rather than its old head-only circle.
+        CombatRoom.Enemy ajarn = new CombatRoom.Enemy(player.x + 100, player.y + 65,
             36, 250, 999, 0, 0, 0);
         combat.enemies.add(first);
         combat.enemies.add(second);
@@ -1509,51 +1512,51 @@ public final class GameRulesCheck {
         check(casts >= 5, "Dome should start at least five casts in twelve seconds in loop one");
     }
 
-    private static void checkTalgoCast() {
+    private static void checkFarCast() {
         RunPlan plan = new RunPlan(new Random(62));
         PlayerCharacter player = new PlayerCharacter();
         CombatRoom combat = new CombatRoom(new Random(63));
-        CombatRoom.Enemy talgo = new CombatRoom.Enemy(1100, 360, 36,
-            500, 72, 0, 12, RunPlan.KEN_ID);
-        talgo.talgoCooldown = .01f;
-        talgo.skillTimer = 100;
-        talgo.sp = 0;
-        combat.enemies.add(talgo);
+        CombatRoom.Enemy far = new CombatRoom.Enemy(1100, 360, 36,
+            500, 72, 0, 12, RunPlan.FAR_ID);
+        far.farCooldown = .01f;
+        far.skillTimer = 100;
+        far.sp = 0;
+        combat.enemies.add(far);
 
         combat.update(.02f, player, plan);
-        check(talgo.talgoCharge == CombatRoom.TALGO_CAST_DURATION,
-            "Talgo should mark a safe circle before casting the full-room AOE");
-        float reachX = talgo.talgoSafeX - player.x;
-        float reachY = talgo.talgoSafeY - player.y;
+        check(far.farCharge == CombatRoom.FAR_CAST_DURATION,
+            "Far should mark a safe circle before casting the full-room AOE");
+        float reachX = far.farSafeX - player.x;
+        float reachY = far.farSafeY - player.y;
         check(reachX * reachX + reachY * reachY <= 180 * 180,
             "The marked circle should be reachable during the warning");
-        player.x = talgo.talgoSafeX;
-        player.y = talgo.talgoSafeY;
+        player.x = far.farSafeX;
+        player.y = far.farSafeY;
         player.invulnerable = 0;
         float hp = player.hp;
-        combat.update(CombatRoom.TALGO_CAST_DURATION + .01f, player, plan);
-        check(player.hp == hp, "Standing in Talgo's safe circle should avoid the AOE");
+        combat.update(CombatRoom.FAR_CAST_DURATION + .01f, player, plan);
+        check(player.hp == hp, "Standing in Far's safe circle should avoid the AOE");
 
-        talgo.talgoCooldown = 0;
+        far.farCooldown = 0;
         combat.update(.01f, player, plan);
-        player.x = talgo.talgoSafeX > GameSpace.WIDTH / 2
+        player.x = far.farSafeX > GameSpace.WIDTH / 2
             ? GameSpace.LEFT + 50 : GameSpace.RIGHT - 50;
         player.y = GameSpace.HEIGHT / 2;
         player.invulnerable = 0;
-        combat.update(CombatRoom.TALGO_CAST_DURATION + .01f, player, plan);
+        combat.update(CombatRoom.FAR_CAST_DURATION + .01f, player, plan);
         check(player.hp < hp, "The AOE should damage a player outside the safe circle");
 
-        talgo.talgoCooldown = 0;
+        far.farCooldown = 0;
         combat.update(.01f, player, plan);
-        player.x = talgo.talgoSafeX > GameSpace.WIDTH / 2
+        player.x = far.farSafeX > GameSpace.WIDTH / 2
             ? GameSpace.LEFT + 50 : GameSpace.RIGHT - 50;
         player.y = GameSpace.HEIGHT / 2;
         player.invulnerable = 0;
         player.dashTimer = 0;
         player.sp = 100;
         hp = player.hp;
-        check(player.dash(0, 1), "A ready dash should activate during Talgo's cast");
-        talgo.talgoCharge = .01f;
+        check(player.dash(0, 1), "A ready dash should activate during Far's cast");
+        far.farCharge = .01f;
         combat.update(.02f, player, plan);
         check(player.hp == hp,
             "Dashing at the impact should protect the player outside the safe circle");

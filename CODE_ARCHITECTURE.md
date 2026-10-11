@@ -4,7 +4,7 @@
 
 ## เริ่มอ่านตรงนี้: เข้าใจภาพรวมด้วย 6 ไฟล์
 
-ปัจจุบันมี Java ฝั่งเกมหลัก 48 ไฟล์ใต้ `core/src/main/java/io/github/kirinojuju/` อีก 2 ไฟล์เป็นตัวเปิดเกมบนคอมพิวเตอร์ และ 3 ไฟล์เป็นชุดตรวจเกม จัดโฟลเดอร์และ Java package ตามระบบแล้ว โดยมี `schoolLife.java` เป็นจุดเริ่มที่โฟลเดอร์หลัก ให้เริ่มตามลำดับนี้:
+ปัจจุบันมี Java ฝั่งเกมหลัก 54 ไฟล์ใต้ `core/src/main/java/io/github/kirinojuju/` อีก 2 ไฟล์เป็นตัวเปิดเกมบนคอมพิวเตอร์ และ 3 ไฟล์เป็นชุดตรวจเกม จัดโฟลเดอร์และ Java package ตามระบบแล้ว โดยมี `schoolLife.java` เป็นจุดเริ่มที่โฟลเดอร์หลัก ให้เริ่มตามลำดับนี้:
 
 | ลำดับ | ไฟล์ | คำถามที่ไฟล์นี้ตอบ |
 | --- | --- | --- |
@@ -19,7 +19,7 @@
 
 ## ไฟล์ที่เหลือเปิดเมื่อทำระบบนั้น
 
-ตารางนี้แสดงตำแหน่งครบทั้ง 48 ไฟล์ โดยชื่อในช่องไฟล์คือชื่อก่อน `.java`:
+ตารางนี้แสดงตำแหน่งครบทั้ง 54 ไฟล์ โดยชื่อในช่องไฟล์คือชื่อก่อน `.java`:
 
 | โฟลเดอร์ | ไฟล์ | หน้าที่ |
 | --- | --- | --- |
@@ -28,10 +28,10 @@
 | `player/` (2) | `PlayerCharacter`, `Upgrade` | ผู้เล่นและตัวเลือกอัปเกรด |
 | `weapon/` (4) | `WeaponAttack`, `WeaponAbility`, `LanWeaponAttack`, `NotebookWeaponAttack` | การโจมตีและช่องต่อ Ability ของอาวุธ |
 | `combat/` (1) | `CombatRoom` | ศัตรูและกระสุนในห้อง การชน และผลดาเมจ |
-| `enemy/` (7) | `EnemyBehavior`, `StandardEnemyBehavior`, `WarperMonsterBehavior`, `EnemyFactory`, `EnemySpacing`, `AlgoMonster`, `NetworkMonster` | พฤติกรรมร่วม มอนทั่วไป การสร้างศัตรู และการแยกตัวที่ซ้อนกัน |
-| `enemy/boss/` (11) | `AjarnBehavior`, `SatiBossBehavior`, `TalgoBossBehavior`, `DomeBossBehavior`, `KenBoss`, `KenBossBehavior`, `AeBoss`, `AeBossBehavior`, `MBoss`, `MBossBehavior`, `SatiBoss` | พฤติกรรมบอสอาจารย์และท่าเฉพาะ |
+| `enemy/` (9) | `EnemyBehavior`, `StandardEnemyBehavior`, `WarperMonsterBehavior`, `EnemyFactory`, `EnemySpacing`, `AlgoMonster`, `NetworkMonster`, `ProgramMonster`, `SlimeMonster` | พฤติกรรมร่วม มอนทั่วไป การสร้างศัตรู และการแยกตัวที่ซ้อนกัน |
+| `enemy/boss/` (13) | `BossBody`, `AjarnBehavior`, `SatiBossBehavior`, `FarBossBehavior`, `DomeBossBehavior`, `KenBoss`, `KenBossBehavior`, `AeBoss`, `AeBossBehavior`, `FarBoss`, `MBoss`, `MBossBehavior`, `SatiBoss` | พฤติกรรมบอสอาจารย์และท่าเฉพาะ |
 | `enemy/ex/` (5) | `ExBehavior`, `LiquidCatBehavior`, `AllergicVacuumBehavior`, `InsecureSwordBehavior`, `LiquidCatBoss` | พฤติกรรม EX Monster |
-| `render/` (11) | `GameRenderer`, `StudentSprite`, `SatiSprite`, `DomeSprite`, `LiquidCatSprite`, `InsecureSwordSprite`, `OptionalAssetTexture`, `KenSprite`, `AeSprite`, `MSprite`, `AlgoMonSprite` | วาดเกม ภาพตัวละคร และภาพสำรอง |
+| `render/` (13) | `GameRenderer`, `StudentSprite`, `SatiSprite`, `DomeSprite`, `LiquidCatSprite`, `InsecureSwordSprite`, `OptionalAssetTexture`, `KenSprite`, `AeSprite`, `FarSprite`, `MSprite`, `AlgoMonSprite`, `MonsterSprite` | วาดเกม ภาพตัวละคร และภาพสำรอง |
 | `world/` (3) | `GameSpace`, `EntranceScene`, `RoomObstacles` | ขอบพื้นที่ ทางเข้าอาคาร โต๊ะ และทางเดินอ้อม |
 | `audio/` (1) | `GameAudio` | เสียงเกม |
 
@@ -52,7 +52,7 @@ Java package ตรงกับโฟลเดอร์ เช่น `player/Pla
 
 `*Behavior` คือการตัดสินใจและกติกาของศัตรู ส่วน `*Sprite` คือภาพของตัวนั้น เช่น แก้เวลาชาร์จเลเซอร์ใน `DomeBossBehavior` และแก้เฟรมเลเซอร์ใน `DomeSprite` การแยกแบบนี้ช่วยให้แก้ระบบหนึ่งได้โดยตามเฉพาะไฟล์ที่เกี่ยวข้อง
 
-จำนวนไฟล์หลักยังเป็น 48 ไฟล์ ตัวช่วยสั้น ๆ ยังคงอยู่ในไฟล์เจ้าของระบบ โดยตัวที่ต้องเรียกข้าม package ใช้ nested class เช่น `WeaponAttack.WeaponAttackSpec`, `NotebookWeaponAttack.NotebookSprite` และ `RoomObstacles.TableSprites` ส่วนท่าของบอสแต่ละตัวยังแยกไว้เพื่อเพิ่มบอสในอนาคตได้ง่าย คลาสแม่ การสืบทอด และ interface ยังใช้โครงสร้างเดิม
+จำนวนไฟล์หลักยังเป็น 54 ไฟล์ ตัวช่วยสั้น ๆ ยังคงอยู่ในไฟล์เจ้าของระบบ โดยตัวที่ต้องเรียกข้าม package ใช้ nested class เช่น `WeaponAttack.WeaponAttackSpec`, `NotebookWeaponAttack.NotebookSprite` และ `RoomObstacles.TableSprites` ส่วนท่าของบอสแต่ละตัวยังแยกไว้เพื่อเพิ่มบอสในอนาคตได้ง่าย คลาสแม่ การสืบทอด และ interface ยังใช้โครงสร้างเดิม
 
 ## รายละเอียดการต่อสู้และ OOP
 
@@ -65,7 +65,7 @@ Java package ตรงกับโฟลเดอร์ เช่น `player/Pla
 | `EnemyFactory` | เลือกชนิดศัตรูและสร้างค่าสถานะสำหรับมอน บอส และ EX |
 | `EnemyBehavior` | สัญญาว่าศัตรูทุกชนิดต้องอัปเดตพฤติกรรมได้ |
 | `StandardEnemyBehavior`, `AjarnBehavior` | กติกาเดิน สัมผัสผู้เล่น และโจมตีที่มอนกับบอสใช้ร่วมกัน; มอนทั่วไปใช้ `StandardEnemyBehavior` ตรง ๆ |
-| `SatiBossBehavior`, `TalgoBossBehavior`, `DomeBossBehavior` | ท่าเฉพาะของ Ajarn แต่ละตัว |
+| `SatiBossBehavior`, `FarBossBehavior`, `DomeBossBehavior` | ท่าเฉพาะของ Ajarn แต่ละตัว |
 | `ExBehavior` และคลาส EX ทั้งสาม | ท่าเฉพาะของ Liquid Cat, Allergic Vacuum และ Insecure Sword |
 | `EnemyProjectilePatterns` | รูปแบบกระสุนของมอนและบอส |
 | `EnemySpacing` | ดันศัตรูที่ซ้อนกันให้ออกจากกัน |
@@ -73,7 +73,7 @@ Java package ตรงกับโฟลเดอร์ เช่น `player/Pla
 
 คลาสตัวช่วยสั้น ๆ อยู่ในไฟล์ของระบบที่ใช้มัน: `EnemyBehavior.EnemyBehaviors` อยู่ใน `enemy/EnemyBehavior.java`, `EnemyProjectilePatterns` อยู่ใน `enemy/StandardEnemyBehavior.java`, `ExBehavior.ExEnvironment` อยู่ใน `enemy/ex/ExBehavior.java` และ `AbstractWeaponAttack` กับ `WeaponAttack.WeaponAttackSpec` อยู่ใน `weapon/WeaponAttack.java` หากเรียก nested class จากไฟล์อื่น สามารถ import ชื่อเต็ม เช่น `import io.github.kirinojuju.weapon.WeaponAttack.WeaponAttackSpec;`
 
-`EnemyBehavior` เป็น interface ที่พฤติกรรมแต่ละตัว implement ผ่านคลาสแม่ ส่วน `WarperMonsterBehavior extends StandardEnemyBehavior`, `SatiBossBehavior extends AjarnBehavior`, `TalgoBossBehavior extends AjarnBehavior` และ EX ทั้งสาม `extends ExBehavior` เป็นตัวอย่างการสืบทอด พฤติกรรมที่ต่างกันถูกเรียกผ่าน interface เดียวกัน จึงไม่ต้องเพิ่ม `if` ของท่าเฉพาะทุกตัวในลูปหลักของ `CombatRoom`
+`EnemyBehavior` เป็น interface ที่พฤติกรรมแต่ละตัว implement ผ่านคลาสแม่ ส่วน `WarperMonsterBehavior extends StandardEnemyBehavior`, `SatiBossBehavior extends AjarnBehavior`, `FarBossBehavior extends AjarnBehavior` และ EX ทั้งสาม `extends ExBehavior` เป็นตัวอย่างการสืบทอด พฤติกรรมที่ต่างกันถูกเรียกผ่าน interface เดียวกัน จึงไม่ต้องเพิ่ม `if` ของท่าเฉพาะทุกตัวในลูปหลักของ `CombatRoom`
 
 เมื่อต้องเพิ่มศัตรูใหม่ ให้เพิ่มคลาสพฤติกรรมของตัวนั้น แล้วเลือกคลาสใน `EnemyBehaviors.forKind(...)` กำหนดค่าตอนเกิดใน `EnemyFactory` และเพิ่มภาพหรือคำเตือนท่าใน `GameRenderer` ตามต้องการ พฤติกรรมที่เก็บสถานะรายตัวควรใช้ข้อมูลใน `CombatRoom.Enemy`; ออบเจ็กต์พฤติกรรมถูกใช้ร่วมกันและไม่ควรเก็บสถานะของศัตรูตัวใดตัวหนึ่งไว้ในฟิลด์ของตน
 
@@ -95,7 +95,7 @@ Java package ตรงกับโฟลเดอร์ เช่น `player/Pla
 
 ## ภาพ Insecure Sword
 
-`render/InsecureSwordSprite.java` โหลด `idle_1..5.png` และ `attack_1..5.png` จาก `assets/characters/boss_ex/insecure-sword/` วาดที่ขนาด 128×128 (ภาพต้นฉบับ 64×64) โดยปรับขนาดได้ที่ `SIZE` ส่วน Idle ใช้ `IDLE_FRAME_TIME` เฟรมละ 0.16 วินาที
+`render/InsecureSwordSprite.java` โหลด `idle_1..5.png` และ `attack_1..5.png` จาก `assets/characters/boss_ex/insecure-sword/` วาดที่ขนาด 128×128 (ภาพต้นฉบับ 64×64) โดยปรับขนาดได้ที่ `DRAW_SIZE` ส่วน Idle ใช้ `IDLE_FRAME_TIME` เฟรมละ 0.16 วินาที
 
 `enemy/ex/InsecureSwordBehavior.java` เริ่ม `Enemy.swordAttackTime` เมื่อฟันหลังวงเตือนหรือฟันพลาด แล้วนับเวลาลงเพื่อเลือกเฟรม Attack ตั้งแต่ต้นทุกครั้ง การติด Post-it หยุดแอนิเมชันโจมตี ช่วงเตือนและช่วงพักที่เหลือกลับไปใช้ Idle; `GameRenderer` วาดภาพและแถบเลือด/เกราะที่อยู่เหนือดาบ และ `OptionalAssetTexture` มีภาพดาบสำรองเมื่อไม่มีไฟล์ PNG
 

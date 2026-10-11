@@ -1,5 +1,7 @@
 package io.github.kirinojuju.enemy.boss;
 
+// File role: M's aimed shots and one-time split when its health reaches half.
+
 import com.badlogic.gdx.math.MathUtils;
 import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.enemy.EnemyBehavior;
@@ -12,6 +14,7 @@ public final class MBossBehavior implements EnemyBehavior {
     static final float FIRST_ATTACK_INTERVAL = 2f;
     static final float SPLIT_ATTACK_INTERVAL = 2f;
 
+    // Fire M's aimed shots and create one second-phase clone after the split delay.
     @Override
     public void update(CombatRoom room, CombatRoom.Enemy enemy, float dt,
                        PlayerCharacter player, RunPlan plan) {

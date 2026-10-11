@@ -1,5 +1,7 @@
 package io.github.kirinojuju.lwjgl3;
 
+// File role: Starts the desktop game and configures its window, graphics and optional test mode.
+
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import io.github.kirinojuju.schoolLife;
@@ -8,6 +10,7 @@ import java.util.List;
 
 /** Launches the desktop (LWJGL3) application. */
 public class Lwjgl3Launcher {
+    // Read desktop test options and launch the game after any platform startup workaround.
     public static void main(String[] args) {
         if (StartupHelper.startNewJvmIfRequired()) return; // This handles macOS support and helps on Windows.
         List<String> options = Arrays.asList(args);
@@ -17,10 +20,12 @@ public class Lwjgl3Launcher {
         createApplication(testMode);
     }
 
+    // Start LibGDX with the requested game mode and desktop configuration.
     private static Lwjgl3Application createApplication(schoolLife.TestMode testMode) {
         return new Lwjgl3Application(new schoolLife(testMode), getDefaultConfiguration());
     }
 
+    // Set the window title, size, VSync and foreground frame rate.
     private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
         Lwjgl3ApplicationConfiguration configuration = new Lwjgl3ApplicationConfiguration();
         configuration.setTitle("School Life: Survive Year Four");

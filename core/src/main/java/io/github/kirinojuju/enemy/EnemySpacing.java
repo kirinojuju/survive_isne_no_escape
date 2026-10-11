@@ -1,5 +1,7 @@
 package io.github.kirinojuju.enemy;
 
+// File role: Separates overlapping enemies and keeps them within the room boundary.
+
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import io.github.kirinojuju.combat.CombatRoom;
@@ -9,8 +11,10 @@ import io.github.kirinojuju.world.GameSpace;
 public final class EnemySpacing {
     private static final int SEPARATION_PASSES = 3;
     private static final float GAP = 12;
+    // Prevent construction of this utility class; use its static helpers.
     private EnemySpacing() { }
 
+    // Push overlapping living enemies apart; CombatRoom resolves table collisions afterward.
     public static void separate(Array<CombatRoom.Enemy> enemies) {
         for (int pass = 0; pass < SEPARATION_PASSES; pass++) {
             for (int i = 0; i < enemies.size; i++) {

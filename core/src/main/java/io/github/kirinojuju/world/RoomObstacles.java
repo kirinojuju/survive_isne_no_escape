@@ -1,5 +1,7 @@
 package io.github.kirinojuju.world;
 
+// File role: Creates tables and handles movement collision, projectile contact and enemy detours.
+
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -30,6 +32,7 @@ public final class RoomObstacles {
         public final float x, y, width, height;
         public final Rectangle solid;
 
+        // Create a table's artwork dimensions and its solid collision rectangle.
         public Table(int art, float x, float y) {
             this.art = art;
             this.x = x;
@@ -49,6 +52,7 @@ public final class RoomObstacles {
     private final int[] previous = new int[14];
     private final boolean[] visited = new boolean[14];
 
+    // Clear old tables and place separated tables for monster and boss rooms.
     public void begin(RunDirector.Room room, Random random) {
         tables.clear();
         if (room != RunDirector.Room.MOBS && room != RunDirector.Room.BOSS) return;
@@ -58,12 +62,14 @@ public final class RoomObstacles {
         tables.add(randomTable(random, 940, 300, true));
     }
 
+    // Choose a furniture image and slightly randomize the table's position.
     private static Table randomTable(Random random, float x, float y, boolean allowTall) {
         int art = allowTall ? TABLE_ARTS[random.nextInt(TABLE_ARTS.length)] : random.nextInt(2);
         return new Table(art, x + random.nextFloat() * 60 - 30,
             y + random.nextFloat() * 20 - 10);
     }
 
+    // Return the horizontal destination after stopping movement at table collision edges.
     public float moveX(float x, float y, float dx, float radius) {
         float destination = x + dx;
         for (Table table : tables) {
@@ -78,6 +84,7 @@ public final class RoomObstacles {
         return destination;
     }
 
+    // Return the vertical destination after stopping movement at table collision edges.
     public float moveY(float x, float y, float dy, float radius) {
         float destination = y + dy;
         for (Table table : tables) {
@@ -92,11 +99,13 @@ public final class RoomObstacles {
         return destination;
     }
 
+    // Move an enemy on both axes while respecting its radius and the tables.
     public void moveEnemy(CombatRoom.Enemy enemy, float dx, float dy) {
         enemy.x = moveX(enemy.x, enemy.y, dx, enemy.radius);
         enemy.y = moveY(enemy.x, enemy.y, dy, enemy.radius);
     }
 
+    // Find a route around tables and move toward its next waypoint.
     public void moveToward(CombatRoom.Enemy enemy, float x, float y, float step, float stop) {
         float distance = Vector2.dst(enemy.x, enemy.y, x, y);
         if (distance <= stop) return;
@@ -163,6 +172,7 @@ public final class RoomObstacles {
         enemy.y = MathUtils.clamp(enemy.y, GameSpace.BOTTOM + enemy.radius, GameSpace.WALK_TOP - enemy.radius);
     }
 
+    // Find a reachable path through visible table corners toward the destination.
     private void findWaypoint(float x, float y, float targetX, float targetY, float radius) {
         waypoint.set(targetX, targetY);
         if (hitFraction(x, y, targetX, targetY, radius) < 0) return;
@@ -211,6 +221,7 @@ public final class RoomObstacles {
         waypoint.set(x, y); // No valid route: stay still rather than walk through furniture.
     }
 
+    // Check whether the entire circular body fits inside the walkable arena.
     private static boolean insideArena(float x, float y, float radius) {
         return x >= GameSpace.LEFT + radius && x <= GameSpace.RIGHT - radius
             && y >= GameSpace.BOTTOM + radius && y <= GameSpace.WALK_TOP - radius;
@@ -221,6 +232,7 @@ public final class RoomObstacles {
         private final Texture[] textures = new Texture[4];
         private final TextureRegion[] regions = new TextureRegion[4];
 
+        // Load table images and crop them to the visible furniture bounds.
         public TableSprites() {
             String[] names = {"table00", "table01", "table03", "table04"};
             for (int i = 0; i < names.length; i++) {
@@ -233,12 +245,14 @@ public final class RoomObstacles {
             }
         }
 
+        // Draw each table using the same dimensions as the obstacle geometry.
         public void draw(SpriteBatch batch, RoomObstacles obstacles) {
             for (RoomObstacles.Table table : obstacles.tables)
                 batch.draw(regions[table.art], table.x - table.width / 2, table.y - table.height / 2,
                     table.width, table.height);
         }
 
+        // Release textures and drawing resources owned by this sprite.
         public void dispose() {
             for (Texture texture : textures) texture.dispose();
         }

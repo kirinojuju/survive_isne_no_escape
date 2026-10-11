@@ -1,5 +1,9 @@
 package io.github.kirinojuju.render;
 
+import io.github.kirinojuju.enemy.boss.BossBody;
+
+// File role: Loads Dome's character and effect frames and matches them to its attack phases.
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -12,7 +16,7 @@ import io.github.kirinojuju.world.GameSpace;
 /** TDome's exported character frames and lightning/laser effects. */
 public final class DomeSprite {
     private static final String ROOT = "characters/boss/Tnetwork(Dome)/";
-    private static final float SIZE = 128;
+    private static final float DRAW_SIZE = BossBody.DOME_DRAW_SIZE;
     private static final float PREPARE_DURATION = .5f;
     private final Texture[] prepare = loadFrames("Casting_state_loop", 5);
     private final Texture[] lightningCast = loadFrames("Casting_lighting_loop", 6);
@@ -24,6 +28,7 @@ public final class DomeSprite {
     private final Texture[] laser = loadFrames("Elements/Laser", 4);
     private final TextureRegion[] laserRegions = regions(laser);
 
+    // Load the numbered image files used by this animation.
     private static Texture[] loadFrames(String prefix, int count) {
         Texture[] frames = new Texture[count];
         for (int i = 0; i < count; i++) {
@@ -33,6 +38,7 @@ public final class DomeSprite {
         return frames;
     }
 
+    // Wrap available laser textures in regions so they can be rotated when drawn.
     private static TextureRegion[] regions(Texture[] textures) {
         TextureRegion[] result = new TextureRegion[textures.length];
         for (int i = 0; i < textures.length; i++)
@@ -40,19 +46,22 @@ public final class DomeSprite {
         return result;
     }
 
+    // Convert phase elapsed time into an animation index within the frame array.
     private static int frameIndex(int count, float elapsed, float duration) {
         return MathUtils.clamp((int)(elapsed / duration * count), 0, count - 1);
     }
 
+    // Draw Dome artwork using the current animation and combat state.
     public void draw(SpriteBatch batch, CombatRoom.Enemy boss) {
         DomeBossBehavior.State state = boss.dome;
         Texture frame = characterFrame(state);
         if (frame == null) return;
         boolean flip = state.facingRight && !state.downward;
-        batch.draw(frame, boss.x + (flip ? SIZE / 2 : -SIZE / 2),
-            boss.y - SIZE / 2, flip ? -SIZE : SIZE, SIZE);
+        batch.draw(frame, boss.x + (flip ? DRAW_SIZE / 2 : -DRAW_SIZE / 2),
+            boss.y + boss.radius - DRAW_SIZE, flip ? -DRAW_SIZE : DRAW_SIZE, DRAW_SIZE);
     }
 
+    // Choose Dome's character animation from the current lightning or laser phase.
     private Texture characterFrame(DomeBossBehavior.State state) {
         switch (state.phase) {
             case LIGHTNING_CHARGE:
@@ -77,16 +86,19 @@ public final class DomeSprite {
         }
     }
 
+    // Return the animation frame corresponding to elapsed phase time.
     private static Texture frame(Texture[] frames, float elapsed, float duration) {
         return frames[frameIndex(frames.length, elapsed, duration)];
     }
 
+    // Draw lightning or laser artwork only during the matching active attack phase.
     public void drawEffect(SpriteBatch batch, CombatRoom.Enemy boss) {
         DomeBossBehavior.State state = boss.dome;
         if (state.phase == DomeBossBehavior.Phase.LIGHTNING_STRIKE) drawLightning(batch, state);
         else if (state.phase == DomeBossBehavior.Phase.LASER_FIRE) drawLaser(batch, state);
     }
 
+    // Draw the lightning strike over the locked target position.
     private void drawLightning(SpriteBatch batch, DomeBossBehavior.State state) {
         Texture frame = frame(lightning, state.elapsed, DomeBossBehavior.LIGHTNING_STRIKE);
         if (frame == null) return;
@@ -95,6 +107,7 @@ public final class DomeSprite {
             width, GameSpace.TOP - state.aimY + 8);
     }
 
+    // Rotate and stretch laser artwork between the beam's origin and endpoint.
     private void drawLaser(SpriteBatch batch, DomeBossBehavior.State state) {
         float dx = state.endX - state.originX, dy = state.endY - state.originY;
         float length = (float)Math.sqrt(dx * dx + dy * dy);
@@ -107,6 +120,7 @@ public final class DomeSprite {
             width / 2, length, width, length, 1, 1, rotation);
     }
 
+    // Release textures and drawing resources owned by this sprite.
     public void dispose() {
         for (Texture[] frames : new Texture[][] {prepare, lightningCast, lightningRecovery,
             laserCast, laserSide, laserDown, lightning, laser})

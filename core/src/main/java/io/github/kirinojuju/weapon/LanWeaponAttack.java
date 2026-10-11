@@ -1,5 +1,7 @@
 package io.github.kirinojuju.weapon;
 
+// File role: Runs the LAN melee attack, including SP cost, arc damage and attached abilities.
+
 import io.github.kirinojuju.audio.GameAudio;
 import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.player.PlayerCharacter;
@@ -7,6 +9,7 @@ import io.github.kirinojuju.weapon.WeaponAttack.WeaponAttackSpec;
 
 /** A free close-range arc attack; abilities may modify its one-attack values. */
 public final class LanWeaponAttack extends AbstractWeaponAttack {
+    // Spend SP and apply a LAN melee arc with enabled slow, area or tether upgrades.
     @Override
     public boolean attack(PlayerCharacter player, CombatRoom combat, GameAudio audio) {
         WeaponAttackSpec spec = new WeaponAttackSpec(

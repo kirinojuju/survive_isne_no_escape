@@ -1,5 +1,7 @@
 package io.github.kirinojuju.world;
 
+// File role: Player movement and door or car interaction areas in the entrance scene.
+
 import com.badlogic.gdx.math.MathUtils;
 import io.github.kirinojuju.player.PlayerCharacter;
 
@@ -14,8 +16,10 @@ public final class EntranceScene {
     private static final float BOTTOM = 145, TOP = 465;
     private static final float WALK_SPEED = 225;
 
+    // Prevent construction of this utility class; use its static helpers.
     private EntranceScene() { }
 
+    // Reset the player to the entrance scene's starting position.
     public static void placePlayer(PlayerCharacter player) {
         player.x = 640;
         player.y = 255;
@@ -27,6 +31,7 @@ public final class EntranceScene {
         player.invulnerable = 0;
     }
 
+    // Move and animate the player within the entrance scene's bounds.
     public static void move(PlayerCharacter player, float dt, float dx, float dy) {
         float length = (float)Math.sqrt(dx * dx + dy * dy);
         player.moving = length > 0;
@@ -44,14 +49,17 @@ public final class EntranceScene {
         player.y = MathUtils.clamp(player.y + dy * WALK_SPEED * dt, BOTTOM, TOP);
     }
 
+    // Check whether the player is within the building entrance trigger.
     public static boolean atDoor(PlayerCharacter player) {
         return near(player, DOOR_X, DOOR_Y, DOOR_REACH);
     }
 
+    // Check whether the player is within the car interaction trigger.
     public static boolean atCar(PlayerCharacter player) {
         return near(player, CAR_X, CAR_Y, CAR_REACH);
     }
 
+    // Check whether a point is inside the requested interaction distance.
     private static boolean near(PlayerCharacter player, float x, float y, float radius) {
         float dx = player.x - x, dy = player.y - y;
         return dx * dx + dy * dy <= radius * radius;
