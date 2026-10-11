@@ -1,4 +1,4 @@
-# Game Design Document — School Life: Survive Year Four
+# Game Design Document — มาทั้งที่ก็เป็นนักเรียนติดลูปไปซะได้
 
 **Version:** 0.2 · **Updated:** October 1, 2026 · **Status:** Design document based on the current prototype
 
@@ -8,7 +8,7 @@
 
 | Topic | Description |
 | --- | --- |
-| Title | **School Life: Survive Year Four** |
+| Title | **มาทั้งที่ก็เป็นนักเรียนติดลูปไปซะได้** |
 | Genre | Single-player, 2D room-based action roguelike |
 | Premise | A computer engineering student fights through monsters and Ajarns while trying to survive a fourth year that repeats and grows harder. |
 | Hooks | Two student-themed weapons, four Ajarn combat styles per loop, EX enemies with distinct mechanics, and a joke ending in which the student chooses to go home before fighting. |
@@ -38,12 +38,12 @@ Monster room → Ajarn room → Choose 1 of 3 upgrades
       └──────── Next stage ─────────┘
 
 Clear 4 stages → Start a harder loop
-Clear an even-numbered loop → Choose the final Ajarn upgrade
+Clear loop 1 or an even-numbered loop → Choose the final Ajarn upgrade
                             → Fight 1 random EX → Gain its buff → Next loop
 HP reaches zero → Results screen → New run
 ```
 
-**Implemented:** Each loop shuffles four unique stage locations and selects four of eight Ajarns, including one from each combat family. A stage contains one monster room followed by one Ajarn room. Defeating an Ajarn restores 24 HP and presents an upgrade choice. One of three EX enemies appears after loops 2, 4, 6, and so on.
+**Implemented:** Each loop shuffles four unique stage locations and selects four of eight Ajarns, including one from each combat family. A stage contains one monster room followed by one Ajarn room. Clearing a monster room restores 12 HP. Defeating an Ajarn restores 35 HP and presents an upgrade choice. One of three EX enemies appears after loop 1, then after loops 2, 4, 6, and so on.
 
 ### Four stage locations
 
@@ -63,9 +63,11 @@ HP reaches zero → Results screen → New run
 | Move | WASD or arrow keys | Walk within the room's playable floor area. |
 | Normal attack | Hold left mouse button or Space | Attack repeatedly with the active weapon. |
 | Select a target | Click near an enemy | Lock that enemy. Clicking empty space locks the nearest living enemy. |
-| Switch weapons | Q or (C) or 1/2 | Select the LAN cable or notebook. |
+| Switch weapons | Tab or 1/2 | Select the LAN cable or notebook. |
 | Dash | Shift | Move quickly with a brief period of damage immunity. |
 | Cast PowerBall | E or the on-screen SKILL button | Stop and cast a homing projectile. |
+| Ice Wall | F or ICE button | Raise a temporary barrier in the facing direction. |
+| HP / SP potion | Z / X | Consume a stored bottle for 40 HP / 35 SP. |
 | Escape a bind | Alternate A/D or left/right six times | Break free before the bind expires. |
 | Choose an upgrade | Click a card or press 1/2/3 | Take one upgrade. |
 | Continue | Enter | Move on after clearing a room. |
@@ -104,10 +106,10 @@ Trait upgrades such as slow, poison, and splash can be selected once. Damage bon
 
 | Enemy stat | Multiplier in loop `n` |
 | --- | --- |
-| HP | `1 + 0.25 × (n − 1)` |
-| SP | `1 + 0.18 × (n − 1)` |
-| Speed | `1 + 0.07 × (n − 1)` |
-| Damage | `1 + 0.18 × (n − 1)` |
+| HP | `1 + 0.15 × (n − 1)` |
+| SP | `1 + 0.10 × (n − 1)` |
+| Speed | `1 + 0.04 × (n − 1)` |
+| Damage | `1 + 0.10 × (n − 1)` |
 
 Monster-room population increases with the stage and loop, up to a cap on the loop-based increase. Loop 1 introduces enemy types gradually. Later loops can spawn additional special monsters more often. From loop 3 onward, Ajarns may gain an extra trait; from loop 5 onward, some may also gain wave attacks.
 
@@ -141,7 +143,7 @@ Ajarns hold a position toward the right side of the room between attacks. Summon
 
 **Planned:** Most Ajarn names and main character art are still placeholders. Each needs a distinct appearance, signature move, and short character voice while keeping the combat family readable.
 
-### EX encounters after even-numbered loops
+### EX encounters after loop 1 and even-numbered loops
 
 | EX | Encounter mechanic | Reward on defeat |
 | --- | --- | --- |
@@ -165,7 +167,7 @@ The HUD shows HP, SP, loop, stage, room or primary enemy, active weapon, and cur
 | --- | --- |
 | Player character | Transparent 64×64 PNG frames for idle, walk, and skill_case; displayed at 2× scale with nearest-neighbor filtering. |
 | Environments | Building 30 entrance with a separate car layer; team-made regular and boss room backgrounds. |
-| Bosses and EX | Liquid Cat has in-game animation frames. Sati's C++ element has art and sound. Allergic Vacuum, Insecure Sword, Sati's main body, and regular monsters still use some temporary visuals. |
+| Bosses and EX | Liquid Cat and Insecure Sword have in-game animation frames. Sati's C++ element has art and sound. Allergic Vacuum, Sati's main body, and regular monsters still use some temporary visuals. |
 | Audio | Sound effects cover menu choices, weapons, hits, room changes, PowerBall, and the C++ element's transformation. |
 | Engine | Java and libGDX, desktop via LWJGL3, 1280×720 logical game space. |
 
@@ -173,11 +175,11 @@ The HUD shows HP, SP, loop, stage, room or primary enemy, active weapon, and cur
 
 ## 9. Demo scope and acceptance criteria
 
-The team demo should play continuously from the entrance through four stages, include upgrade choices after Ajarns, present an EX encounter after loop 2, and enter loop 3 without blocking progress.
+The team demo should play continuously from the entrance through four stages, include upgrade choices after Ajarns, present an EX encounter after loop 1, and enter loop 2 without blocking progress.
 
 | Area | Acceptance criterion |
 | --- | --- |
-| Run flow | Correct room order; four unique locations per loop; four boss families; EX after even-numbered loops. |
+| Run flow | Correct room order; four unique locations per loop; four boss families; EX after loop 1 and even-numbered loops. |
 | Combat | Both weapons and PowerBall work; major status effects have readable counters; HP, SP, and targeting are shown correctly. |
 | Progression | Choosing one of three upgrades changes gameplay; EX buffs last for the run; EX-only techniques disappear after the encounter. |
 | Presentation | The player character and all three EX enemies are visually distinct; major attacks have readable visual and audio timing; temporary art is replaced in content presented as finished. |

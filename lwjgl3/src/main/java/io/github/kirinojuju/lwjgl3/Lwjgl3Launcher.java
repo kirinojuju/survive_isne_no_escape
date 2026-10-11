@@ -3,21 +3,33 @@ package io.github.kirinojuju.lwjgl3;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import io.github.kirinojuju.schoolLife;
+import java.util.Arrays;
+import java.util.List;
 
 /** Launches the desktop (LWJGL3) application. */
 public class Lwjgl3Launcher {
     public static void main(String[] args) {
         if (StartupHelper.startNewJvmIfRequired()) return; // This handles macOS support and helps on Windows.
-        createApplication();
+        List<String> options = Arrays.asList(args);
+        schoolLife.TestMode testMode = schoolLife.TestMode.NONE;
+        if (options.contains("--test-final-exam")) testMode = schoolLife.TestMode.FINAL_EXAM;
+        else if (options.contains("--test-obstacles")) testMode = schoolLife.TestMode.OBSTACLES;
+        else if (options.contains("--test-allergic-vacuum"))
+            testMode = schoolLife.TestMode.EX_ALLERGIC_VACUUM;
+        else if (options.contains("--test-insecure-sword"))
+            testMode = schoolLife.TestMode.EX_INSECURE_SWORD;
+        else if (options.contains("--test-ex") || options.contains("--test-liquid-cat"))
+            testMode = schoolLife.TestMode.EX_LIQUID_CAT;
+        createApplication(testMode);
     }
 
-    private static Lwjgl3Application createApplication() {
-        return new Lwjgl3Application(new schoolLife(), getDefaultConfiguration());
+    private static Lwjgl3Application createApplication(schoolLife.TestMode testMode) {
+        return new Lwjgl3Application(new schoolLife(testMode), getDefaultConfiguration());
     }
 
     private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
         Lwjgl3ApplicationConfiguration configuration = new Lwjgl3ApplicationConfiguration();
-        configuration.setTitle("School Life: Survive Year Four");
+        configuration.setTitle(schoolLife.GAME_TITLE);
         //// Vsync limits the frames per second to what your hardware can display, and helps eliminate
         //// screen tearing. This setting doesn't always work on Linux, so the line after is a safeguard.
         configuration.useVsync(true);
