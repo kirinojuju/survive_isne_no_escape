@@ -19,6 +19,9 @@ final class CombatRoom {
     static final float SATI_CHARGE_DURATION = 1.05f;
     static final float NOTEBOOK_BEAM_RANGE = 760;
     static final float NOTEBOOK_BEAM_HALF_WIDTH = 42;
+    static final float ICE_WALL_DURATION = 4.5f;
+    static final float ICE_WALL_LENGTH = 180f;
+    static final float ICE_WALL_HALF_DEPTH = 10f;
     static final class Enemy {
         float x, y, radius, hp, maxHp, sp, maxSp, speed, damage;
         float contactTimer, skillTimer, armor, maxArmor, reflectTimer, summonTimer;
@@ -96,6 +99,7 @@ final class CombatRoom {
     private GameAudio audio;
     float blastX, blastY, blastTime, splashX, splashY, splashTime;
     float beamX, beamY, beamEndX, beamEndY, beamTime;
+    float iceWallX, iceWallY, iceWallAngle, iceWallTime, iceWallAnimationTime;
 
     CombatRoom(Random random) { this.random = random; }
     void setAudio(GameAudio audio) { this.audio = audio; }
@@ -107,6 +111,7 @@ final class CombatRoom {
         carriedNotes = 0;
         spawnQueue.clear();
         blastTime = splashTime = beamTime = 0;
+        iceWallTime = iceWallAnimationTime = 0;
         if (room == RunDirector.Room.MOBS) {
             int count = 6 + plan.stage() + Math.min(3, plan.loop() - 1);
             for (int i = 0; i < count; i++) {
@@ -333,6 +338,58 @@ final class CombatRoom {
         shots.add(shot);
     }
 
+    void raiseIceWall(float playerX, float playerY, float faceX, float faceY) {
+        float length = Math.max(.001f, (float)Math.sqrt(faceX * faceX + faceY * faceY));
+        float nx = faceX / length, ny = faceY / length;
+        iceWallX = MathUtils.clamp(playerX + nx * 92, GameSpace.LEFT + 112,
+            GameSpace.RIGHT - 112);
+        iceWallY = MathUtils.clamp(playerY + ny * 92, GameSpace.BOTTOM + 64,
+            GameSpace.WALK_TOP - 64);
+        iceWallAngle = MathUtils.atan2(ny, nx) + MathUtils.PI / 2;
+        iceWallTime = ICE_WALL_DURATION;
+        iceWallAnimationTime = 0;
+        for (Enemy enemy : enemies) {
+            if (enemy.hp <= 0) continue;
+            float dx = enemy.x - iceWallX, dy = enemy.y - iceWallY;
+            if (dx * dx + dy * dy <= 112 * 112) {
+                damageEnemy(enemy, 24, playerX, playerY);
+                enemy.stunTime = Math.max(enemy.stunTime, .8f);
+            }
+        }
+    }
+
+    private boolean iceWallBlocks(float x, float y, float radius) {
+        if (iceWallTime <= 0) return false;
+        float dx = x - iceWallX, dy = y - iceWallY;
+        float along = Math.abs(dx * MathUtils.cos(iceWallAngle)
+            + dy * MathUtils.sin(iceWallAngle));
+        float across = Math.abs(-dx * MathUtils.sin(iceWallAngle)
+            + dy * MathUtils.cos(iceWallAngle));
+        return along <= ICE_WALL_LENGTH / 2 + radius
+            && across <= ICE_WALL_HALF_DEPTH + radius;
+    }
+
+    boolean playerOverlapsIceWall(float x, float y, float radius) {
+        return iceWallBlocks(x, y, radius);
+    }
+
+    private void resolveIceWallCollision(Enemy enemy, float playerX, float playerY) {
+        if (!iceWallBlocks(enemy.x, enemy.y, enemy.radius)) return;
+        float nx = -MathUtils.sin(iceWallAngle), ny = MathUtils.cos(iceWallAngle);
+        float side = (enemy.x - iceWallX) * nx + (enemy.y - iceWallY) * ny;
+        if (Math.abs(side) < .001f)
+            side = (playerX - iceWallX) * nx + (playerY - iceWallY) * ny;
+        float sign = side < 0 ? -1 : 1;
+        float offset = ICE_WALL_HALF_DEPTH + enemy.radius;
+        float correction = sign * offset - side;
+        enemy.x += nx * correction;
+        enemy.y += ny * correction;
+        enemy.x = MathUtils.clamp(enemy.x, GameSpace.LEFT + enemy.radius,
+            GameSpace.RIGHT - enemy.radius);
+        enemy.y = MathUtils.clamp(enemy.y, GameSpace.BOTTOM + enemy.radius,
+            GameSpace.WALK_TOP - enemy.radius);
+    }
+
     void fireNotebookBeam(float x, float y, float dx, float dy,
                           float damage, boolean poisonous) {
         float length = Math.max(.001f, (float)Math.sqrt(dx * dx + dy * dy));
@@ -393,6 +450,8 @@ final class CombatRoom {
         blastTime = Math.max(0, blastTime - dt);
         splashTime = Math.max(0, splashTime - dt);
         beamTime = Math.max(0, beamTime - dt);
+        iceWallTime = Math.max(0, iceWallTime - dt);
+        if (iceWallTime > 0) iceWallAnimationTime += dt;
         updateExObjects(dt, player, plan);
         for (Enemy enemy : enemies) {
             if (enemy.hp <= 0) continue;
@@ -461,6 +520,7 @@ final class CombatRoom {
                 GameSpace.RIGHT - enemy.radius);
             enemy.y = MathUtils.clamp(enemy.y, GameSpace.BOTTOM + enemy.radius,
                 GameSpace.WALK_TOP - enemy.radius);
+            resolveIceWallCollision(enemy, player.x, player.y);
             if (!warping && length < enemy.radius + 18 && enemy.contactTimer <= 0) {
                 player.hurt(enemy.damage);
                 enemy.contactTimer = .75f;
@@ -509,6 +569,8 @@ final class CombatRoom {
                     }
                     remove = true;
                 }
+            } else if (!remove && iceWallBlocks(shot.x, shot.y, shot.radius)) {
+                remove = true;
             } else if (!remove) {
                 float dx = shot.x - player.x, dy = shot.y - player.y;
                 if (dx * dx + dy * dy < (shot.radius + 17) * (shot.radius + 17)) {
@@ -704,7 +766,7 @@ final class CombatRoom {
         float dx = vacuum.x - player.x, dy = vacuum.y - player.y;
         float distance = Math.max(.001f, (float)Math.sqrt(dx * dx + dy * dy));
         if (distance < 285 && !player.skillPlaying)
-            player.moveBy(dx / distance * 82 * dt, dy / distance * 82 * dt);
+            player.moveBy(dx / distance * 82 * dt, dy / distance * 82 * dt, this);
         if (distance < vacuum.radius + 22 && vacuum.contactTimer <= 0) {
             player.hurt(vacuum.damage);
             vacuum.contactTimer = .8f;

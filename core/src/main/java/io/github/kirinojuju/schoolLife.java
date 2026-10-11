@@ -35,6 +35,8 @@ public class schoolLife extends ApplicationAdapter {
         audio.update(dt);
         boolean touchSkill = run.phase == RunDirector.Phase.FIGHT
             && renderer.skillButtonJustPressed();
+        boolean touchIceWall = run.phase == RunDirector.Phase.FIGHT
+            && renderer.iceWallButtonJustPressed();
         boolean mouseAttack = run.phase == RunDirector.Phase.FIGHT
             && renderer.mouseAttackHeld();
         if (mouseAttack && renderer.mouseAttackJustPressed())
@@ -49,7 +51,7 @@ public class schoolLife extends ApplicationAdapter {
             int choice = renderer.carChoiceJustPressed();
             if (choice >= 0) run.chooseCar(choice == 0);
         }
-        if (run.update(dt, player, combat, touchSkill, mouseAttack)) newRun();
+        if (run.update(dt, player, combat, touchSkill, touchIceWall, mouseAttack)) newRun();
         renderer.draw(run, player, combat);
     }
 

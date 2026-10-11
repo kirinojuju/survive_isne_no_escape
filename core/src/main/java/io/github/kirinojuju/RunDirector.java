@@ -34,7 +34,7 @@ final class RunDirector {
 
     /** Returns true when the player requests a fresh run. */
     boolean update(float dt, PlayerCharacter player, CombatRoom combat,
-                   boolean touchSkill, boolean mouseAttack) {
+                   boolean touchSkill, boolean touchIceWall, boolean mouseAttack) {
         if (advanceSceneFade(dt, player, combat)) return false;
         if (phase == Phase.GAME_OVER)
             return Gdx.input.isKeyJustPressed(Input.Keys.R);
@@ -89,7 +89,7 @@ final class RunDirector {
             return false;
         }
 
-        player.update(dt, combat, touchSkill, mouseAttack);
+        player.update(dt, combat, touchSkill, touchIceWall, mouseAttack);
         boolean cleared = combat.update(dt, player, plan);
         if (player.hp <= 0) phase = Phase.GAME_OVER;
         else if (cleared) finishRoom(player);

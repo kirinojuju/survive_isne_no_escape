@@ -8,6 +8,7 @@ import com.badlogic.gdx.math.MathUtils;
 final class PlayerCharacter {
     static final float SKILL_ANIMATION_DURATION = .72f;
     static final float SKILL_SP_COST = 30f;
+    static final float ICE_WALL_SP_COST = 25f;
     static final float LAN_SWING_DURATION = .25f;
     static final float LAN_REACH = 125f;
     static final float LAN_ATTACK_INTERVAL = .44f;
@@ -15,6 +16,7 @@ final class PlayerCharacter {
     static final float NOTEBOOK_BEAM_INTERVAL = .65f;
     private static final float SKILL_RELEASE_TIME = .4f;
     private static final float SKILL_COOLDOWN = 2f;
+    private static final float ICE_WALL_COOLDOWN = 7f;
     private static final float EDGE_X = 30, EDGE_Y = 64;
     enum Weapon { PHYSICAL, MAGICAL }
 
@@ -29,7 +31,7 @@ final class PlayerCharacter {
     float notebookHeat;
     float attackTimer, dashTimer, invulnerable, swingTimer;
     float slowTime;
-    float walkTime, skillTime, skillCooldown;
+    float walkTime, skillTime, skillCooldown, iceWallCooldown;
     float boundTime, bindImmunity;
     int bindProgress, lastBindDirection;
     boolean moving, facingRight = true, skillPlaying, skillReleased;
@@ -65,7 +67,7 @@ final class PlayerCharacter {
         sp = Math.min(100, sp + 30);
         invulnerable = .9f;
         attackTimer = 0;
-        walkTime = skillTime = skillCooldown = 0;
+        walkTime = skillTime = skillCooldown = iceWallCooldown = 0;
         boundTime = bindImmunity = 0;
         slowTime = 0;
         bindProgress = lastBindDirection = 0;
@@ -79,12 +81,14 @@ final class PlayerCharacter {
         notebookHeat = 0;
     }
 
-    void update(float dt, CombatRoom combat, boolean touchSkill, boolean mouseAttack) {
+    void update(float dt, CombatRoom combat, boolean touchSkill,
+                boolean touchIceWall, boolean mouseAttack) {
         attackTimer = Math.max(0, attackTimer - dt);
         dashTimer = Math.max(0, dashTimer - dt);
         invulnerable = Math.max(0, invulnerable - dt);
         swingTimer = Math.max(0, swingTimer - dt);
         skillCooldown = Math.max(0, skillCooldown - dt);
+        iceWallCooldown = Math.max(0, iceWallCooldown - dt);
         slowTime = Math.max(0, slowTime - dt);
         bindImmunity = Math.max(0, bindImmunity - dt);
         if (boundTime > 0) {
@@ -96,6 +100,8 @@ final class PlayerCharacter {
             advanceSkill(dt, combat);
             return; // Casting locks movement, dash, weapon switching, and normal attacks.
         }
+        if ((Gdx.input.isKeyJustPressed(Input.Keys.F) || touchIceWall)
+            && tryStartIceWall(combat)) return;
         if ((Gdx.input.isKeyJustPressed(Input.Keys.E) || touchSkill)
             && tryStartSkill(combat)) return;
 
@@ -134,7 +140,7 @@ final class PlayerCharacter {
             if (dx != 0) facingRight = dx > 0;
             walkTime += dt;
             float moveSpeed = (225 + speedBonus) * (slowTime > 0 ? .62f : 1f);
-            moveBy(dx * moveSpeed * dt, dy * moveSpeed * dt);
+            moveBy(dx * moveSpeed * dt, dy * moveSpeed * dt, combat);
         }
         else walkTime = 0;
 
@@ -142,13 +148,17 @@ final class PlayerCharacter {
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.SHIFT_LEFT)
             || Gdx.input.isKeyJustPressed(Input.Keys.SHIFT_RIGHT))
-            dash(length > 0 ? dx : faceX, length > 0 ? dy : faceY);
+            dash(length > 0 ? dx : faceX, length > 0 ? dy : faceY, combat);
         if (attacking && attackTimer <= 0) attack(combat);
     }
 
     boolean dash(float directionX, float directionY) {
+        return dash(directionX, directionY, null);
+    }
+
+    private boolean dash(float directionX, float directionY, CombatRoom combat) {
         if (dashTimer > 0 || sp < 25) return false;
-        moveBy(directionX * 115, directionY * 115);
+        moveBy(directionX * 115, directionY * 115, combat);
         sp -= 25;
         dashTimer = .75f;
         invulnerable = Math.max(invulnerable, .22f);
@@ -156,10 +166,36 @@ final class PlayerCharacter {
     }
 
     void moveBy(float dx, float dy) {
-        x = MathUtils.clamp(x + dx,
-            GameSpace.LEFT + EDGE_X, GameSpace.RIGHT - EDGE_X);
-        y = MathUtils.clamp(y + dy,
-            GameSpace.BOTTOM + EDGE_Y, GameSpace.WALK_TOP - EDGE_Y);
+        moveBy(dx, dy, null);
+    }
+
+    void moveBy(float dx, float dy, CombatRoom combat) {
+        float distance = (float)Math.sqrt(dx * dx + dy * dy);
+        int steps = Math.max(1, (int)Math.ceil(distance / 4));
+        float stepX = dx / steps, stepY = dy / steps;
+        for (int i = 0; i < steps; i++) {
+            float nextX = MathUtils.clamp(x + stepX,
+                GameSpace.LEFT + EDGE_X, GameSpace.RIGHT - EDGE_X);
+            float nextY = MathUtils.clamp(y + stepY,
+                GameSpace.BOTTOM + EDGE_Y, GameSpace.WALK_TOP - EDGE_Y);
+            if (combat == null || !combat.playerOverlapsIceWall(nextX, nextY, 12)) {
+                x = nextX;
+                y = nextY;
+                continue;
+            }
+
+            float alongX = MathUtils.cos(combat.iceWallAngle);
+            float alongY = MathUtils.sin(combat.iceWallAngle);
+            float slide = stepX * alongX + stepY * alongY;
+            nextX = MathUtils.clamp(x + alongX * slide,
+                GameSpace.LEFT + EDGE_X, GameSpace.RIGHT - EDGE_X);
+            nextY = MathUtils.clamp(y + alongY * slide,
+                GameSpace.BOTTOM + EDGE_Y, GameSpace.WALK_TOP - EDGE_Y);
+            if (!combat.playerOverlapsIceWall(nextX, nextY, 12)) {
+                x = nextX;
+                y = nextY;
+            }
+        }
     }
 
     void lockAttackTarget(CombatRoom combat, float aimX, float aimY) {
@@ -241,6 +277,16 @@ final class PlayerCharacter {
         walkTime = 0;
         swingTimer = 0;
         faceSkillTarget(combat);
+        return true;
+    }
+
+    boolean tryStartIceWall(CombatRoom combat) {
+        if (iceWallCooldown > 0 || sp < ICE_WALL_SP_COST) return false;
+        faceSkillTarget(combat);
+        sp -= ICE_WALL_SP_COST;
+        iceWallCooldown = ICE_WALL_COOLDOWN;
+        combat.raiseIceWall(x, y, faceX, faceY);
+        if (audio != null) audio.skillCast();
         return true;
     }
 

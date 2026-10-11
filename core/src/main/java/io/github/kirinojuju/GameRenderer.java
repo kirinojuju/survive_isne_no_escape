@@ -17,6 +17,7 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 /** Arena, HUD and temporary enemy art; the player uses exported sprite frames. */
 final class GameRenderer {
     private static final float SKILL_X = 1138, SKILL_Y = 155, SKILL_RADIUS = 45;
+    private static final float ICE_WALL_X = 1035;
     private static final Color INK = new Color(.09f, .12f, .18f, 1);
     private static final Color PAPER = new Color(.91f, .94f, .91f, 1);
     private static final Color CYAN = new Color(.36f, .85f, .86f, 1);
@@ -35,6 +36,7 @@ final class GameRenderer {
     private final BitmapFont font = new BitmapFont();
     private final BitmapFont bigFont = new BitmapFont();
     private final StudentSprite student = new StudentSprite();
+    private final IceWallSprite iceWall = new IceWallSprite();
     private final SatiSprite sati = new SatiSprite();
     private final LiquidCatSprite liquidCat = new LiquidCatSprite();
     private final Texture normalRoom = loadRoom("scene/sceneroom.png");
@@ -119,7 +121,10 @@ final class GameRenderer {
             for (CombatRoom.Enemy enemy : combat.enemies) drawEnemy(enemy);
             drawAttackEffect(player);
             drawBars(player);
-            if (run.phase == RunDirector.Phase.FIGHT) drawSkillButton(player);
+            if (run.phase == RunDirector.Phase.FIGHT) {
+                drawSkillButton(player);
+                drawIceWallButton(player);
+            }
         }
         if (run.phase != RunDirector.Phase.FIGHT) drawPanel();
         if (run.phase == RunDirector.Phase.UPGRADE) drawUpgradeChoices();
@@ -127,6 +132,7 @@ final class GameRenderer {
 
         batch.begin();
         if (run.phase == RunDirector.Phase.FIGHT) {
+            iceWall.draw(batch, combat);
             for (CombatRoom.Shot shot : combat.shots)
                 if (shot.powerBall) student.drawPowerBall(batch, shot);
                 else if (shot.satiSpear) sati.drawSpear(batch, shot);
@@ -153,8 +159,10 @@ final class GameRenderer {
         } else {
             drawHud(run, player, combat);
             if (run.phase == RunDirector.Phase.FIGHT) {
-                font.draw(batch, "SKILL", SKILL_X - 29, SKILL_Y + 6);
+                font.draw(batch, "BALL", SKILL_X - 25, SKILL_Y + 6);
                 font.draw(batch, "E", SKILL_X - 6, SKILL_Y - 16);
+                font.draw(batch, "ICE", ICE_WALL_X - 18, SKILL_Y + 6);
+                font.draw(batch, "F", ICE_WALL_X - 5, SKILL_Y - 16);
             }
             if (run.phase == RunDirector.Phase.TRANSITION) {
                 title(run.transitionTitle, 415);
@@ -606,6 +614,14 @@ final class GameRenderer {
         shapes.circle(SKILL_X, SKILL_Y, SKILL_RADIUS, 40);
     }
 
+    private void drawIceWallButton(PlayerCharacter player) {
+        shapes.setColor(INK);
+        shapes.circle(ICE_WALL_X, SKILL_Y, SKILL_RADIUS + 4, 40);
+        shapes.setColor(player.sp >= PlayerCharacter.ICE_WALL_SP_COST
+            && player.iceWallCooldown <= 0 ? CYAN : DISABLED);
+        shapes.circle(ICE_WALL_X, SKILL_Y, SKILL_RADIUS, 40);
+    }
+
     private void drawHud(RunDirector run, PlayerCharacter player, CombatRoom combat) {
         font.draw(batch, "HP " + (int)Math.ceil(player.hp) + "/" + (int)player.maxHp, 73, 690);
         font.draw(batch, "SP " + (int)player.sp + "/100", 292, 690);
@@ -676,7 +692,7 @@ final class GameRenderer {
         if (!effects.isEmpty()) font.draw(batch, effects, 700, 16);
         if (run.room == RunDirector.Room.EX)
             font.draw(batch, "EX POWER: TETHER + HEAT BEAM", 690, 35);
-        font.draw(batch, "WASD move   LEFT CLICK / SPACE attack   SHIFT dash   E skill", 600, 48);
+        font.draw(batch, "WASD move   LEFT CLICK / SPACE attack   SHIFT dash   E ball   F ice wall", 540, 48);
     }
 
     private void drawPanel() {
@@ -711,6 +727,18 @@ final class GameRenderer {
         float dy = touchPosition.y - SKILL_Y;
         skillPressCaptured = dx * dx + dy * dy <= SKILL_RADIUS * SKILL_RADIUS;
         return skillPressCaptured;
+    }
+
+    boolean iceWallButtonJustPressed() {
+        if (!Gdx.input.isTouched()) skillPressCaptured = false;
+        if (!Gdx.input.justTouched()) return false;
+        touchPosition.set(Gdx.input.getX(), Gdx.input.getY());
+        viewport.unproject(touchPosition);
+        float dx = touchPosition.x - ICE_WALL_X;
+        float dy = touchPosition.y - SKILL_Y;
+        boolean pressed = dx * dx + dy * dy <= SKILL_RADIUS * SKILL_RADIUS;
+        skillPressCaptured = skillPressCaptured || pressed;
+        return pressed;
     }
 
     boolean mouseAttackHeld() {
@@ -761,6 +789,7 @@ final class GameRenderer {
 
     void dispose() {
         student.dispose();
+        iceWall.dispose();
         sati.dispose();
         liquidCat.dispose();
         normalRoom.dispose();
