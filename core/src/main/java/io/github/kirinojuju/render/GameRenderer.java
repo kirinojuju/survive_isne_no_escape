@@ -245,7 +245,7 @@ public final class GameRenderer {
             line(run.transitionDetail, 340);
             line("Press ENTER to continue", 260);
         } else if (run.phase == RunDirector.Phase.UPGRADE) {
-            title("CHOOSE ONE UPGRADE", 435);
+            title("CHOOSE ONE UPGRADE  |  R: REROLL (" + run.upgradeRerollsRemaining() + ")", 435);
             line(run.transitionTitle + "  |  +" + RunDirector.BOSS_CLEAR_HEAL + " HP", 390);
             for (int i = 0; i < run.offeredUpgrades.length; i++) {
                 Upgrade upgrade = run.offeredUpgrades[i];

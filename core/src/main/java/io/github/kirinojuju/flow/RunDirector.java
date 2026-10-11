@@ -36,6 +36,7 @@ public final class RunDirector {
     private boolean nextLoopAfterFinalExam;
     private Phase fadeDestination;
     private final Random random;
+    private int upgradeRerollsRemaining;
     private GameAudio audio;
 
     // Create the run plan and keep the random generator for rewards and encounters.
@@ -108,7 +109,9 @@ public final class RunDirector {
         }
 
         if (phase == Phase.UPGRADE) {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1))
+            if (Gdx.input.isKeyJustPressed(Input.Keys.R))
+                rerollUpgrades(player);
+            else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1))
                 chooseUpgrade(0, player, combat);
             else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2))
                 chooseUpgrade(1, player, combat);
@@ -316,8 +319,44 @@ public final class RunDirector {
         nextLoopOnContinue = false;
     }
 
+    // Reroll the offered choices once, preferring upgrades not shown yet.
+    public boolean rerollUpgrades(PlayerCharacter player) {
+        if (phase != Phase.UPGRADE || upgradeRerollsRemaining <= 0) return false;
+
+        ArrayList<Upgrade> available = new ArrayList<Upgrade>();
+        ArrayList<Upgrade> unseen = new ArrayList<Upgrade>();
+        ArrayList<Upgrade> previous = new ArrayList<Upgrade>();
+        Collections.addAll(previous, offeredUpgrades);
+        for (Upgrade upgrade : Upgrade.values()) {
+            if (!upgrade.available(player)) continue;
+            available.add(upgrade);
+            if (!previous.contains(upgrade)) unseen.add(upgrade);
+        }
+        if (unseen.isEmpty()) return false;
+
+        Collections.shuffle(unseen, random);
+        Collections.shuffle(previous, random);
+        ArrayList<Upgrade> rerolled = new ArrayList<Upgrade>();
+        for (Upgrade upgrade : unseen) {
+            if (rerolled.size() == offeredUpgrades.length) break;
+            rerolled.add(upgrade);
+        }
+        for (Upgrade upgrade : previous) {
+            if (rerolled.size() == offeredUpgrades.length) break;
+            if (available.contains(upgrade) && !rerolled.contains(upgrade))
+                rerolled.add(upgrade);
+        }
+        for (int i = 0; i < offeredUpgrades.length; i++)
+            offeredUpgrades[i] = rerolled.get(i);
+        upgradeRerollsRemaining--;
+        return true;
+    }
+
+    public int upgradeRerollsRemaining() { return upgradeRerollsRemaining; }
+
     // Shuffle available upgrades and fill the three choices shown to the player.
     private void offerUpgrades(PlayerCharacter player) {
+        upgradeRerollsRemaining = 1;
         ArrayList<Upgrade> choices = new ArrayList<Upgrade>();
         for (Upgrade upgrade : Upgrade.values())
             if (upgrade.available(player)) choices.add(upgrade);
