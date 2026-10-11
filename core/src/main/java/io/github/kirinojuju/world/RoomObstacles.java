@@ -16,7 +16,7 @@ import java.util.Random;
 /** Table placement, movement collision and routes around a few separate tables. */
 public final class RoomObstacles {
     private static final float EPSILON = .01f;
-    private static final float ROUTE_GAP = 3;
+    private static final float ROUTE_GAP = 4;
     // table03 is a silhouette; use the three finished furniture images.
     private static final int[] TABLE_ARTS = {0, 1, 3};
     // Visible pixel bounds in the artist's 360 x 373 transparent canvases.
@@ -43,6 +43,7 @@ public final class RoomObstacles {
     }
 
     public final Array<Table> tables = new Array<Table>();
+
     private final Vector2 waypoint = new Vector2();
     // Start, destination and four corners per table. Reused during routing.
     private final float[] nodeX = new float[14], nodeY = new float[14], cost = new float[14];
@@ -114,9 +115,11 @@ public final class RoomObstacles {
         float dx = endX - x, dy = endY - y;
         for (Table table : tables) {
             Rectangle box = table.solid;
+            // Expand the box by the radius of the moving circle, then find the earliest contact along the segment.
             float left = box.x - radius, right = box.x + box.width + radius;
             float bottom = box.y - radius, top = box.y + box.height + radius;
             float enter = 0, exit = 1;
+
             if (Math.abs(dx) < EPSILON) {
                 if (x < left || x > right) continue;
             } else {

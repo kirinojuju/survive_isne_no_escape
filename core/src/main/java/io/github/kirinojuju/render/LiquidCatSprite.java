@@ -1,16 +1,18 @@
 package io.github.kirinojuju.render;
 
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 import io.github.kirinojuju.combat.CombatRoom;
+import io.github.kirinojuju.enemy.ex.LiquidCatBehavior;
 import java.util.Locale;
 
 /** The team's separate Liquid Cat animation and attack frames. */
 public final class LiquidCatSprite {
     private static final float DRAW_SIZE = 128;
     private static final float SMALL_DRAW_SIZE = 96;
-    private static final float BULLET_SIZE = 128;
     private static final String ROOT = "characters/boss_ex/liquid-cat/";
 
     private final Texture[] idleLeft = loadFrames("idle/liquid_cat_idle_l", 1, 8);
@@ -23,6 +25,7 @@ public final class LiquidCatSprite {
     private final Texture[] strike = loadFrames("attack/liquid_orbital_strike_animation", 0, 10);
     private final Texture strikeObject = load("attack/liquid_orbital_strike_object.png");
     private final Texture bullet = load("attack/liquid_bullet.png");
+    private final TextureRegion bulletRegion = new TextureRegion(bullet, 27, 26, 10, 10);
 
     private static Texture load(String name) {
         return OptionalAssetTexture.load(ROOT + name);
@@ -45,37 +48,47 @@ public final class LiquidCatSprite {
 
     public void draw(SpriteBatch batch, CombatRoom.Enemy cat) {
         Texture frame;
+        boolean flip = !cat.catFacingRight;
         if (cat.catTransformTime > 0) {
             float progress = 1 - MathUtils.clamp(cat.catTransformTime
-                / CombatRoom.CAT_TRANSFORM_DURATION, 0, 1);
+                / LiquidCatBehavior.TRANSFORM_DURATION, 0, 1);
             int index = MathUtils.clamp((int)(progress * transform.length), 0,
                 transform.length - 1);
             frame = transform[cat.exState == 1 ? index : transform.length - 1 - index];
         } else if (cat.exState == 1 && cat.catDivideTime > 0) {
-            frame = timedFrame(divide, cat.catDivideTime, CombatRoom.CAT_DIVIDE_DURATION);
+            frame = timedFrame(divide, cat.catDivideTime, LiquidCatBehavior.DIVIDE_DURATION);
         } else if (cat.exState == 0 && cat.exMeter > 0) {
-            frame = timedFrame(strike, cat.exMeter, CombatRoom.CAT_LEAP_WINDUP);
+            frame = timedFrame(strike, cat.exMeter, LiquidCatBehavior.LEAP_WINDUP);
         } else if (cat.exState == 1) {
             if (cat.catMoving) {
                 Texture[] walking = cat.catFacingRight ? smallWalkRight : smallWalkLeft;
                 frame = walking[(int)(cat.animationTime / .11f) % walking.length];
+                flip = false;
             } else frame = smallIdle[(int)(cat.animationTime / .22f) % smallIdle.length];
         } else {
             Texture[] idle = cat.catFacingRight ? idleRight : idleLeft;
             frame = idle[(int)(cat.animationTime / .12f) % idle.length];
+            flip = false;
         }
-        float size = cat.exState == 1 && cat.catTransformTime <= 0
-            ? SMALL_DRAW_SIZE : DRAW_SIZE;
-        batch.draw(frame, cat.x - size / 2, cat.y - size / 2,
-            size, size);
-        if (cat.exState == 0 && cat.exMeter > 0)
+        float size = cat.exState == 1 ? SMALL_DRAW_SIZE : DRAW_SIZE;
+        if (cat.catTransformTime > 0) {
+            float progress = 1 - cat.catTransformTime / LiquidCatBehavior.TRANSFORM_DURATION;
+            size = cat.exState == 1 ? MathUtils.lerp(DRAW_SIZE, SMALL_DRAW_SIZE, progress)
+                : MathUtils.lerp(SMALL_DRAW_SIZE, DRAW_SIZE, progress);
+        }
+        batch.draw(frame, cat.x + (flip ? size / 2 : -size / 2), cat.y - size / 2,
+            flip ? -size : size, size);
+        if (cat.exState == 0 && (cat.exMeter > 0 || cat.exFlashTime > 0)) {
+            batch.setColor(1, 1, 1, cat.exMeter > 0 ? .45f : cat.exFlashTime / .3f);
             batch.draw(strikeObject, cat.exAimX - DRAW_SIZE / 2,
                 cat.exAimY - DRAW_SIZE / 2, DRAW_SIZE, DRAW_SIZE);
+            batch.setColor(Color.WHITE);
+        }
     }
 
     public void drawBullet(SpriteBatch batch, CombatRoom.Shot shot) {
-        batch.draw(bullet, shot.x - BULLET_SIZE / 2, shot.y - BULLET_SIZE / 2,
-            BULLET_SIZE, BULLET_SIZE);
+        float size = shot.radius * 2;
+        batch.draw(bulletRegion, shot.x - shot.radius, shot.y - shot.radius, size, size);
     }
 
     public void dispose() {

@@ -1,4 +1,4 @@
-# Game Design Document — School Life: Survive Year Four
+# Game Design Document — มาทั้งที่ก็เป็นนักเรียนติดลูปไปซะได้
 
 **Version:** 0.2 · **Updated:** October 1, 2026 · **Status:** Design document based on the current prototype
 
@@ -8,7 +8,7 @@
 
 | Topic | Description |
 | --- | --- |
-| Title | **School Life: Survive Year Four** |
+| Title | **มาทั้งที่ก็เป็นนักเรียนติดลูปไปซะได้** |
 | Genre | Single-player, 2D room-based action roguelike |
 | Premise | A computer engineering student fights through monsters and Ajarns while trying to survive a fourth year that repeats and grows harder. |
 | Hooks | Two student-themed weapons, four Ajarn combat styles per loop, EX enemies with distinct mechanics, and a joke ending in which the student chooses to go home before fighting. |
@@ -63,9 +63,11 @@ HP reaches zero → Results screen → New run
 | Move | WASD or arrow keys | Walk within the room's playable floor area. |
 | Normal attack | Hold left mouse button or Space | Attack repeatedly with the active weapon. |
 | Select a target | Click near an enemy | Lock that enemy. Clicking empty space locks the nearest living enemy. |
-| Switch weapons | Q or (C) or 1/2 | Select the LAN cable or notebook. |
+| Switch weapons | Tab or 1/2 | Select the LAN cable or notebook. |
 | Dash | Shift | Move quickly with a brief period of damage immunity. |
 | Cast PowerBall | E or the on-screen SKILL button | Stop and cast a homing projectile. |
+| Ice Wall | F or ICE button | Raise a temporary barrier in the facing direction. |
+| HP / SP potion | Z / X | Consume a stored bottle for 40 HP / 35 SP. |
 | Escape a bind | Alternate A/D or left/right six times | Break free before the bind expires. |
 | Choose an upgrade | Click a card or press 1/2/3 | Take one upgrade. |
 | Continue | Enter | Move on after clearing a room. |

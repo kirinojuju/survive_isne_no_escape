@@ -19,3 +19,15 @@ tasks.register('verifyGameRules', JavaExec) {
   classpath = sourceSets.test.runtimeClasspath
   mainClass = 'io.github.kirinojuju.GameRulesCheck'
 }
+
+tasks.register('verifyDomeBoss', JavaExec) {
+  dependsOn testClasses
+  classpath = sourceSets.test.runtimeClasspath
+  mainClass = 'io.github.kirinojuju.DomeBossCheck'
+}
+
+tasks.register('verifyCustomBosses', JavaExec) {
+  dependsOn testClasses
+  classpath = sourceSets.test.runtimeClasspath
+  mainClass = 'io.github.kirinojuju.CustomBossCheck'
+}

@@ -129,8 +129,10 @@ final class EnemyProjectilePatterns {
 
     private static void fireSingle(CombatRoom room, CombatRoom.Enemy enemy,
                                    float angle, float speed, float damage) {
-        room.addEnemyShot(enemy, new CombatRoom.Shot(enemy.x, enemy.y,
+        CombatRoom.Shot shot = new CombatRoom.Shot(enemy.x, enemy.y,
             MathUtils.cos(angle) * speed, MathUtils.sin(angle) * speed,
-            7, damage, 3, false));
+            7, damage, 3, false);
+        shot.algoBall = enemy instanceof AlgoMonster;
+        room.addEnemyShot(enemy, shot);
     }
 }

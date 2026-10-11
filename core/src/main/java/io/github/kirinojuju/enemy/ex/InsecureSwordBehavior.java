@@ -11,6 +11,11 @@ public final class InsecureSwordBehavior extends ExBehavior {
     public static final float WHIFF_DURATION = .6f;
 
     @Override
+    public float incomingDamageMultiplier(CombatRoom.Enemy sword) {
+        return sword.exState == 2 ? 1.5f : 1f;
+    }
+
+    @Override
     protected void act(CombatRoom room, CombatRoom.Enemy sword, float dt,
                        PlayerCharacter player, RunPlan plan) {
         sword.swordAttackTime = Math.max(0, sword.swordAttackTime - dt);

@@ -10,12 +10,15 @@ import io.github.kirinojuju.weapon.NotebookWeaponAttack;
 import io.github.kirinojuju.weapon.WeaponAbility;
 import io.github.kirinojuju.weapon.WeaponAttack;
 import io.github.kirinojuju.world.GameSpace;
+import io.github.kirinojuju.world.IceWall;
 import io.github.kirinojuju.world.RoomObstacles;
 
 /** Player movement, resources, weapon ownership and attacks. */
 public final class PlayerCharacter {
     public static final float SKILL_ANIMATION_DURATION = .72f;
     public static final float SKILL_SP_COST = 30f;
+    public static final float ICE_WALL_SP_COST = 25f;
+    public static final float ICE_WALL_COOLDOWN = 7f;
     public static final float LAN_SWING_DURATION = .25f;
     public static final float LAN_REACH = 125f;
     public static final float LAN_ATTACK_INTERVAL = .44f;
@@ -30,6 +33,7 @@ public final class PlayerCharacter {
     public float faceX = 1, faceY = 0;
     public float swingFaceX = 1, swingFaceY = 0;
     public float hp = 100, maxHp = 100, sp = 100;
+    public final PotionInventory potions = new PotionInventory();
     public float physicalBonus, magicalBonus, notebookBonus, speedBonus;
     public float attackSpeedBonus, skillDamageBonus;
     public boolean lanSlow, lanAoE, lanTether;
@@ -38,6 +42,7 @@ public final class PlayerCharacter {
     public float attackTimer, dashTimer, invulnerable, swingTimer;
     public float slowTime;
     public float walkTime, skillTime, skillCooldown;
+    public float iceWallCooldown;
     public float boundTime, bindImmunity;
     public int bindProgress, lastBindDirection;
     public boolean moving, facingRight = true, skillPlaying, skillReleased;
@@ -49,6 +54,7 @@ public final class PlayerCharacter {
     private Weapon active;
     private boolean horizontalOnly;
     private RoomObstacles obstacles;
+    private IceWall iceWall;
 
     public Weapon activeWeapon() { return active; }
     public boolean owns(Weapon weapon) { return owned[weapon.ordinal()]; }
@@ -58,6 +64,7 @@ public final class PlayerCharacter {
     }
     public void setAudio(GameAudio audio) { this.audio = audio; }
     public void setObstacles(RoomObstacles obstacles) { this.obstacles = obstacles; }
+    public void setIceWall(IceWall iceWall) { this.iceWall = iceWall; }
 
     /** Teammates can attach an ability to one weapon without changing input handling. */
     public void addWeaponAbility(Weapon weapon, WeaponAbility ability) {
@@ -78,13 +85,14 @@ public final class PlayerCharacter {
 
     public void startRoom(boolean horizontalOnly) {
         obstacles = null;
+        iceWall = null;
         this.horizontalOnly = horizontalOnly;
         x = GameSpace.WIDTH / 2;
         y = horizontalOnly ? GameSpace.SERVER_PLAYER_Y : GameSpace.HEIGHT / 2;
         sp = Math.min(100, sp + 30);
         invulnerable = .9f;
         attackTimer = 0;
-        walkTime = skillTime = skillCooldown = 0;
+        walkTime = skillTime = skillCooldown = iceWallCooldown = 0;
         boundTime = bindImmunity = 0;
         slowTime = 0;
         bindProgress = lastBindDirection = 0;
@@ -99,11 +107,17 @@ public final class PlayerCharacter {
     }
 
     public void update(float dt, CombatRoom combat, boolean touchSkill, boolean mouseAttack) {
+        update(dt, combat, touchSkill, false, mouseAttack);
+    }
+
+    public void update(float dt, CombatRoom combat, boolean touchSkill,
+                       boolean touchIceWall, boolean mouseAttack) {
         attackTimer = Math.max(0, attackTimer - dt);
         dashTimer = Math.max(0, dashTimer - dt);
         invulnerable = Math.max(0, invulnerable - dt);
         swingTimer = Math.max(0, swingTimer - dt);
         skillCooldown = Math.max(0, skillCooldown - dt);
+        iceWallCooldown = Math.max(0, iceWallCooldown - dt);
         slowTime = Math.max(0, slowTime - dt);
         bindImmunity = Math.max(0, bindImmunity - dt);
         if (boundTime > 0) {
@@ -111,16 +125,20 @@ public final class PlayerCharacter {
             if (boundTime == 0) releaseBind();
         }
         sp = Math.min(100, sp + 14 * dt);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.Z)) potions.useHp(this);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.X)) potions.useSp(this);
         if (skillPlaying) {
             advanceSkill(dt, combat);
             return; // Casting locks movement, dash, weapon switching, and normal attacks.
         }
         if ((Gdx.input.isKeyJustPressed(Input.Keys.E) || touchSkill)
             && tryStartSkill(combat)) return;
+        if ((Gdx.input.isKeyJustPressed(Input.Keys.F) || touchIceWall)
+            && tryStartIceWall(combat)) return;
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) switchTo(Weapon.PHYSICAL);
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) switchTo(Weapon.MAGICAL);
-        if (Gdx.input.isKeyJustPressed(Input.Keys.Q) && hasBothWeapons())
+        if (Gdx.input.isKeyJustPressed(Input.Keys.TAB) && hasBothWeapons())
             switchTo(active == Weapon.PHYSICAL ? Weapon.MAGICAL : Weapon.PHYSICAL);
 
         boolean attacking = mouseAttack || Gdx.input.isKeyPressed(Input.Keys.SPACE);
@@ -174,13 +192,15 @@ public final class PlayerCharacter {
             directionY = 0;
         }
         float dx = directionX * 115, dy = directionY * 115;
+        float hit = iceWall == null ? -1 : iceWall.hitFraction(x, y, x + dx, y + dy, 17);
         if (obstacles != null) {
-            float hit = obstacles.hitFraction(x, y, x + dx, y + dy, 17);
-            if (hit >= 0) {
-                float fraction = Math.max(0, hit - .001f);
-                dx *= fraction;
-                dy *= fraction;
-            }
+            float tableHit = obstacles.hitFraction(x, y, x + dx, y + dy, 17);
+            if (tableHit >= 0 && (hit < 0 || tableHit < hit)) hit = tableHit;
+        }
+        if (hit >= 0) {
+            float fraction = Math.max(0, hit - .001f);
+            dx *= fraction;
+            dy *= fraction;
         }
         moveBy(dx, dy);
         sp -= 25;
@@ -193,11 +213,13 @@ public final class PlayerCharacter {
         float nextX = MathUtils.clamp(x + dx,
             GameSpace.LEFT + EDGE_X, GameSpace.RIGHT - EDGE_X);
         if (obstacles != null) nextX = obstacles.moveX(x, y, nextX - x, 17);
+        if (iceWall != null) nextX = iceWall.moveX(x, y, nextX - x, 17);
         x = nextX;
         float nextY = horizontalOnly ? GameSpace.SERVER_PLAYER_Y
             : MathUtils.clamp(y + dy,
                 GameSpace.BOTTOM + EDGE_Y, GameSpace.WALK_TOP - EDGE_Y);
         if (obstacles != null) nextY = obstacles.moveY(x, y, nextY - y, 17);
+        if (iceWall != null) nextY = iceWall.moveY(x, y, nextY - y, 17);
         y = nextY;
     }
 
@@ -235,6 +257,16 @@ public final class PlayerCharacter {
 
     public void attack(CombatRoom combat) {
         if (active != null) attacks[active.ordinal()].attack(this, combat, audio);
+    }
+
+    public boolean tryStartIceWall(CombatRoom combat) {
+        if (skillPlaying || iceWallCooldown > 0 || sp < ICE_WALL_SP_COST) return false;
+        iceWall = combat.iceWall;
+        if (!combat.raiseIceWall(x, y, faceX, faceY)) return false;
+        sp -= ICE_WALL_SP_COST;
+        iceWallCooldown = ICE_WALL_COOLDOWN;
+        if (audio != null) audio.skillCast();
+        return true;
     }
 
     public boolean tryStartSkill(CombatRoom combat) {

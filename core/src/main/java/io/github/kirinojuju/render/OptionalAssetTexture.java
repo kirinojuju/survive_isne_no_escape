@@ -33,8 +33,40 @@ public final class OptionalAssetTexture {
         else if (path.contains("insecure-sword/")) drawSword(pixels);
         else if (path.contains("Tnetwork(Dome)/")) drawDome(pixels, path);
         else if (path.startsWith("weapons/notebook/")) drawNotebook(pixels, path);
+        else if (path.startsWith("weapons/icewall/")) drawIceWall(pixels);
+        else if (path.startsWith("weapons/potion/")) drawPotion(pixels, path.contains("_hp"));
+        else if (path.contains("monsters/")) drawSlime(pixels);
         else drawSati(pixels, path);
         return pixels;
+    }
+
+    private static void drawIceWall(Pixmap pixels) {
+        pixels.setColor(.24f, .70f, .92f, 1);
+        pixels.fillRectangle(4, 22, 56, 28);
+        pixels.setColor(.62f, .94f, 1f, 1);
+        for (int x = 7; x < 58; x += 10) {
+            pixels.fillRectangle(x, 18, 7, 30);
+            pixels.fillTriangle(x, 18, x + 7, 18, x + 3, 8);
+        }
+        pixels.setColor(Color.WHITE);
+        pixels.drawLine(5, 23, 59, 23);
+    }
+
+    private static void drawSlime(Pixmap pixels) {
+        pixels.setColor(.43f, .87f, .57f, 1);
+        pixels.fillCircle(32, 43, 16);
+        pixels.fillRectangle(16, 43, 33, 14);
+        pixels.setColor(Color.WHITE);
+        pixels.fillRectangle(24, 40, 5, 5);
+        pixels.fillRectangle(36, 40, 5, 5);
+    }
+
+    private static void drawPotion(Pixmap pixels, boolean health) {
+        pixels.setColor(Color.LIGHT_GRAY);
+        pixels.fillRectangle(26, 12, 12, 12);
+        pixels.fillRectangle(21, 24, 22, 29);
+        pixels.setColor(health ? Color.CORAL : Color.CYAN);
+        pixels.fillRectangle(24, 31, 16, 19);
     }
 
     private static void drawNotebook(Pixmap pixels, String path) {

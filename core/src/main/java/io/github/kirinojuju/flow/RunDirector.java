@@ -27,6 +27,7 @@ public final class RunDirector {
     public int exId, clearedRooms;
     public String transitionTitle = "", transitionDetail = "";
     public float sceneFade;
+    public boolean exTest;
     public final Upgrade[] offeredUpgrades = new Upgrade[3];
     private boolean nextLoopOnContinue;
     private boolean finalExamQueued, finalExamCleared;
@@ -61,74 +62,92 @@ public final class RunDirector {
         beginRoom(Room.MOBS, player, combat);
     }
 
+    /** Desktop test entry: fight one EX immediately with both weapons and EX techniques. */
+    public void startExTest(PlayerCharacter player, CombatRoom combat, int selectedExId) {
+        if (selectedExId < 0 || selectedExId >= RunPlan.EX_MONSTERS.length)
+            throw new IllegalArgumentException("Unknown EX id: " + selectedExId);
+        exTest = true;
+        exId = selectedExId;
+        player.acquire(PlayerCharacter.Weapon.PHYSICAL);
+        player.acquire(PlayerCharacter.Weapon.MAGICAL);
+        beginRoom(Room.EX, player, combat);
+        sceneFade = 0;
+    }
+
     /** Returns true when the player requests a fresh run. */
     public boolean update(float dt, PlayerCharacter player, CombatRoom combat,
                    boolean touchSkill, boolean mouseAttack) {
+        return update(dt, player, combat, touchSkill, false, mouseAttack);
+    }
+
+    public boolean update(float dt, PlayerCharacter player, CombatRoom combat,
+                          boolean touchSkill, boolean touchIceWall, boolean mouseAttack) {
         if (advanceSceneFade(dt, player, combat)) return false;
-        if (phase == Phase.GAME_OVER)
-            return Gdx.input.isKeyJustPressed(Input.Keys.R);
-
-        if (phase == Phase.CAR_ENDING)
-            return Gdx.input.isKeyJustPressed(Input.Keys.ENTER)
-                || Gdx.input.isKeyJustPressed(Input.Keys.R);
-
-        if (phase == Phase.START_SELECT) {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) startRun(player, combat);
-            return false;
+        switch (phase) {
+            case GAME_OVER:
+                return Gdx.input.isKeyJustPressed(Input.Keys.R);
+            case CAR_ENDING:
+                return Gdx.input.isKeyJustPressed(Input.Keys.ENTER)
+                    || Gdx.input.isKeyJustPressed(Input.Keys.R);
+            case START_SELECT:
+                if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) startRun(player, combat);
+                break;
+            case ENTRANCE:
+                updateEntrance(dt, player);
+                break;
+            case CAR_PROMPT:
+                updateCarPrompt();
+                break;
+            case UPGRADE:
+                if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) chooseUpgrade(0, player, combat);
+                else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) chooseUpgrade(1, player, combat);
+                else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) chooseUpgrade(2, player, combat);
+                break;
+            case TRANSITION:
+                if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) continueAfterRoom(player, combat);
+                break;
+            case CUTSCENE:
+                if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) continueAfterCutscene(player, combat);
+                break;
+            case FIGHT:
+                updateFight(dt, player, combat, touchSkill, touchIceWall, mouseAttack);
+                break;
+            default:
+                break;
         }
+        return false;
+    }
 
-        if (phase == Phase.ENTRANCE) {
-            float dx = 0, dy = 0;
-            if (Gdx.input.isKeyPressed(Input.Keys.A)
-                || Gdx.input.isKeyPressed(Input.Keys.LEFT)) dx--;
-            if (Gdx.input.isKeyPressed(Input.Keys.D)
-                || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) dx++;
-            if (Gdx.input.isKeyPressed(Input.Keys.S)
-                || Gdx.input.isKeyPressed(Input.Keys.DOWN)) dy--;
-            if (Gdx.input.isKeyPressed(Input.Keys.W)
-                || Gdx.input.isKeyPressed(Input.Keys.UP)) dy++;
-            EntranceScene.move(player, dt, dx, dy);
-            if (EntranceScene.atDoor(player)) requestDoor(player);
-            else if (Gdx.input.isKeyJustPressed(Input.Keys.E)) openCarPrompt(player);
-            return false;
-        }
+    private void updateEntrance(float dt, PlayerCharacter player) {
+        float dx = 0, dy = 0;
+        if (Gdx.input.isKeyPressed(Input.Keys.A)
+            || Gdx.input.isKeyPressed(Input.Keys.LEFT)) dx--;
+        if (Gdx.input.isKeyPressed(Input.Keys.D)
+            || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) dx++;
+        if (Gdx.input.isKeyPressed(Input.Keys.S)
+            || Gdx.input.isKeyPressed(Input.Keys.DOWN)) dy--;
+        if (Gdx.input.isKeyPressed(Input.Keys.W)
+            || Gdx.input.isKeyPressed(Input.Keys.UP)) dy++;
+        EntranceScene.move(player, dt, dx, dy);
+        if (EntranceScene.atDoor(player)) requestDoor(player);
+        else if (Gdx.input.isKeyJustPressed(Input.Keys.E)) openCarPrompt(player);
+    }
 
-        if (phase == Phase.CAR_PROMPT) {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.Y)
-                || Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)
-                || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) chooseCar(true);
-            else if (Gdx.input.isKeyJustPressed(Input.Keys.N)
-                || Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)
-                || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) chooseCar(false);
-            return false;
-        }
+    private void updateCarPrompt() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.Y)
+            || Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)
+            || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) chooseCar(true);
+        else if (Gdx.input.isKeyJustPressed(Input.Keys.N)
+            || Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)
+            || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) chooseCar(false);
+    }
 
-        if (phase == Phase.UPGRADE) {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1))
-                chooseUpgrade(0, player, combat);
-            else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2))
-                chooseUpgrade(1, player, combat);
-            else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3))
-                chooseUpgrade(2, player, combat);
-            return false;
-        }
-
-        if (phase == Phase.TRANSITION) {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) continueAfterRoom(player, combat);
-            return false;
-        }
-
-        if (phase == Phase.CUTSCENE) {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER))
-                continueAfterCutscene(player, combat);
-            return false;
-        }
-
-        player.update(dt, combat, touchSkill, mouseAttack);
+    private void updateFight(float dt, PlayerCharacter player, CombatRoom combat,
+                             boolean touchSkill, boolean touchIceWall, boolean mouseAttack) {
+        player.update(dt, combat, touchSkill, touchIceWall, mouseAttack);
         boolean cleared = combat.update(dt, player, plan);
         if (player.hp <= 0) phase = Phase.GAME_OVER;
         else if (cleared) finishRoom(player);
-        return false;
     }
 
     public void startRun(PlayerCharacter player, CombatRoom combat) {
@@ -220,6 +239,7 @@ public final class RunDirector {
         player.setExTechniques(next == Room.EX);
         combat.begin(room, plan, exId);
         player.setObstacles(combat.obstacles);
+        player.setIceWall(combat.iceWall);
         sceneFade = 1;
     }
 

@@ -8,6 +8,9 @@ import io.github.kirinojuju.world.GameSpace;
 
 /** Talgo's full-room blast resolves before ordinary boss actions. */
 public final class TalgoBossBehavior extends AjarnBehavior {
+    public static final float CAST_DURATION = 1.8f;
+    public static final float SAFE_RADIUS = 76f;
+
     @Override
     public void update(CombatRoom room, CombatRoom.Enemy boss, float dt,
                        PlayerCharacter player, RunPlan plan) {
@@ -24,7 +27,7 @@ public final class TalgoBossBehavior extends AjarnBehavior {
                 float dx = player.x - boss.talgoSafeX;
                 float dy = player.y - boss.talgoSafeY;
                 boolean inSafeCircle = dx * dx + dy * dy
-                    <= CombatRoom.TALGO_SAFE_RADIUS * CombatRoom.TALGO_SAFE_RADIUS;
+                    <= TalgoBossBehavior.SAFE_RADIUS * TalgoBossBehavior.SAFE_RADIUS;
                 if (!inSafeCircle) player.hurt(27 * plan.damageScale());
                 boss.talgoFlashTime = .3f;
             }
@@ -33,15 +36,15 @@ public final class TalgoBossBehavior extends AjarnBehavior {
         boss.talgoCooldown -= dt;
         if (boss.talgoCooldown > 0 || boss.stunTime > 0) return false;
         boss.talgoCooldown = Math.max(5.2f, 7.2f / plan.speedScale());
-        boss.talgoCharge = CombatRoom.TALGO_CAST_DURATION;
+        boss.talgoCharge = TalgoBossBehavior.CAST_DURATION;
         float angle = room.random.nextFloat() * MathUtils.PI2;
         float distance = 125 + room.random.nextFloat() * 55;
         boss.talgoSafeX = MathUtils.clamp(player.x + MathUtils.cos(angle) * distance,
-            GameSpace.LEFT + CombatRoom.TALGO_SAFE_RADIUS,
-            GameSpace.RIGHT - CombatRoom.TALGO_SAFE_RADIUS);
+            GameSpace.LEFT + TalgoBossBehavior.SAFE_RADIUS,
+            GameSpace.RIGHT - TalgoBossBehavior.SAFE_RADIUS);
         boss.talgoSafeY = MathUtils.clamp(player.y + MathUtils.sin(angle) * distance,
-            GameSpace.BOTTOM + CombatRoom.TALGO_SAFE_RADIUS,
-            GameSpace.WALK_TOP - CombatRoom.TALGO_SAFE_RADIUS);
+            GameSpace.BOTTOM + TalgoBossBehavior.SAFE_RADIUS,
+            GameSpace.WALK_TOP - TalgoBossBehavior.SAFE_RADIUS);
         return true;
     }
 }

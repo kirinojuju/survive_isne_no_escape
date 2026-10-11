@@ -3,6 +3,11 @@ package io.github.kirinojuju.enemy;
 import com.badlogic.gdx.math.MathUtils;
 import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.enemy.ex.ExBehavior.ExEnvironment;
+import io.github.kirinojuju.enemy.ex.LiquidCatBoss;
+import io.github.kirinojuju.enemy.boss.KenBoss;
+import io.github.kirinojuju.enemy.boss.MBoss;
+import io.github.kirinojuju.enemy.boss.AeBoss;
+import io.github.kirinojuju.enemy.boss.SatiBoss;
 import io.github.kirinojuju.flow.RunDirector;
 import io.github.kirinojuju.flow.RunPlan;
 import io.github.kirinojuju.world.GameSpace;
@@ -16,6 +21,9 @@ public final class EnemyFactory {
     };
     private static final float[][] BOSS_MINION_POSITIONS = {
         {270, 180}, {470, 460}, {780, 220}, {880, 460}, {1080, 180}
+    };
+    private static final int[] SUMMON_MINION_KINDS = {
+        CombatRoom.BINDER, CombatRoom.WAVE, CombatRoom.RANGED, CombatRoom.WARPER
     };
     private final Random random;
 
@@ -46,7 +54,7 @@ public final class EnemyFactory {
             float angle = MathUtils.PI2 * i / count + random.nextFloat() * .25f;
             float x = GameSpace.WIDTH / 2 + MathUtils.cos(angle) * (330 + random.nextInt(90));
             float y = GameSpace.HEIGHT / 2 + MathUtils.sin(angle) * (95 + random.nextInt(50));
-            combat.enemies.add(createMonster(x, y, mobKind(i, plan), plan));
+            combat.enemies.add(createMonster(x, y, mobKind(i, plan), plan, i == 0));
         }
     }
 
@@ -61,6 +69,28 @@ public final class EnemyFactory {
             int kind = BOSS_MINION_KINDS[(boss.kind + i) % available];
             float[] position = BOSS_MINION_POSITIONS[i];
             combat.enemies.add(createMonster(position[0], position[1], kind, plan));
+        }
+    }
+
+    /** Queue helpers until the current frame finishes, with a four-monster cap. */
+    public void queueSummons(CombatRoom room, CombatRoom.Enemy boss, float dt, RunPlan plan) {
+        boss.summonTimer -= dt;
+        if (boss.summonTimer > 0) return;
+        boss.summonTimer = Math.max(3f, 5.2f / plan.speedScale());
+        int living = 0;
+        // updateEnemies is already iterating this Array; LibGDX reuses its iterators.
+        for (int i = 0; i < room.enemies.size; i++) {
+            CombatRoom.Enemy enemy = room.enemies.get(i);
+            if (enemy.kind < 0 && enemy.hp > 0) living++;
+        }
+        int count = Math.min(plan.loop() == 1 ? 1 : 2, 4 - living - room.spawnQueue.size);
+        for (int i = 0; i < count; i++) {
+            int kind = SUMMON_MINION_KINDS[random.nextInt(plan.loop() == 1 ? 3 : SUMMON_MINION_KINDS.length)];
+            CombatRoom.Enemy minion = createMonster(boss.homeX - 85 - i * 65,
+                boss.homeY + (i == 0 ? -55 : 55), kind, plan);
+            minion.maxArmor = (28 + plan.stage() * 5) * plan.healthScale();
+            minion.armor = minion.maxArmor;
+            room.spawnQueue.add(minion);
         }
     }
 
@@ -80,6 +110,10 @@ public final class EnemyFactory {
     }
 
     public CombatRoom.Enemy createMonster(float x, float y, int kind, RunPlan plan) {
+        return createMonster(x, y, kind, plan, false);
+    }
+
+    private CombatRoom.Enemy createMonster(float x, float y, int kind, RunPlan plan, boolean algorithm) {
         float hp = 42 + plan.stage() * 5;
         float sp = 37;
         float speed = 80;
@@ -114,11 +148,13 @@ public final class EnemyFactory {
             default:
                 break;
         }
-        CombatRoom.Enemy enemy = new CombatRoom.Enemy(
-            MathUtils.clamp(x, GameSpace.LEFT + 17, GameSpace.RIGHT - 17),
-            MathUtils.clamp(y, GameSpace.BOTTOM + 17, GameSpace.WALK_TOP - 17),
-            17, hp * plan.healthScale(), sp * plan.spScale(),
-            speed * plan.speedScale(), damage * plan.damageScale(), kind);
+        float spawnX = MathUtils.clamp(x, GameSpace.LEFT + 17, GameSpace.RIGHT - 17);
+        float spawnY = MathUtils.clamp(y, GameSpace.BOTTOM + 17, GameSpace.WALK_TOP - 17);
+        CombatRoom.Enemy enemy = algorithm
+            ? new AlgoMonster(spawnX, spawnY, 17, hp * plan.healthScale(), sp * plan.spScale(),
+                speed * plan.speedScale(), damage * plan.damageScale(), kind)
+            : new NetworkMonster(spawnX, spawnY, 17, hp * plan.healthScale(), sp * plan.spScale(),
+                speed * plan.speedScale(), damage * plan.damageScale(), kind);
         if (kind == CombatRoom.SHIELDED) {
             enemy.maxArmor = (36 + plan.stage() * 7) * plan.healthScale();
             enemy.armor = enemy.maxArmor;
@@ -134,14 +170,19 @@ public final class EnemyFactory {
             (190 + plan.stage() * 22 + (id % 3) * 12) * plan.healthScale(),
             72 * plan.spScale(), (90 + (id % 4) * 9) * plan.speedScale(),
             (12 + (id % 3) * 2) * plan.damageScale(), id);
+        if (id == RunPlan.KEN_ID) boss = new KenBoss(plan, random);
+        else if (id == RunPlan.M_ID) boss = new MBoss(plan);
+        else if (id == RunPlan.SATI_ID) boss = new SatiBoss(plan, random);
+        else if (id == RunPlan.AE_ID) boss = new AeBoss(plan);
         boss.reflector = family == 0 || family == 3;
         boss.warper = family == 1;
         boss.artillery = family == 2;
         boss.waveCaster = family == 3;
+        if (boss instanceof KenBoss) boss.reflector = false;
         boss.warpCooldown = plan.loop() == 1 ? 4f : 2.8f;
         if (id == RunPlan.AE_ID) boss.warpCooldown = 6f;
-        if (id == 0) boss.satiCooldown = 3.4f;
-        if (id == RunPlan.TALGO_ID) boss.talgoCooldown = 3.4f;
+        if (id == RunPlan.SATI_ID) boss.satiCooldown = 3.4f;
+        if (id == RunPlan.KEN_ID) boss.talgoCooldown = 3.4f;
         if (plan.loop() >= 3) {
             if (random.nextBoolean()) boss.reflector = true;
             else boss.warper = true;
@@ -150,6 +191,14 @@ public final class EnemyFactory {
         if (id == RunPlan.DOME_ID) {
             boss.warper = false;
             boss.waveCaster = false;
+        }
+        if (boss instanceof KenBoss || boss instanceof SatiBoss) {
+            boss.summoner = true;
+            boss.summonTimer = plan.loop() == 1 ? 5.2f : 3.8f;
+        }
+        if (boss instanceof KenBoss) {
+            boss.warper = false;
+            boss.talgoCooldown = 0;
         }
         if (boss.reflector) {
             boss.maxArmor = ((plan.loop() == 1 ? 75 : 110)
@@ -164,6 +213,7 @@ public final class EnemyFactory {
             GameSpace.RIGHT - 75, GameSpace.WALK_TOP - 75, 34,
             380 * plan.healthScale(), 88 * plan.spScale(),
             120 * plan.speedScale(), 14 * plan.damageScale(), CombatRoom.LIQUID_CAT + exId);
+        if (exId == 0) ex = new LiquidCatBoss(plan);
         ex.skillTimer = 1.8f;
         if (ex.kind == CombatRoom.LIQUID_CAT) ex.exStateTime = 3.5f;
         else if (ex.kind == CombatRoom.ALLERGIC_VACUUM) {

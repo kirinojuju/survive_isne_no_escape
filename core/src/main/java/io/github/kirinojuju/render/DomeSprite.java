@@ -1,5 +1,6 @@
 package io.github.kirinojuju.render;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -25,14 +26,17 @@ public final class DomeSprite {
 
     private static Texture[] loadFrames(String prefix, int count) {
         Texture[] frames = new Texture[count];
-        for (int i = 0; i < count; i++)
-            frames[i] = OptionalAssetTexture.load(ROOT + prefix + (i + 1) + ".png");
+        for (int i = 0; i < count; i++) {
+            String path = ROOT + prefix + (i + 1) + ".png";
+            if (Gdx.files.internal(path).exists()) frames[i] = OptionalAssetTexture.load(path);
+        }
         return frames;
     }
 
     private static TextureRegion[] regions(Texture[] textures) {
         TextureRegion[] result = new TextureRegion[textures.length];
-        for (int i = 0; i < textures.length; i++) result[i] = new TextureRegion(textures[i]);
+        for (int i = 0; i < textures.length; i++)
+            if (textures[i] != null) result[i] = new TextureRegion(textures[i]);
         return result;
     }
 
@@ -43,6 +47,7 @@ public final class DomeSprite {
     public void draw(SpriteBatch batch, CombatRoom.Enemy boss) {
         DomeBossBehavior.State state = boss.dome;
         Texture frame = characterFrame(state);
+        if (frame == null) return;
         boolean flip = state.facingRight && !state.downward;
         batch.draw(frame, boss.x + (flip ? SIZE / 2 : -SIZE / 2),
             boss.y - SIZE / 2, flip ? -SIZE : SIZE, SIZE);
@@ -84,6 +89,7 @@ public final class DomeSprite {
 
     private void drawLightning(SpriteBatch batch, DomeBossBehavior.State state) {
         Texture frame = frame(lightning, state.elapsed, DomeBossBehavior.LIGHTNING_STRIKE);
+        if (frame == null) return;
         float width = DomeBossBehavior.LIGHTNING_RADIUS * 2;
         batch.draw(frame, state.aimX - width / 2, state.aimY - 8,
             width, GameSpace.TOP - state.aimY + 8);
@@ -96,6 +102,7 @@ public final class DomeSprite {
         float rotation = MathUtils.atan2(dy, dx) * MathUtils.radiansToDegrees + 90;
         TextureRegion frame = laserRegions[frameIndex(laserRegions.length,
             state.elapsed, DomeBossBehavior.LASER_FIRE)];
+        if (frame == null) return;
         batch.draw(frame, state.originX - width / 2, state.originY - length,
             width / 2, length, width, length, 1, 1, rotation);
     }
@@ -103,6 +110,6 @@ public final class DomeSprite {
     public void dispose() {
         for (Texture[] frames : new Texture[][] {prepare, lightningCast, lightningRecovery,
             laserCast, laserSide, laserDown, lightning, laser})
-            for (Texture frame : frames) frame.dispose();
+            for (Texture frame : frames) if (frame != null) frame.dispose();
     }
 }

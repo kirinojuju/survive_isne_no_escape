@@ -37,6 +37,44 @@ public abstract class ExBehavior implements EnemyBehavior {
     public static final class ExEnvironment {
         private ExEnvironment() { }
 
+        /** Pickups and hazards resolve before the EX boss acts in the same frame. */
+        public static void updateObjects(CombatRoom room, float dt, PlayerCharacter player, RunPlan plan) {
+            for (int i = room.exObjects.size - 1; i >= 0; i--) {
+                CombatRoom.ExObject object = room.exObjects.get(i);
+                object.life -= dt;
+                moveEjectedObject(object, dt);
+
+                float dx = object.x - player.x, dy = object.y - player.y;
+                float reach = object.radius + 18;
+                boolean touching = dx * dx + dy * dy <= reach * reach;
+                if (touching && object.kind == CombatRoom.NOTE) {
+                    room.carriedNotes = Math.min(3, room.carriedNotes + 1);
+                    room.exObjects.removeIndex(i);
+                    continue;
+                }
+                if (touching && object.kind == CombatRoom.SLIME) {
+                    player.slowTime = Math.max(player.slowTime, .7f);
+                    player.hurt(3 * plan.damageScale());
+                } else if (touching && object.kind == CombatRoom.DUST && object.ejectionTime > 0) {
+                    player.hurt(9 * plan.damageScale());
+                    object.ejectionTime = 0;
+                    object.vx = object.vy = 0;
+                }
+                if (object.life <= 0) room.exObjects.removeIndex(i);
+            }
+        }
+
+        private static void moveEjectedObject(CombatRoom.ExObject object, float dt) {
+            if (object.ejectionTime <= 0) return;
+            object.ejectionTime = Math.max(0, object.ejectionTime - dt);
+            object.x = MathUtils.clamp(object.x + object.vx * dt,
+                GameSpace.LEFT + object.radius, GameSpace.RIGHT - object.radius);
+            object.y = MathUtils.clamp(object.y + object.vy * dt,
+                GameSpace.BOTTOM + object.radius, GameSpace.WALK_TOP - object.radius);
+            object.vx *= Math.max(0, 1 - dt * 1.4f);
+            object.vy *= Math.max(0, 1 - dt * 1.4f);
+        }
+
         public static void spawnDust(CombatRoom room, CombatRoom.Enemy vacuum) {
             float x = MathUtils.clamp(vacuum.x - 260 + room.random.nextFloat() * 300,
                 GameSpace.LEFT + 12, GameSpace.RIGHT - 12);
