@@ -36,6 +36,7 @@ public final class CustomBossCheck {
         checkKen();
         checkKenBodyHitbox();
         checkBossBodyHitboxes();
+        checkTransparentBodyPadding();
         checkAe();
         checkM();
         checkSati();
@@ -156,13 +157,13 @@ public final class CustomBossCheck {
         RunPlan plan = new RunPlan(new Random(15));
         PlayerCharacter player = new PlayerCharacter();
         float[][] points = {{0, -10}, {0, -KenBoss.DRAW_SIZE / 2},
-            {0, -KenBoss.DRAW_SIZE + 10}, {-KenBoss.DRAW_SIZE / 2 + 10, -100},
-            {KenBoss.DRAW_SIZE / 2 - 10, -100}};
+            {0, -KenBoss.DRAW_SIZE + 10}, {-55, -100}, {60, -100}};
         for (float[] point : points) {
             CombatRoom room = new CombatRoom(new Random(16));
             KenBoss ken = new KenBoss(plan, new Random(17));
             ken.x = 800;
             ken.y = 450;
+            BossBody.applyBounds(ken, new float[] {15f / 64, 1f / 64, 49f / 64, 63f / 64}, false);
             room.enemies.add(ken);
             float hitX = ken.x + point[0], hitY = ken.y + ken.radius + point[1];
             float hp = ken.hp;
@@ -187,6 +188,7 @@ public final class CustomBossCheck {
         KenBoss ken = new KenBoss(plan, new Random(19));
         ken.x = 800;
         ken.y = 450;
+        BossBody.applyBounds(ken, new float[] {15f / 64, 1f / 64, 49f / 64, 63f / 64}, false);
         room.enemies.add(ken);
         float hp = ken.hp;
         room.fireNotebookBeam(ken.x - 200, ken.y + ken.radius - KenBoss.DRAW_SIZE + 10,
@@ -209,13 +211,15 @@ public final class CustomBossCheck {
             RunPlan.SATI_ID, RunPlan.DOME_ID, CombatRoom.LIQUID_CAT, CombatRoom.INSECURE_SWORD};
         for (int kind : kinds) {
             Enemy boss = new Enemy(700, 460, 36, 500, 72, 0, 0, kind);
+            BossBody.applyBounds(boss, new float[] {.3f, .35f, .7f, .9f}, false);
             boss.stunTime = 100;
             // Non-square Ae/Far art must retain the same horizontal extent as its hit area.
             if (kind == RunPlan.AE_ID || kind == RunPlan.FAR_ID) boss.bodyAspectRatio = 1.4f;
             CombatRoom room = new CombatRoom(new Random(51));
             room.enemies.add(boss);
-            float height = BossBody.height(boss), width = BossBody.width(boss);
-            float top = boss.y + boss.radius;
+            float height = BossBody.top(boss) - BossBody.bottom(boss);
+            float width = BossBody.right(boss) - BossBody.left(boss);
+            float top = BossBody.top(boss);
             float[][] points = {{boss.x, top - 2}, {boss.x, top - height / 2},
                 {boss.x, top - height + 2}, {boss.x - width / 2 + 2, top - height / 2},
                 {boss.x + width / 2 - 2, top - height / 2}};
@@ -265,6 +269,47 @@ public final class CustomBossCheck {
         Enemy monster = new Enemy(700, 460, 17, 50, 37, 80, 7, CombatRoom.BASIC);
         check(monster.damageRadius() == 17 && monster.aimY() == monster.y,
             "Ordinary monster geometry must remain unchanged");
+    }
+
+    // Transparent canvas margins must not count as the boss's body for any incoming attack.
+    private static void checkTransparentBodyPadding() {
+        int[] rgba = new int[64 * 64];
+        for (int y = 8; y <= 36; y++)
+            for (int x = 19; x <= 47; x++) rgba[y * 64 + x] = 0xffffffff;
+        rgba[0] = 0xffffff1f; // A very faint pixel outside the body must not expand the hit area.
+        float[] bounds = BossBody.visibleBounds(64, 64, rgba);
+        check(bounds[0] == 19f / 64 && bounds[1] == 27f / 64
+            && bounds[2] == 48f / 64 && bounds[3] == 56f / 64,
+            "Visible bounds must exclude transparent and very faint image margins");
+        check(BossBody.visibleBounds(64, 64, new int[64 * 64]) == null,
+            "A fully transparent frame must not create an invisible body rectangle");
+        RunPlan plan = new RunPlan(new Random(70));
+        Enemy boss = new Enemy(700, 460, 36, 500, 72, 0, 0, RunPlan.M_ID);
+        boss.stunTime = 100;
+        BossBody.applyBounds(boss, bounds, false);
+        CombatRoom room = new CombatRoom(new Random(71));
+        room.enemies.add(boss);
+        PlayerCharacter player = new PlayerCharacter();
+        float paddingX = boss.x, paddingY = boss.y + boss.radius - BossBody.M_DRAW_SIZE + 10;
+        room.damageNearby(paddingX, paddingY, 1, 10);
+        room.damageArc(paddingX - 20, paddingY, 1, 0, 25, 60, 10);
+        room.fireFriendly(paddingX, paddingY, 0, 0, 10, null);
+        room.update(.01f, player, plan);
+        room.fireNotebookBeam(boss.x - 200, paddingY, 1, 0, 10, false);
+        check(boss.hp == 500, "Area, melee, projectile and beam hits inside empty PNG padding must miss");
+        room.shots.clear();
+        float centerX = (BossBody.left(boss) + BossBody.right(boss)) / 2;
+        float centerY = (BossBody.bottom(boss) + BossBody.top(boss)) / 2;
+        check(boss.aimX() == centerX && boss.aimY() == centerY,
+            "Targeting must aim at the visible body, not the empty canvas center");
+        room.damageNearby(centerX, centerY, 1, 10);
+        check(boss.hp == 490, "The visible torso must still take damage");
+        BossBody.applyBounds(boss, bounds, true);
+        check(boss.bodyLeft == 1 - 48f / 64 && boss.bodyRight == 1 - 19f / 64,
+            "Flipped artwork must mirror the visible hit bounds");
+        BossBody.applyBounds(boss, null, false);
+        check(boss.damageRadius() == boss.radius && boss.aimY() == boss.y,
+            "Missing artwork must keep a small fallback hit area");
     }
 
     private static void checkAe() {

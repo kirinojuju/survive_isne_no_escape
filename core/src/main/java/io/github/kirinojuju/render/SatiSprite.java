@@ -69,6 +69,7 @@ public final class SatiSprite {
         }
         if (frame == null) frame = OptionalAssetTexture.frame(body, 0);
         if (frame == null) return;
+        OptionalAssetTexture.applyBodyBounds(boss, frame, false);
         batch.draw(frame, boss.x - DRAW_SIZE / 2, boss.y + boss.radius - DRAW_SIZE,
             DRAW_SIZE, DRAW_SIZE);
     }

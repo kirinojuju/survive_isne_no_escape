@@ -51,6 +51,7 @@ public class KenSprite {
         } else {
             frame = bodyFrames[(int)(boss.animationTime / .3f) % 2];
         }
+        OptionalAssetTexture.applyBodyBounds(boss, frame, false);
         batch.draw(frame,
             boss.x - DRAW_SIZE / 2,
             // Keep the top below the HP bar at boss.y + boss.radius + 8.

@@ -57,6 +57,7 @@ public final class DomeSprite {
         Texture frame = characterFrame(state);
         if (frame == null) return;
         boolean flip = state.facingRight && !state.downward;
+        OptionalAssetTexture.applyBodyBounds(boss, frame, flip);
         batch.draw(frame, boss.x + (flip ? DRAW_SIZE / 2 : -DRAW_SIZE / 2),
             boss.y + boss.radius - DRAW_SIZE, flip ? -DRAW_SIZE : DRAW_SIZE, DRAW_SIZE);
     }

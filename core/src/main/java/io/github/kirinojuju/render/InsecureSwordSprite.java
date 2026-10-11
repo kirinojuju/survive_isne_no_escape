@@ -38,6 +38,7 @@ public final class InsecureSwordSprite {
         } else {
             frame = idle[(int)(sword.animationTime / IDLE_FRAME_TIME) % idle.length];
         }
+        OptionalAssetTexture.applyBodyBounds(sword, frame, false);
         batch.draw(frame, sword.x - DRAW_SIZE / 2, sword.y + sword.radius - DRAW_SIZE, DRAW_SIZE, DRAW_SIZE);
     }
 

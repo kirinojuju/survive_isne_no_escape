@@ -47,6 +47,4 @@ public class KenBoss extends Enemy {
         skillTimer = 1.8f;
     }
 
-    // Full-body damage and aiming use CombatRoom.Enemy's shared BossBody geometry.
-
 }

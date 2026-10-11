@@ -30,7 +30,7 @@ public final class AeSprite {
     // Load an available Ae texture, returning null when no file exists.
     private static Texture loadOptional(String name) {
         if (!Gdx.files.internal(ROOT + name).exists()) return null;
-        Texture texture = new Texture(Gdx.files.internal(ROOT + name));
+        Texture texture = OptionalAssetTexture.load(ROOT + name);
         texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         return texture;
     }
@@ -52,6 +52,7 @@ public final class AeSprite {
         if (frame == null) return;
         float width = DRAW_SIZE * frame.getWidth() / frame.getHeight();
         boss.bodyAspectRatio = width / DRAW_SIZE;
+        OptionalAssetTexture.applyBodyBounds(boss, frame, false);
         batch.draw(frame, boss.x - width / 2, boss.y + boss.radius - DRAW_SIZE, width, DRAW_SIZE);
     }
 

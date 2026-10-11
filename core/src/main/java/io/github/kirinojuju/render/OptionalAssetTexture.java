@@ -7,9 +7,14 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
+import io.github.kirinojuju.combat.CombatRoom.Enemy;
+import io.github.kirinojuju.enemy.boss.BossBody;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /** Uses local art when available and a small code-drawn stand-in in fresh clones. */
 public final class OptionalAssetTexture {
+    private static final Map<Texture, float[]> BODY_BOUNDS = new WeakHashMap<Texture, float[]>();
     // Prevent construction of this utility class; use its static helpers.
     private OptionalAssetTexture() { }
 
@@ -40,14 +45,38 @@ public final class OptionalAssetTexture {
     public static Texture load(String path) {
         FileHandle file = Gdx.files.internal(path);
         Texture texture;
-        if (file.exists()) texture = new Texture(file);
+        if (file.exists()) {
+            texture = new Texture(file);
+            if (path.startsWith("characters/boss/") || path.startsWith("characters/boss_ex/")) {
+                Pixmap pixels = new Pixmap(file);
+                try { cacheBodyBounds(texture, pixels); }
+                finally { pixels.dispose(); }
+            }
+        }
         else {
             Pixmap pixels = placeholder(path);
-            try { texture = new Texture(pixels); }
+            try {
+                texture = new Texture(pixels);
+                cacheBodyBounds(texture, pixels);
+            }
             finally { pixels.dispose(); }
         }
         texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         return texture;
+    }
+
+    // Cache visible pixel bounds at load time; drawing never scans the PNG again.
+    private static void cacheBodyBounds(Texture texture, Pixmap pixels) {
+        int width = pixels.getWidth(), height = pixels.getHeight();
+        int[] rgba = new int[width * height];
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++) rgba[y * width + x] = pixels.getPixel(x, y);
+        BODY_BOUNDS.put(texture, BossBody.visibleBounds(width, height, rgba));
+    }
+
+    // Match the boss hit area to the frame actually being drawn, including a horizontal flip.
+    public static void applyBodyBounds(Enemy boss, Texture frame, boolean flipped) {
+        BossBody.applyBounds(boss, BODY_BOUNDS.get(frame), flipped);
     }
 
     // Choose and create placeholder artwork based on the requested asset path.

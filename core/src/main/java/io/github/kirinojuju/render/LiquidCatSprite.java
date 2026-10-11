@@ -74,6 +74,7 @@ public final class LiquidCatSprite {
         }
         float size = cat.exState == 1 && cat.catTransformTime <= 0
             ? SMALL_DRAW_SIZE : DRAW_SIZE;
+        OptionalAssetTexture.applyBodyBounds(cat, frame, false);
         batch.draw(frame, cat.x - size / 2, cat.y + cat.radius - size,
             size, size);
         if (cat.exState == 0 && cat.exMeter > 0)

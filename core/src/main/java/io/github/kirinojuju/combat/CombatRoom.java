@@ -43,6 +43,9 @@ public final class CombatRoom {
         public float attackAnimationTime;
         // Ae and Far sprites update this ratio to match their actual body artwork.
         public float bodyAspectRatio = 1f;
+        // Visible frame edges inside the PNG canvas; transparent padding is excluded from hits.
+        public boolean bodyBoundsReady;
+        public float bodyLeft, bodyBottom, bodyRight = 1f, bodyTop = 1f;
         public float warpCooldown, warpWindup, warpX, warpY, warpReturnTime;
         public final float homeX, homeY;
         public int warpStrikes;
@@ -96,32 +99,28 @@ public final class CombatRoom {
         // Damage geometry is separate from the radius used for movement and contact.
         // Return the horizontal hit-test point; custom bosses can use the nearest point on their body.
         public float damageX(float sourceX) {
-            float width = BossBody.width(this);
-            return width > 0 ? MathUtils.clamp(sourceX, x - width / 2, x + width / 2) : x;
+            return BossBody.hasBounds(this) ? MathUtils.clamp(sourceX, BossBody.left(this), BossBody.right(this)) : x;
         }
         // Return the vertical hit-test point; custom bosses can use the nearest point on their body.
         public float damageY(float sourceY) {
-            float height = BossBody.height(this);
-            return height > 0 ? MathUtils.clamp(sourceY, y + radius - height, y + radius) : y;
+            return BossBody.hasBounds(this) ? MathUtils.clamp(sourceY, BossBody.bottom(this), BossBody.top(this)) : y;
         }
         // Return the radius used by incoming attacks, separately from movement collision.
-        public float damageRadius() { return BossBody.height(this) > 0 ? 0 : radius; }
+        public float damageRadius() { return BossBody.hasBounds(this) ? 0 : radius; }
         // Return the horizontal point that player attacks should aim toward.
-        public float aimX() { return x; }
+        public float aimX() { return BossBody.hasBounds(this) ? (BossBody.left(this) + BossBody.right(this)) / 2 : x; }
         // Return the vertical point that player attacks should aim toward.
         public float aimY() {
-            float height = BossBody.height(this);
-            return height > 0 ? y + radius - height / 2 : y;
+            return BossBody.hasBounds(this) ? (BossBody.bottom(this) + BossBody.top(this)) / 2 : y;
         }
 
         // Check whether the enemy's damage shape touches the directed beam.
         public boolean overlapsBeam(float originX, float originY, float aimX, float aimY,
                                     float range, float halfWidth) {
-            float height = BossBody.height(this);
-            if (height > 0) {
-                float width = BossBody.width(this);
-                Rectangle body = new Rectangle(x - width / 2 - halfWidth,
-                    y + radius - height - halfWidth, width + halfWidth * 2, height + halfWidth * 2);
+            if (BossBody.hasBounds(this)) {
+                float left = BossBody.left(this), bottom = BossBody.bottom(this);
+                Rectangle body = new Rectangle(left - halfWidth, bottom - halfWidth,
+                    BossBody.right(this) - left + halfWidth * 2, BossBody.top(this) - bottom + halfWidth * 2);
                 return Intersector.intersectSegmentRectangle(new Vector2(originX, originY),
                     new Vector2(originX + aimX * range, originY + aimY * range), body);
             }

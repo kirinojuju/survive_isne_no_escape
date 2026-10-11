@@ -18,7 +18,7 @@ public final class FarSprite {
     // Load Far's body PNG, returning null when it has not been supplied yet.
     private static Texture loadBody() {
         if (!Gdx.files.internal(ROOT + "farBody.png").exists()) return null;
-        Texture texture = new Texture(Gdx.files.internal(ROOT + "farBody.png"));
+        Texture texture = OptionalAssetTexture.load(ROOT + "farBody.png");
         texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         return texture;
     }
@@ -31,6 +31,7 @@ public final class FarSprite {
         if (body == null) return;
         float width = DRAW_SIZE * body.getWidth() / body.getHeight();
         boss.bodyAspectRatio = width / DRAW_SIZE;
+        OptionalAssetTexture.applyBodyBounds(boss, body, false);
         batch.draw(body, boss.x - width / 2, boss.y + boss.radius - DRAW_SIZE,
             width, DRAW_SIZE);
     }
