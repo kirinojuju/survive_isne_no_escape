@@ -18,6 +18,7 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 final class GameRenderer {
     private static final float SKILL_X = 1138, SKILL_Y = 155, SKILL_RADIUS = 45;
     private static final float ICE_WALL_X = 1035;
+    private static final float LAN_WAVE_X = 932;
     private static final Color INK = new Color(.09f, .12f, .18f, 1);
     private static final Color PAPER = new Color(.91f, .94f, .91f, 1);
     private static final Color CYAN = new Color(.36f, .85f, .86f, 1);
@@ -37,6 +38,7 @@ final class GameRenderer {
     private final BitmapFont bigFont = new BitmapFont();
     private final StudentSprite student = new StudentSprite();
     private final IceWallSprite iceWall = new IceWallSprite();
+    private final LanWaveSprite lanWave = new LanWaveSprite();
     private final SatiSprite sati = new SatiSprite();
     private final LiquidCatSprite liquidCat = new LiquidCatSprite();
     private final Texture normalRoom = loadRoom("scene/sceneroom.png");
@@ -81,7 +83,8 @@ final class GameRenderer {
                     && (enemy.talgoCharge > 0 || enemy.talgoFlashTime > 0))
                     drawTalgoWarning(enemy);
             for (CombatRoom.Shot shot : combat.shots) {
-                if (shot.powerBall || shot.satiSpear || shot.liquidCatBullet) continue;
+                if (shot.powerBall || shot.satiSpear || shot.liquidCatBullet
+                    || shot.lanWave) continue;
                 if (shot.wave) {
                     shapes.setColor(BLUE);
                     shapes.circle(shot.x, shot.y, shot.radius, 28);
@@ -124,6 +127,7 @@ final class GameRenderer {
             if (run.phase == RunDirector.Phase.FIGHT) {
                 drawSkillButton(player);
                 drawIceWallButton(player);
+                drawLanWaveButton(player);
             }
         }
         if (run.phase != RunDirector.Phase.FIGHT) drawPanel();
@@ -134,7 +138,8 @@ final class GameRenderer {
         if (run.phase == RunDirector.Phase.FIGHT) {
             iceWall.draw(batch, combat);
             for (CombatRoom.Shot shot : combat.shots)
-                if (shot.powerBall) student.drawPowerBall(batch, shot);
+                if (shot.lanWave) lanWave.draw(batch, shot);
+                else if (shot.powerBall) student.drawPowerBall(batch, shot);
                 else if (shot.satiSpear) sati.drawSpear(batch, shot);
                 else if (shot.liquidCatBullet) liquidCat.drawBullet(batch, shot);
             for (CombatRoom.Enemy enemy : combat.enemies)
@@ -163,6 +168,8 @@ final class GameRenderer {
                 font.draw(batch, "E", SKILL_X - 6, SKILL_Y - 16);
                 font.draw(batch, "ICE", ICE_WALL_X - 18, SKILL_Y + 6);
                 font.draw(batch, "F", ICE_WALL_X - 5, SKILL_Y - 16);
+                font.draw(batch, "LAN", LAN_WAVE_X - 22, SKILL_Y + 6);
+                font.draw(batch, "R", LAN_WAVE_X - 5, SKILL_Y - 16);
             }
             if (run.phase == RunDirector.Phase.TRANSITION) {
                 title(run.transitionTitle, 415);
@@ -622,6 +629,15 @@ final class GameRenderer {
         shapes.circle(ICE_WALL_X, SKILL_Y, SKILL_RADIUS, 40);
     }
 
+    private void drawLanWaveButton(PlayerCharacter player) {
+        shapes.setColor(INK);
+        shapes.circle(LAN_WAVE_X, SKILL_Y, SKILL_RADIUS + 4, 40);
+        boolean ready = player.activeWeapon() == PlayerCharacter.Weapon.PHYSICAL
+            && player.lanWaveCooldown <= 0;
+        shapes.setColor(ready ? CYAN : DISABLED);
+        shapes.circle(LAN_WAVE_X, SKILL_Y, SKILL_RADIUS, 40);
+    }
+
     private void drawHud(RunDirector run, PlayerCharacter player, CombatRoom combat) {
         font.draw(batch, "HP " + (int)Math.ceil(player.hp) + "/" + (int)player.maxHp, 73, 690);
         font.draw(batch, "SP " + (int)player.sp + "/100", 292, 690);
@@ -741,6 +757,18 @@ final class GameRenderer {
         return pressed;
     }
 
+    boolean lanWaveButtonJustPressed() {
+        if (!Gdx.input.isTouched()) skillPressCaptured = false;
+        if (!Gdx.input.justTouched()) return false;
+        touchPosition.set(Gdx.input.getX(), Gdx.input.getY());
+        viewport.unproject(touchPosition);
+        float dx = touchPosition.x - LAN_WAVE_X;
+        float dy = touchPosition.y - SKILL_Y;
+        boolean pressed = dx * dx + dy * dy <= SKILL_RADIUS * SKILL_RADIUS;
+        skillPressCaptured = skillPressCaptured || pressed;
+        return pressed;
+    }
+
     boolean mouseAttackHeld() {
         return Gdx.input.isButtonPressed(Input.Buttons.LEFT) && !skillPressCaptured;
     }
@@ -790,6 +818,7 @@ final class GameRenderer {
     void dispose() {
         student.dispose();
         iceWall.dispose();
+        lanWave.dispose();
         sati.dispose();
         liquidCat.dispose();
         normalRoom.dispose();

@@ -71,8 +71,9 @@ final class CombatRoom {
     }
 
     static final class Shot {
-        float x, y, vx, vy, radius, damage, life;
+        float x, y, vx, vy, radius, damage, life, age;
         boolean friendly, powerBall, binding, reflected, wave, giant, satiSpear;
+        boolean lanWave;
         boolean liquidCatBullet;
         boolean poisonous, splash;
         Enemy target;
@@ -331,6 +332,14 @@ final class CombatRoom {
         shots.add(shot);
     }
 
+    void fireLanWave(float x, float y, float directionX, float directionY,
+                     float damage) {
+        Shot shot = new Shot(x, y, directionX * 600, directionY * 600,
+            15, damage, .72f, true);
+        shot.lanWave = true;
+        shots.add(shot);
+    }
+
     void firePowerBall(float x, float y, float vx, float vy, float damage, Enemy target) {
         Shot shot = new Shot(x, y, vx, vy, 40, damage, 2.4f, true);
         shot.powerBall = true;
@@ -543,6 +552,7 @@ final class CombatRoom {
             shot.x += shot.vx * dt;
             shot.y += shot.vy * dt;
             shot.life -= dt;
+            shot.age += dt;
             if (shot.wave) shot.radius = Math.min(42, shot.radius + 24 * dt);
             boolean remove = shot.life <= 0 || shot.x < GameSpace.LEFT
                 || shot.x > GameSpace.RIGHT || shot.y < GameSpace.BOTTOM

@@ -12,12 +12,13 @@ final class PlayerCharacter {
     static final float LAN_SWING_DURATION = .25f;
     static final float LAN_REACH = 125f;
     static final float LAN_ATTACK_INTERVAL = .44f;
+    static final float LAN_WAVE_COOLDOWN = 0.1f;
     static final float NOTEBOOK_ATTACK_INTERVAL = .28f;
     static final float NOTEBOOK_BEAM_INTERVAL = .65f;
     private static final float SKILL_RELEASE_TIME = .4f;
     private static final float SKILL_COOLDOWN = 2f;
     private static final float ICE_WALL_COOLDOWN = 7f;
-    private static final float EDGE_X = 30, EDGE_Y = 64;
+    private static final float EDGE_X = 60, EDGE_Y = 128;
     enum Weapon { PHYSICAL, MAGICAL }
 
     float x = GameSpace.WIDTH / 2, y = GameSpace.HEIGHT / 2;
@@ -29,7 +30,7 @@ final class PlayerCharacter {
     boolean lanSlow, lanAoE, lanTether;
     boolean notebookPoison, notebookSplash, notebookHeatBeam;
     float notebookHeat;
-    float attackTimer, dashTimer, invulnerable, swingTimer;
+    float attackTimer, dashTimer, invulnerable, swingTimer, lanWaveCooldown;
     float slowTime;
     float walkTime, skillTime, skillCooldown, iceWallCooldown;
     float boundTime, bindImmunity;
@@ -67,7 +68,7 @@ final class PlayerCharacter {
         sp = Math.min(100, sp + 30);
         invulnerable = .9f;
         attackTimer = 0;
-        walkTime = skillTime = skillCooldown = iceWallCooldown = 0;
+        walkTime = skillTime = skillCooldown = iceWallCooldown = lanWaveCooldown = 0;
         boundTime = bindImmunity = 0;
         slowTime = 0;
         bindProgress = lastBindDirection = 0;
@@ -82,11 +83,12 @@ final class PlayerCharacter {
     }
 
     void update(float dt, CombatRoom combat, boolean touchSkill,
-                boolean touchIceWall, boolean mouseAttack) {
+                boolean touchIceWall, boolean touchLanWave, boolean mouseAttack) {
         attackTimer = Math.max(0, attackTimer - dt);
         dashTimer = Math.max(0, dashTimer - dt);
         invulnerable = Math.max(0, invulnerable - dt);
         swingTimer = Math.max(0, swingTimer - dt);
+        lanWaveCooldown = Math.max(0, lanWaveCooldown - dt);
         skillCooldown = Math.max(0, skillCooldown - dt);
         iceWallCooldown = Math.max(0, iceWallCooldown - dt);
         slowTime = Math.max(0, slowTime - dt);
@@ -104,6 +106,8 @@ final class PlayerCharacter {
             && tryStartIceWall(combat)) return;
         if ((Gdx.input.isKeyJustPressed(Input.Keys.E) || touchSkill)
             && tryStartSkill(combat)) return;
+        if (Gdx.input.isKeyJustPressed(Input.Keys.R) || touchLanWave)
+            tryLanWave(combat);
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) switchTo(Weapon.PHYSICAL);
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) switchTo(Weapon.MAGICAL);
@@ -261,6 +265,25 @@ final class PlayerCharacter {
                 if (audio != null) audio.notebookAttack();
             }
         }
+    }
+
+    boolean tryLanWave(CombatRoom combat) {
+        if (active != Weapon.PHYSICAL || lanWaveCooldown > 0) return false;
+        CombatRoom.Enemy target = attackTarget();
+        float dx = target == null ? faceX : target.x - x;
+        float dy = target == null ? faceY : target.y - y;
+        float length = Math.max(.001f, (float)Math.sqrt(dx * dx + dy * dy));
+        dx /= length;
+        dy /= length;
+        faceX = dx;
+        faceY = dy;
+        swingFaceX = dx;
+        swingFaceY = dy;
+        combat.fireLanWave(x + dx * 24, y + dy * 24, dx, dy,
+            38 + physicalBonus);
+        lanWaveCooldown = LAN_WAVE_COOLDOWN;
+        if (audio != null) audio.lanAttack();
+        return true;
     }
 
     boolean tryStartSkill(CombatRoom combat) {
