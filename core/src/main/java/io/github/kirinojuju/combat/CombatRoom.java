@@ -251,7 +251,7 @@ public final class CombatRoom {
                 damageRules.applyToEnemy(enemy, 24, playerX, playerY);
                 enemy.stunTime = Math.max(enemy.stunTime, .8f);
             }
-            iceWall.resolveEnemy(enemy, obstacles);
+            iceWall.resolveEnemy(enemy, playerX, playerY, obstacles);
         }
         return true;
     }
@@ -262,10 +262,10 @@ public final class CombatRoom {
         ExEnvironment.updateObjects(this, dt, player, plan);
         updateEnemies(dt, player, plan);
         EnemySpacing.separate(enemies);
-        resolveObstacles();
+        resolveObstacles(player);
         projectiles.update(dt, player);
         // PowerBall can push an enemy into cover, so resolve again after projectile hits.
-        resolveObstacles();
+        resolveObstacles(player);
         removeDefeatedEnemies(player);
         return enemies.size == 0;
     }
@@ -278,10 +278,10 @@ public final class CombatRoom {
         projectiles.updateImpacts(dt);
     }
 
-    private void resolveObstacles() {
+    private void resolveObstacles(PlayerCharacter player) {
         for (Enemy enemy : enemies) {
             obstacles.resolveEnemy(enemy);
-            iceWall.resolveEnemy(enemy, obstacles);
+            iceWall.resolveEnemy(enemy, player.x, player.y, obstacles);
         }
     }
 

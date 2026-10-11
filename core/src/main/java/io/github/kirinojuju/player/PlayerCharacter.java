@@ -221,17 +221,42 @@ public final class PlayerCharacter {
     }
 
     public void moveBy(float dx, float dy) {
-        float nextX = MathUtils.clamp(x + dx,
-            GameSpace.LEFT + EDGE_X, GameSpace.RIGHT - EDGE_X);
-        if (obstacles != null) nextX = obstacles.moveX(x, y, nextX - x, 17);
-        if (iceWall != null) nextX = iceWall.moveX(x, y, nextX - x, 17);
-        x = nextX;
-        float nextY = horizontalOnly ? GameSpace.SERVER_PLAYER_Y
-            : MathUtils.clamp(y + dy,
-                GameSpace.BOTTOM + EDGE_Y, GameSpace.WALK_TOP - EDGE_Y);
-        if (obstacles != null) nextY = obstacles.moveY(x, y, nextY - y, 17);
-        if (iceWall != null) nextY = iceWall.moveY(x, y, nextY - y, 17);
-        y = nextY;
+        float distance = (float)Math.sqrt(dx * dx + dy * dy);
+        int steps = Math.max(1, (int)Math.ceil(distance / 4));
+        float stepX = dx / steps, stepY = dy / steps;
+        for (int i = 0; i < steps; i++) {
+            float nextX = MathUtils.clamp(x + stepX,
+                GameSpace.LEFT + EDGE_X, GameSpace.RIGHT - EDGE_X);
+            float nextY = horizontalOnly ? GameSpace.SERVER_PLAYER_Y
+                : MathUtils.clamp(y + stepY,
+                    GameSpace.BOTTOM + EDGE_Y, GameSpace.WALK_TOP - EDGE_Y);
+            if (obstacles != null) {
+                nextX = obstacles.moveX(x, y, nextX - x, 17);
+                nextY = obstacles.moveY(nextX, y, nextY - y, 17);
+            }
+            if (iceWall == null || !iceWall.overlaps(nextX, nextY, 17)) {
+                x = nextX;
+                y = nextY;
+                continue;
+            }
+
+            float alongX = MathUtils.cos(iceWall.angle);
+            float alongY = MathUtils.sin(iceWall.angle);
+            float slide = stepX * alongX + stepY * alongY;
+            nextX = MathUtils.clamp(x + alongX * slide,
+                GameSpace.LEFT + EDGE_X, GameSpace.RIGHT - EDGE_X);
+            nextY = horizontalOnly ? GameSpace.SERVER_PLAYER_Y
+                : MathUtils.clamp(y + alongY * slide,
+                    GameSpace.BOTTOM + EDGE_Y, GameSpace.WALK_TOP - EDGE_Y);
+            if (obstacles != null) {
+                nextX = obstacles.moveX(x, y, nextX - x, 17);
+                nextY = obstacles.moveY(nextX, y, nextY - y, 17);
+            }
+            if (!iceWall.overlaps(nextX, nextY, 17)) {
+                x = nextX;
+                y = nextY;
+            }
+        }
     }
 
     public void lockAttackTarget(CombatRoom combat, float aimX, float aimY) {

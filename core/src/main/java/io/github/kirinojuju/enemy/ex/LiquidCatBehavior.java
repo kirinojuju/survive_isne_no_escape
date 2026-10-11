@@ -123,7 +123,7 @@ public final class LiquidCatBehavior extends ExBehavior {
         if (cat.exMeter > 0) return;
         cat.x = cat.exAimX;
         cat.y = cat.exAimY;
-        room.iceWall.resolveEnemy(cat, room.obstacles);
+        room.iceWall.resolveEnemy(cat, player.x, player.y, room.obstacles);
         cat.exFlashTime = .3f;
         // Damage stays on the warning marker, even if the wall separates the landing body.
         float dx = player.x - cat.exAimX, dy = player.y - cat.exAimY;

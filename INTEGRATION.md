@@ -58,17 +58,17 @@ GitHub ทั้งสอง branch ไม่มีภาพใหม่เห�
 | `characters/monsters/Blue-Blob-sheets/Blue-Blob-{Idle,Run}.png` | Binder และ Wave; แบ่งช่อง 64x32 เป็น 6/8 เฟรม |
 | `characters/monsters/Green-Blob-sheets/Green-Blob-{Idle,Run}.png` | Warper และ Ranged; แบ่งช่อง 64x32 เป็น 6/8 เฟรม |
 | `scene/ปกเกม/Whatzz.png` | ปกหน้าเริ่มเกม รักษาสัดส่วน พร้อม Enter |
-| `weapons/icewall/icewall1.png` ถึง `icewall10.png` | ภาพจริง 10 เฟรม วาดเป็นน้ำแข็งตั้งตรงตามแนวชน |
+| `icewall/icewall/icewall1.png` ถึง `icewall17.png` | ภาพ Ice Wall ของ ability-weapon จำนวน 17 เฟรม วาดเป็นแผ่นเดียวกว้าง 180 สูง 128 และหมุนตามแนวกำแพง |
 | `weapons/potion/Potion_hp.png`, `Potion_mp.png` | ไอเทมเก็บติดตัว ใช้ Z/X พร้อมจำนวนบน HUD |
 
 - สลับอาวุธด้วย Tab หรือ 1/2; Q ไม่สลับแล้ว
-- Ice Wall วางตามทิศหันที่ระยะ 92 คงที่ ไม่เลื่อนไปหามอนหรือดึงกลับจากขอบห้อง หากกึ่งกลางกำแพงออกนอกพื้นที่จะไม่ใช้สกิลและไม่เสีย SP/คูลดาวน์ ตรวจทางเดินมอนตลอดเส้นทางและเลือกจุดแยกออกจากกำแพงที่ไม่ติดโต๊ะ/ขอบห้อง
+- Ice Wall ใช้ภาพ 17 เฟรมและรูปทรงชนยาว 180 หนา 20 วางไปตามทิศหันที่ระยะ 92 และจำกัดตำแหน่งกึ่งกลางให้อยู่ในพื้นที่เดิน ผู้เล่นชนแล้วเลื่อนขนานไปตามกำแพงได้ มอนสเตอร์ถูกแยกออกด้านตรงข้ามผู้เล่นโดยคงตำแหน่งตามแนวกำแพง และตรวจโต๊ะก่อนย้าย
 - Potion เริ่ม HP/SP อย่างละ 2 ขวดต่อ run; ใช้แล้วฟื้น 40 HP/35 SP จำนวนติดตัวข้ามห้อง ยังไม่มีการดรอปหรือหาเพิ่ม
 - Liquid Cat หยุดระหว่างแปลงร่างและร่าย Divide, ปล่อยกระสุนนัดเดียวกลางแอนิเมชัน ล็อกจุด Leap และให้ท่าที่ค้างจบก่อนเปลี่ยนร่าง พร้อมช่วงพัก/ภาพกระแทก กระสุนแสดงตามขนาดชน
 - เพิ่มคลาสใหม่ 2 ไฟล์: `MonsterSprite` และ `PotionInventory` รวม main Java 52 ไฟล์
 - สำเนาก่อนปรับรอบนี้อยู่ใน `build/assets-polish-2026-10-11-before/`
 
-ชุดตรวจ GameRules/CustomBoss/Dome และการคอมไพล์ผ่านแล้ว ฉากตรวจ OpenGL จริงตรวจปก, มอนทั้งหกชนิด, เฟรม Blob, ภาพ Ice Wall ทั้งสิบเฟรมและตำแหน่งสี่ทิศ, Tab/Q, Z/X และ Cat Transform/Divide/Bullet/Leap/Impact พร้อมภาพใน `build/integration-preview/new-*.png` ตรวจฉากรถและโหมด EX เดิมผ่านด้วย โดยหน้าปกใหม่ตรวจแยกจาก baseline หน้าเริ่มเก่า
+ชุดตรวจ GameRules/CustomBoss/Dome และการคอมไพล์ผ่านแล้ว ฉากตรวจ OpenGL จริงตรวจปก, มอนทั้งหกชนิด, เฟรม Blob, ภาพ Ice Wall 17 เฟรมและตำแหน่งสี่ทิศ, Tab/Q, Z/X และ Cat Transform/Divide/Bullet/Leap/Impact พร้อมภาพใน `build/integration-preview/new-*.png` ตรวจฉากรถและโหมด EX เดิมผ่านด้วย โดยหน้าปกใหม่ตรวจแยกจาก baseline หน้าเริ่มเก่า
 
 
 ## แยกหน้าที่ CombatRoom

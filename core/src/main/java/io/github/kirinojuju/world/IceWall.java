@@ -23,14 +23,10 @@ public final class IceWall {
         float length = (float)Math.sqrt(faceX * faceX + faceY * faceY);
         if (length < EPSILON) { faceX = 1; faceY = 0; length = 1; }
         float nx = faceX / length, ny = faceY / length;
-        float targetX = playerX + nx * CAST_DISTANCE;
-        float targetY = playerY + ny * CAST_DISTANCE;
-        // Keep the requested point fixed. Clamping it back into the room can trap the caster.
-        if (targetX < GameSpace.LEFT + HALF_DEPTH || targetX > GameSpace.RIGHT - HALF_DEPTH
-            || targetY < GameSpace.BOTTOM + HALF_DEPTH || targetY > GameSpace.WALK_TOP - HALF_DEPTH)
-            return false;
-        x = targetX;
-        y = targetY;
+        x = MathUtils.clamp(playerX + nx * CAST_DISTANCE,
+            GameSpace.LEFT + 112, GameSpace.RIGHT - 112);
+        y = MathUtils.clamp(playerY + ny * CAST_DISTANCE,
+            GameSpace.BOTTOM + 64, GameSpace.WALK_TOP - 64);
         angle = MathUtils.atan2(ny, nx) + MathUtils.PI / 2;
         time = DURATION;
         animationTime = 0;
@@ -62,6 +58,11 @@ public final class IceWall {
             exit = Math.min(exit, Math.max(a, b));
         }
         return enter <= exit ? enter : -1;
+    }
+
+    /** The student's circular hitbox must stay outside the expanded wall rectangle. */
+    public boolean overlaps(float x, float y, float radius) {
+        return hitFraction(x, y, x, y, radius) >= 0;
     }
 
     public float moveX(float startX, float startY, float dx, float radius) {
@@ -98,34 +99,31 @@ public final class IceWall {
         enemy.y = oldY + (enemy.y - oldY) * fraction;
     }
 
-    public void resolveEnemy(CombatRoom.Enemy enemy) {
-        resolveEnemy(enemy, null);
-    }
-
-    public void resolveEnemy(CombatRoom.Enemy enemy, RoomObstacles obstacles) {
-        if (enemy.anchored || enemy.hp <= 0
-            || hitFraction(enemy.x, enemy.y, enemy.x, enemy.y, enemy.radius) < 0) return;
-        float cos = MathUtils.cos(angle), sin = MathUtils.sin(angle);
-        float along = (enemy.x - x) * cos + (enemy.y - y) * sin;
-        float across = -(enemy.x - x) * sin + (enemy.y - y) * cos;
-        float best = Float.MAX_VALUE, bestX = enemy.x, bestY = enemy.y;
-        // Pick the nearest of four exits that stays inside the arena and outside furniture.
-        for (int edge = 0; edge < 4; edge++) {
-            float exitAlong = along, exitAcross = across;
-            if (edge < 2) exitAcross = (edge == 0 ? -1 : 1) * (HALF_DEPTH + enemy.radius + EPSILON);
-            else exitAlong = (edge == 2 ? -1 : 1) * (LENGTH / 2 + enemy.radius + EPSILON);
-            float candidateX = x + exitAlong * cos - exitAcross * sin;
-            float candidateY = y + exitAlong * sin + exitAcross * cos;
-            if (candidateX < GameSpace.LEFT + enemy.radius || candidateX > GameSpace.RIGHT - enemy.radius
-                || candidateY < GameSpace.BOTTOM + enemy.radius || candidateY > GameSpace.WALK_TOP - enemy.radius)
-                continue;
-            if (obstacles != null && obstacles.hitFraction(candidateX, candidateY,
-                candidateX, candidateY, enemy.radius) >= 0) continue;
-            float dx = candidateX - enemy.x, dy = candidateY - enemy.y;
-            float distance = dx * dx + dy * dy;
-            if (distance < best) { best = distance; bestX = candidateX; bestY = candidateY; }
+    public void resolveEnemy(CombatRoom.Enemy enemy, float playerX, float playerY,
+                             RoomObstacles obstacles) {
+        if (enemy.anchored || enemy.hp <= 0 || !overlaps(enemy.x, enemy.y, enemy.radius)) return;
+        float nx = -MathUtils.sin(angle), ny = MathUtils.cos(angle);
+        float side = (enemy.x - x) * nx + (enemy.y - y) * ny;
+        if (Math.abs(side) < EPSILON)
+            side = (playerX - x) * nx + (playerY - y) * ny;
+        float sign = side < 0 ? -1 : 1;
+        float distance = HALF_DEPTH + enemy.radius + EPSILON;
+        float targetX = enemy.x + nx * (sign * distance - side);
+        float targetY = enemy.y + ny * (sign * distance - side);
+        targetX = MathUtils.clamp(targetX, GameSpace.LEFT + enemy.radius,
+            GameSpace.RIGHT - enemy.radius);
+        targetY = MathUtils.clamp(targetY, GameSpace.BOTTOM + enemy.radius,
+            GameSpace.WALK_TOP - enemy.radius);
+        if (obstacles != null && obstacles.hitFraction(targetX, targetY,
+            targetX, targetY, enemy.radius) >= 0) {
+            targetX = enemy.x + nx * (-sign * distance - side);
+            targetY = enemy.y + ny * (-sign * distance - side);
+            targetX = MathUtils.clamp(targetX, GameSpace.LEFT + enemy.radius,
+                GameSpace.RIGHT - enemy.radius);
+            targetY = MathUtils.clamp(targetY, GameSpace.BOTTOM + enemy.radius,
+                GameSpace.WALK_TOP - enemy.radius);
         }
-        enemy.x = bestX;
-        enemy.y = bestY;
+        enemy.x = targetX;
+        enemy.y = targetY;
     }
 }
