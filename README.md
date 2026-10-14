@@ -1,154 +1,216 @@
 # มาทั้งที่ก็เป็นนักเรียนติดลูปไปซะได้
 
-A small playable libGDX action roguelike prototype about surviving computer engineering school life. This is a student-themed spin-off of Pusenbi. Its visual direction carries over Pusenbi's simple pixel-art style and adapts the characters, clothing, enemies, and settings to ISNE student life.
+**Accepted into ISNE, yet stuck in a loop.**
 
-The game name is defined in `schoolLife.GAME_TITLE`. The cover screen shows the artwork and START button, without an extra title header. A normal launch first shows four short English/Thai story cards on black. They fade and advance automatically; Enter, Space or left click advances a card, and Esc skips to the cover. Retrying within the same app goes directly to the cover. Test modes bypass the opening story.
+![ภาพปกเกม มาทั้งที่ก็เป็นนักเรียนติดลูปไปซะได้](docs/images/game-cover.png)
 
-The Thai title and intro subtitles are bundled as shaped text images in `core/src/main/resources/ui/`, so the default bitmap font does not replace Thai letters with squares. The renderer also supports loading these resources directly from the source folder for IDE launches. Edit story lines in `RunDirector.INTRO_LINES`. After editing Thai story text or the game title, regenerate their lettering with a Thai-capable font installed:
+เกมแอ็กชัน Roguelike มุมมอง 2D ที่เปลี่ยนชีวิตนักศึกษา ISNE ให้กลายเป็นการเอาชีวิตรอดในห้องเรียน ใช้สาย LAN และ Notebook ต่อสู้กับมอนสเตอร์ อาจารย์ และศัตรู EX เลือกอัปเกรดให้เข้ากับสไตล์การเล่น แล้วเผชิญปีการศึกษาที่วนกลับมาพร้อมความยากที่เพิ่มขึ้น
 
-```powershell
-java "-Djava.awt.headless=true" tools/GenerateGameTitle.java
-```
+[เรื่องราว](#story) · [ตัวละครหลัก](#main-character) · [Game Loop](#gameplay-loop) · [วิธีเล่น](#how-to-play) · [ปุ่มควบคุม](#controls)
 
-## Where to find the code
+## Game Overview
 
-Start with `core/src/main/java/io/github/kirinojuju/schoolLife.java`. The 51 main Java files are organized into matching folders and Java packages:
-
-| Folder | Responsibility |
+| หัวข้อ | รายละเอียด |
 | --- | --- |
-| `flow/` | Screens, room progression, stages and loops |
-| `player/` | Player movement, skills and upgrades |
-| `weapon/` | LAN, Notebook and weapon abilities |
-| `combat/` | `CombatRoom` coordinates room state, `CombatDamage` applies hits, and `ProjectileSystem` moves and collides shots |
-| `enemy/` | Shared AI, monster behaviors, spawning and spacing |
-| `enemy/boss/` | Ajarn boss behaviors |
-| `enemy/ex/` | EX monster behaviors |
-| `render/` | Drawing, character animations and fallback textures |
-| `render/scene/`, `render/combat/`, `render/hud/` | Background/entrance, combat presentation, and HUD/menu rendering |
-| `render/sprite/` | Shared/player/monster sprites, with `boss/`, `ex/`, and `effect/` subfolders |
-| `world/` | Arena bounds, entrance scene and table obstacles |
-| `audio/` | Game sounds |
+| แนวเกม | Single-player · 2D Action Roguelike · Arena Combat |
+| ธีม | ชีวิตนักศึกษา วิชาที่เรียน และการติดอยู่ในลูป |
+| สถานที่ | อาคาร 30 ห้องเรียน ห้องปฏิบัติการ และห้อง Server |
+| แพลตฟอร์มปัจจุบัน | PC / Windows ใช้คีย์บอร์ดและเมาส์ |
+| เป้าหมาย | ผ่านห้องต่อสู้ สร้าง Build ด้วยอัปเกรด ชนะ EX และ FINAL EXAM แล้วเอาชีวิตรอดในลูปถัดไป |
+| สถานะ | Playable Prototype — กำลังปรับสมดุลและงานภาพ |
 
-See [CODE_ARCHITECTURE.md](CODE_ARCHITECTURE.md) for the six-file reading order, the three combat files, frame order and a guide to finding the code for each feature. The desktop launcher remains in `lwjgl3`; the rules check remains in `core/src/test/java`.
+**จุดเด่นของเกม**
 
-## Clone and play
+- สลับอาวุธระยะใกล้และระยะไกล พร้อมบริหาร HP/SP ระหว่างต่อสู้
+- อ่านวงเตือน หลบสกิล ใช้โต๊ะหรือ Ice Wall ช่วยจัดตำแหน่ง
+- เลือกอัปเกรดหลังชนะบอส ทำให้แต่ละรันมี Build ต่างกัน
+- EX แต่ละตัวมีกติกาเฉพาะ และ FINAL EXAM เปลี่ยนสนามเป็นการต่อสู้ที่เดินได้เฉพาะซ้าย–ขวา
 
-The team's original art and sound files are kept locally and are not included in Git. A fresh clone includes an empty `assets/` folder and runs with simple generated placeholder art and no sound. If you have the original files, put them under `assets/` using the paths shown in the art and sound sections below; the game will use each file that exists and fall back only for missing files. Do not commit those local files.
+## Story
 
-Install a JDK (17 or newer) and clone the repository. The first Gradle run needs internet access to download dependencies.
+> “I'm a student here.”<br>
+> ผมเป็นนักเรียนที่นี่
+>
+> “I can't remember how many years I've been here...”<br>
+> ผมจำไม่ได้แล้วว่าเรียนที่นี่มากี่ปี...
+>
+> “But I have this feeling...”<br>
+> แต่ผมรู้สึกว่า...
+>
+> “I... must be stuck in a loop.”<br>
+> ผม...ต้องติดอยู่ในลูปนี้แน่ ๆ
 
-```powershell
-git clone https://github.com/kirinojuju/survive_isne_no_escape.git
-cd survive_isne_no_escape
-.\gradlew.bat :lwjgl3:run
+เรื่องเริ่มต้นที่อาคาร 30 สถานที่ที่ควรเป็นเพียงวันธรรมดาของนักศึกษา แต่ห้องเรียนกลับเต็มไปด้วยศัตรู และอาจารย์กลายเป็นบททดสอบที่ต้องผ่านไปให้ได้ เมื่อจบปีการศึกษา ทุกอย่างกลับเริ่มต้นอีกครั้งพร้อมความท้าทายที่มากกว่าเดิม
+
+ผู้เล่นเลือกเดินเข้าประตูเพื่อเผชิญหน้ากับลูป หรือเดินไปที่รถเพื่อพบฉากจบทางเลือกแบบขำ ๆ
+
+## Main Character
+
+<p align="center">
+  <img src="docs/images/main-character.png" alt="ตัวละครหลัก นักศึกษา ISNE ในชุดนักศึกษา" width="256" height="256">
+</p>
+
+**นักศึกษา ISNE ผู้ติดอยู่ในลูป** คือคนที่ผู้เล่นควบคุมตลอดรัน ใช้อุปกรณ์ใกล้ตัวเป็นอาวุธ และเอาตัวรอดด้วยการเคลื่อนที่ หลบการโจมตี และเลือกจังหวะใช้สกิล
+
+| สิ่งที่มีตอนเริ่มต่อสู้ | รายละเอียด |
+| --- | --- |
+| HP | 100 — หมดแล้วรันจบ |
+| SP | 100 — ใช้กับการโจมตี Notebook, Dash และสกิลบางชนิด; ฟื้นตามเวลาและเมื่อกำจัดศัตรู |
+| อาวุธ | LAN Cable และ Notebook สลับใช้ได้ทั้งสองแบบ |
+| Potion | ยา HP 2 ขวด และยา SP 2 ขวด |
+
+## Gameplay Loop
+
+**Opening Story → หน้าปก → อาคาร 30 → ประตูห้องเรียน → เริ่มต่อสู้**
+
+```mermaid
+flowchart TD
+    A["ต่อสู้กับมอนสเตอร์"] --> B["ต่อสู้กับบอสและลูกน้อง"]
+    B --> C["เลือกอัปเกรด 1 จาก 3"]
+    C --> D{"ครบ 4 ด่านหรือยัง?"}
+    D -- "ยังไม่ครบ" --> A
+    D -- "ครบแล้ว" --> E["ตรวจห้องพิเศษตามลำดับรัน"]
+    E --> F["EX / FINAL EXAM ถ้ามี"]
+    F --> G["เริ่ม Loop ใหม่ ศัตรูแข็งแกร่งขึ้น"]
+    G --> A
 ```
 
-On macOS or Linux, use `./gradlew :lwjgl3:run`. To verify the rules and compile without opening the game, run `.\gradlew.bat :core:verifyGameRules :lwjgl3:classes` on Windows.
+- **1 Loop มี 4 ด่าน** แต่ละด่านประกอบด้วยห้องมอนสเตอร์และห้องบอส ลำดับห้องเรียนและบอสถูกสลับในแต่ละลูป
+- ห้องเรียนทั้งสี่คือ **Programming Lab, Circuit Workshop, Network Center และ Capstone Studio**
+- ผ่านห้องมอนสเตอร์ฟื้น **12 HP**; ผ่านห้องบอสฟื้น **35 HP** และได้เลือกอัปเกรด
+- **EX แรกอยู่หลัง Loop 1** จากนั้นพบอีกหลัง Loop 2, 4, 6, ... โดยสุ่มศัตรู EX หนึ่งตัว
+- ชนะ **Ae และ Dome** ในรันเดียวกันเพื่อปลดล็อก **FINAL EXAM** หนึ่งครั้งต่อรัน ถ้ามี EX รออยู่ จะต่อสู้ EX ก่อนเข้าฉากคั่นของ FINAL EXAM
+- ชนะ FINAL EXAM แล้วกลับไปเล่นตามลำดับรันต่อ เกมต้นแบบเน้นการเอาชีวิตรอดในลูปที่ยากขึ้น
 
-Each teammate should create a branch from the latest shared branch before coding, for example:
+**ผ่านห้อง:** กำจัดศัตรูที่เหลือทั้งหมด รวมลูกน้องของบอส<br>
+**แพ้:** HP เหลือ 0 → GAME OVER → กด R เริ่มรันใหม่ อัปเกรดและรางวัลสะสมอยู่เฉพาะรันปัจจุบัน
 
-```powershell
-git switch -c feature/dim-monster-ability
-# Make and test your own change.
-git add core/src/main/java core/src/test/java
-git commit -m "Add telegraphed monster ability"
-git push -u origin feature/dim-monster-ability
-```
+## How to Play
 
-Use a branch name for your own feature and open a pull request to combine it with the team's work. Access to a private GitHub repository must be granted by its owner before teammates can clone or push.
+### 1. เปิดเกมและเข้าสู่โรงเรียน
 
-After the opening story, click **START** or press **Enter** on the title screen to arrive at Building 30. The supplied button changes appearance on hover. Use **WASD** or the arrow keys to walk. Reach the left door to enter the core game. Near the car, press **E** or click the car to choose whether to go home; **1/Y/Enter** confirms the joke ending and **2/N/Esc** returns to the entrance. The car ending is English and centered within the screen. The opening scene has no combat. Scene changes fade through black.
+สำหรับแพ็กเกม Windows ให้แตกไฟล์ ZIP แล้วเปิด **START_GAME.bat** โดยเครื่องต้องมี Java 17 หรือใหม่กว่า
 
-Inside the core game, both the LAN cable and notebook are available. Press **Tab** to toggle weapons or **1**/**2** to select one directly during combat. Use **WASD** or the arrow keys to move, hold the **left mouse button** (or **Space**) for a normal attack, and press **Shift** to dash. Clicking near an enemy locks that target while the button is held; clicking empty ground locks the nearest living enemy. The student turns toward the target, a green ring shows the lock, and notebook shots home toward it. Press **E**, or tap the on-screen **BALL** button, to stand still and cast PowerBall. The skill locks the nearest living enemy, the student turns to follow it during the cast, and the PowerBall homes toward it. If that enemy falls, the ball locks another living enemy in the room. The cast costs 30 SP and has a 2-second cooldown. A dash costs 25 SP. Ranged shots cost 10 SP; close-range attacks are free. SP regenerates over time and on kills. Press **Enter** after clearing a monster or EX room. After each Ajarn, click one of three upgrades or press **1**, **2**, or **3** to advance. If you fall, press **R** to start a new run.
+1. เมื่อเปิดเกมครั้งแรกจะพบ Story ภาษาอังกฤษและไทยบนฉากดำ ปล่อยให้เล่นอัตโนมัติ หรือกด **Enter / Space / คลิกซ้าย** เพื่อเลื่อนข้อความ และกด **Esc** เพื่อข้าม
+2. ที่หน้าปก คลิก **START** หรือกด **Enter** เพื่อเข้าอาคาร 30
+3. ใช้ **WASD / ปุ่มลูกศร** เดินไปประตูด้านซ้ายเพื่อเริ่มต่อสู้
+4. ถ้าอยากสำรวจทางเลือก เดินเข้าใกล้รถแล้วกด **E** หรือคลิกที่รถ เลือกกลับบ้านหรือกลับไปเผชิญหน้ากับโรงเรียน
 
-Press **F**, or click **ICE**, to raise Ice Wall exactly 92 units in the direction the student is facing. Its position stays fixed until it expires. An outward cast with its center outside the floor fails without spending SP or starting cooldown. It costs 25 SP, has a 7-second cooldown and lasts 4.5 seconds. The barrier blocks movement, dashes and enemy projectiles, including boss shots; friendly shots pass through. Raising it deals 24 damage and briefly stuns nearby enemies. The wall and cooldown reset on room entry. The ten frames in `assets/weapons/icewall/` grow upright along the barrier instead of rotating the artwork onto the floor.
+### 2. เอาชีวิตรอดในห้องต่อสู้
 
-With **LAN** equipped, press **R** or click **LAN** to fire the teammate's sword-wave skill. It travels straight toward the locked attack target, or the direction you are facing, and deals 38 damage plus the physical upgrade bonus to one enemy. It costs no SP and has a 0.1-second cooldown. Tables stop the wave; friendly Ice Wall lets it through. The 12 frames load from `assets/weapons/sword_power/effectsword1.png` through `effectsword12.png`. **F4** retries in EX test mode; **Tab** and **1/2** switch weapons.
+1. คลิกใกล้ศัตรูเพื่อเลือกเป้า แล้ว **กดคลิกซ้ายค้าง / Space** เพื่อโจมตี กรอบสีเขียวแสดงเป้าหมายที่ล็อกอยู่
+2. ใช้ **Tab** สลับอาวุธ: **LAN** เหมาะกับระยะใกล้และไม่เสีย SP ส่วน **Notebook** โจมตีระยะไกลและติดตามเป้าหมาย แต่ใช้ SP
+3. ขยับออกจากวงหรือแนวเตือนก่อนการโจมตีลงถึงตัว ใช้ **Shift** เพื่อ Dash เมื่อจำเป็น
+4. ใช้ **E — PowerBall**, **F — Ice Wall** และ **R — Sword Wave** ตามสถานการณ์ โดย Sword Wave ต้องถือ LAN
+5. ดูแถบ HP/SP และจำนวน Potion ด้านบน กด **Z** เติม HP หรือ **X** เติม SP ก่อนทรัพยากรหมด
+6. กำจัดศัตรูให้ครบห้อง แล้วกด **Enter** เพื่อไปต่อ หลังชนะบอสให้เลือกอัปเกรดหนึ่งอย่าง
 
-Sword Wave alternates `getsuga1.mp3` and `getsuga2.mp3` from the same folder. Both clips are preloaded as sound effects. Each successful R/button cast immediately stops the previous sword clip and starts the next one, so rapid casts restart the sound without waiting. If the MP3 files are absent, the skill uses the ordinary LAN sound.
+### 3. สร้าง Build และผ่านห้องพิเศษ
 
-Potions are consumable inventory items: press **Z** for **+40 HP** or **X** for **+35 SP**. A new run starts with two of each; remaining bottles carry between rooms. Using a potion at full HP/SP does not consume it. The HUD shows the real HP/SP bottle PNGs and remaining counts. Replenishment and monster drops are not implemented yet.
+- หลังชนะบอส เลือกอัปเกรดจากสามตัวเลือกด้วยเมาส์หรือปุ่ม **1 / 2 / 3** กด **R** เพื่อสุ่มตัวเลือกใหม่ได้หนึ่งครั้งต่อหน้ารางวัล
+- เลือกเพิ่มดาเมจ ความเร็วโจมตี ความเร็วเดิน หรือเอฟเฟกต์อย่าง Slow, Poison และ Splash ให้เข้ากับอาวุธที่ใช้
+- ในห้อง EX จะได้ใช้ **LAN Tether** และ **Notebook Heat Beam** ชั่วคราว ส่วนรางวัลจากการชนะ EX อยู่ต่อจนจบรัน
+- ใน FINAL EXAM ผู้เล่นอยู่เลนล่างและเดิน/Dash ได้เฉพาะ **ซ้าย–ขวา** ใช้การโจมตีระยะไกลขึ้นไปหาบอสบนตู้ Server พร้อมหลบสกิลของทั้งสองตัว
 
-The LAN cable now sweeps a wide arc in the direction the student faces. Its reach is 125 game units and it swings every 0.44 seconds; the notebook attacks every 0.28 seconds. PowerBall is larger and explodes on impact, damaging and knocking back nearby enemies. Ordinary monsters are pushed farther than bosses. The blast briefly stuns and then slows enemies; bosses recover faster.
+## Controls
 
-When a cyan binder shot catches you, movement stops. Alternate **A** and **D** (or **Left** and **Right**) six times to break free early. The bind also expires after 3.5 seconds. Purple warpers mark a red target on the floor before teleporting in for a heavy hit; move out of the marker before they arrive.
+| การกระทำ | ปุ่ม |
+| --- | --- |
+| เลื่อน Story / ข้าม Story | Enter, Space หรือคลิกซ้าย / Esc |
+| เริ่มเกมที่หน้าปก | คลิก START หรือ Enter |
+| เดิน | WASD หรือปุ่มลูกศร; FINAL EXAM ใช้เฉพาะซ้าย–ขวา |
+| โจมตีปกติ | คลิกซ้ายค้าง หรือ Space |
+| ล็อกเป้า | คลิกใกล้ศัตรู; คลิกพื้นว่างจะเลือกศัตรูที่ใกล้ผู้เล่นที่สุด |
+| สลับอาวุธ | Tab หรือ 1 = LAN, 2 = Notebook |
+| Dash | Shift |
+| PowerBall | E หรือปุ่ม BALL บนจอ |
+| Ice Wall | F หรือปุ่ม ICE บนจอ |
+| LAN Sword Wave | R หรือปุ่ม LAN บนจอ เมื่อถือ LAN |
+| ใช้ยา HP / SP | Z / X |
+| หลุดจาก Bind | กด A–D หรือซ้าย–ขวาสลับกัน 6 ครั้ง |
+| เลือกอัปเกรด | คลิกตัวเลือก หรือ 1 / 2 / 3 |
+| สุ่มอัปเกรดใหม่ | R — หนึ่งครั้งต่อหน้ารางวัล |
+| ไปห้องถัดไป / เริ่ม FINAL EXAM | Enter |
+| เริ่มรันใหม่หลังแพ้ | R |
 
-The upper wall contains windows. The student and monsters are restricted to the floor below them, including during dashes and teleports.
+**ปุ่ม R เปลี่ยนหน้าที่ตามหน้าจอ:** ระหว่างต่อสู้คือ Sword Wave, หน้ารางวัลคือสุ่มอัปเกรด และหน้า GAME OVER คือเริ่มใหม่
 
-## Run structure
+## Weapons & Skills
 
-### Direct EX playtest
+| อาวุธ / สกิล | การใช้งาน | ค่าใช้จ่ายพื้นฐาน |
+| --- | --- | --- |
+| LAN Cable | ฟาดเป็นวงด้านหน้า เหมาะกับศัตรูระยะใกล้ | ไม่เสีย SP |
+| Notebook | ขว้างโจมตีจากระยะไกล กระสุนติดตามเป้าหมาย | 10 SP ต่อครั้ง |
+| Sword Wave | ปล่อยคลื่นตรงไปตามเป้าหรือทิศที่หัน เมื่อถือ LAN | ไม่เสีย SP |
+| PowerBall | ลูกพลังติดตามเป้า ระเบิดเป็นวงและผลักศัตรู; ยืนร่ายก่อนปล่อย | 30 SP |
+| Ice Wall | วางกำแพงด้านหน้า ตำแหน่งคงที่ 4.5 วินาที กั้นการเดินและกระสุนศัตรู | 25 SP |
+| Dash | พุ่งเปลี่ยนตำแหน่ง พร้อมช่วงป้องกันดาเมจสั้น ๆ | 25 SP |
 
-Run `.\gradlew.bat :lwjgl3:run --args="--test-ex" --no-daemon` to enter a Liquid Cat fight immediately. In EX test mode, **F1** selects Liquid Cat, **F2** selects Allergic Vacuum, and **F3** selects Insecure Sword. **F4** retries the current boss at any time; **R** also restarts after defeat, and **Enter** after a win starts a fresh fight against that boss. Each reset restores 100 HP/SP, both weapons, and the room's initial pickups. Notebook starts equipped; use **1/2** or **Tab** to switch weapons. LAN Tether and Notebook Heat Beam are available during the EX fight.
+**Potion:** ยา HP ฟื้น **40 HP** และยา SP ฟื้น **35 SP** ขวดที่เหลือเก็บข้ามห้องได้ การกดใช้ขณะค่าพลังเต็มจะไม่เสียขวด
 
-To start with a specific boss, replace `--test-ex` with `--test-liquid-cat`, `--test-allergic-vacuum`, or `--test-insecure-sword`. These shortcuts are active only when an EX test flag is supplied.
+## Enemies & Bosses
 
-### Other direct tests
+### มอนสเตอร์ปกติ
 
-To test table cover directly, run `gradlew.bat :lwjgl3:run --args="--test-obstacles"`. Monster and boss rooms use `scene/sceneroom_new_no_table.png` with three separate tables, randomized once on room entry. If the new scene is absent, the renderer loads `scene/sceneroom_not_table.png` instead. Left, middle and right zones leave wide detours; the middle table alternates between the top and bottom of the room to keep the player's spawn clear. Table art also varies among table00, table01 and table04; the middle uses a low table. Walk around them with WASD/arrow keys; Shift stops before a table. Tables block player and ordinary monster projectiles. Boss projectiles travel over tables, including reflected shots and Sati's spear. Press 2 to try Notebook impacts against cover, or E to explode PowerBall against a table. Monsters route around the furniture. Tables are permanent; EX uses the new classroom without tables, and Final Exam keeps its server scene and horizontal lane.
+| ประเภท | สิ่งที่ต้องรับมือ |
+| --- | --- |
+| Basic | เข้าประชิดและโจมตี |
+| Ranged | รักษาระยะแล้วปล่อยกระสุน |
+| Wave | ยิงคลื่นพลังเข้าหาผู้เล่น |
+| Shielded | มีเกราะ ต้องทำลายเกราะก่อนลด HP |
+| Binder | กระสุนจับผู้เล่นให้อยู่กับที่ |
+| Warper | เตือนจุดก่อนวาร์ปเข้ามาโจมตี |
 
-To test the Final Exam directly, run `gradlew.bat :lwjgl3:run --args="--test-final-exam"`. Press Enter on the black cutscene to begin. The test starts with Notebook equipped; use A/D or Left/Right to move, Shift for a horizontal dash, and click/Space or E to attack. Restarting with R returns to this test cutscene.
+### บอสอาจารย์
 
-- Each loop shuffles four school-themed stages and picks four distinct Ajarns from five active bosses: Ken or Sati, Ae, M, and Dome. Boss IDs stay stable even though the old Voltage and Thesis placeholders are no longer in the pool.
-- Each stage has a regular monster room, then an Ajarn boss room. Normal bosses start with two different minions in loop 1, three in loop 2 and five from loop 3 onward. First-loop bosses introduce minion types gradually, starting with basic and ranged monsters; all six types can appear from loop 2. Initial minions spawn once; Ken and Sati can summon additional armored helpers while fewer than four regular minions are alive. Defeat both the boss and its minions to clear the room.
-- Each defeated Ajarn offers three random upgrades; choose one permanent upgrade for that run before the next room. Press **R** on this screen to reroll once, preferring available upgrades outside the previous three. If no alternative remains, the choices and reroll charge stay unchanged. During combat, R casts Sword Wave; after defeat, R restarts the run. F4 retries an EX test at any time.
-- After stage four and any queued EX or Final Exam fight, the next loop begins. Each additional loop adds 15% of base HP/armor, 10% SP/regen, 10% damage and 4% speed.
-- The first random EX monster appears after the final Ajarn of loop 1; subsequent EX encounters retain the schedule after loops 2, 4, 6 and so on. Defeating Liquid Cat, Allergic Vacuum, or Insecure Sword grants its corresponding permanent buff for that run.
-- Defeating Ajarn Ae and Dome during the same run unlocks the separate Final Exam once. The introductory EX after loop 1, or an already queued even-loop EX, happens first. A black cutscene says "Good...Let's us prepare the final EXAM" before the two bosses appear.
-- In the Final Exam, Ae and Dome stay on the outer server cabinets. The student moves or dashes only left and right in the lower lane. Notebook, PowerBall and Sword Wave can reach the bosses above. Clearing both resumes the normal room sequence.
-- LAN Tether and Notebook Heat Beam become available only during the EX fight. They switch off when that encounter ends and do not appear among the normal boss upgrade cards.
-- Monster rooms restore 12 HP on victory; Ajarn defeats restore 35 HP. The run continues until the player is defeated.
+มีบอสปกติ **5 ตัว** แต่ละลูปพบ 4 ตัว: **Ken หรือ Sati** ร่วมกับ **Ae, M และ Dome**
 
-## Enemy encounters
+| บอส | รูปแบบการต่อสู้ |
+| --- | --- |
+| Ajarn Ken | วางระเบิดหลายจุดพร้อมวงเตือน และเรียกลูกน้อง |
+| Ajarn Sati | ธาตุ C++ แปลงเป็นหอก และเรียกลูกน้องมีเกราะ |
+| Ajarn Ae | วาร์ป โจมตีจับ/ทำดาเมจ และเลเซอร์กวาดในห้องปกติ |
+| Ajarn M | แยกร่างเมื่อ HP เหลือครึ่งหนึ่ง ต้องรับมือกระสุนจากทั้งสองร่าง |
+| Ajarn Dome | สายฟ้าเตือนจุดก่อนฟาด สลับกับเลเซอร์ชาร์จก่อนยิง |
 
-- Regular monsters move apart when they crowd each other. Green ranged monsters keep their distance, blue wave monsters fire expanding energy waves, white shielded monsters absorb damage with armor, cyan binders stop movement, and purple warpers teleport to a marked spot.
-- Loop 1 introduces these enemies gradually: ranged in stage 1, waves in stage 2, shields and binders in stage 3, then warpers in stage 4. Later loops add random special monsters more often.
-- Ajarns appear at the far right and hold their ground between attacks. Shared traits include reflecting armor, warp strikes, huge projectiles and energy waves. Every boss room has initial minions; Ken and Sati also use a capped summon queue. Sati transforms his C++ element into a spear. Ken places 7–9 warned bombs around the arena. M splits once at half HP and both bodies fire aimed projectiles. Algorithm monsters have their own sprite and ball projectile.
-- Ajarn Ae waits six seconds before his first warp warning, then marks a radius-75 area for 0.8 seconds. Walk out of the fixed circle or dash at impact to avoid the alternating one-second bind / base-14-damage hit. He returns home after 0.38 seconds and waits a seven-second cooldown before warning again (scaling down to at least five seconds in later loops). His regular spread fires every 1.1 seconds, with base speed 220 and damage 8 per shot. Final Exam Ae uses the slower spread while staying on his cabinet. In normal boss rooms, Ae also warns for 0.9 seconds before sweeping a vertical laser from left to right over 5 seconds, then resting for 5 seconds. The sweep uses base damage 16 and width 32; dash invulnerability protects against it. Final Exam Ae retains his cabinet behavior.
-- Ajarn Dome uses the `Tnetwork(Dome)` character and effect animations. He alternates a lightning strike marked for 0.85 seconds (28 SP, base damage 22, radius set by `LIGHTNING_RADIUS`, currently 100) and a laser charged for 1 second (38 SP, base damage 18, active for 0.6 seconds). Lightning and the normal-room laser target the player's position at cast start, allowing a dodge. In Final Exam, his laser fires straight down from the server cabinet. Dash invulnerability protects against both attacks. Dome keeps reflecting armor in his normal boss room, and these skills replace his generic wave attacks. Recovery lasts 0.3 seconds and the pause between casts is 0.9 seconds (scaling down to 0.55 seconds in later loops).
+### EX Encounters
 
-Normal boss hitboxes follow the visible rectangle of the current sprite frame, excluding transparent PNG margins and mirroring with flipped art. Melee, projectiles, PowerBall, splash and Notebook beams share that geometry; targeting aims at its center. `enemy/boss/BossBody.java` owns drawing sizes, and each `OptionalAssetTexture.BodyTexture` owns its alpha bounds from loading. Missing body art falls back to the ordinary circular hit area. Final Exam retains its anchored hit geometry. Dome's laser origin now follows the hand coordinates of the side/downward shooting frames.
+| EX | กติกาพิเศษ | รางวัล |
+| --- | --- | --- |
+| Liquid Cat | เฟสแรกอยู่นิ่ง เมื่อถูกกำจัดจะแปลงเป็นเฟสสองที่เคลื่อนที่ แยกร่าง และใช้ Orbital จากฟ้า | Max HP +25 และฟื้น 45 HP |
+| Allergic Vacuum | ดูดฝุ่นและดึงผู้เล่นเข้าใกล้ เมื่อค่าแพ้เต็มจะเตือนก่อนจามฝุ่นออกมา | ความเร็วเดิน +30 และฟื้น 20 HP |
+| Insecure Sword | เดินเก็บ Post-it แล้วนำเข้าใกล้บอสเพื่อลดเกราะ แต่ทำให้มันมั่นใจขึ้น; ฉวยจังหวะตอนฟันพลาด | ดาเมจ LAN +8, Notebook +6 และฟื้น 20 HP |
 
-Network and Programming monster frames load from `characters/monsters/monster_network/Network_Kiki1..15.png` and `monster_program/Program_Kiki1..8.png`. `Monster` selects artwork by combat role; `WarperMonster extends Monster` owns its teleport attack. Sati uses seven body and ten attack frames, and M uses seven body and eight attack frames. Missing art uses a stand-in. Far is removed from the active game.
+### FINAL EXAM — Ae & Dome
 
-`GameRenderer` coordinates `SceneRenderer` (scenes and entrance), `CombatRenderer` (sprites and effects), and `GameHud` (bars and menus). Combat rendering uses abstract `EnemySprite` implementations with shared texture ownership. Enemy behavior lives directly in `Enemy → Monster / Boss → ExBoss` subclasses, without separate AI strategy objects. Enemy HP is private and weapons can be injected through the `PlayerCharacter` constructor as `WeaponAttack` interfaces. See `OOP_PRESENTATION_TH.md` for lecture mappings and `CODE_ARCHITECTURE.md` for all 51 files.
+เมื่อชนะ Ae และ Dome ครบในรันเดียวกัน จะเปิดห้องพิเศษที่ทั้งสองอยู่บนตู้ Server ด้านบน ผู้เล่นเดินขึ้นไปไม่ได้และต้องรับมือการโจมตีพร้อมกันจากเลนด้านล่าง โดยเลเซอร์ของ Dome ยิงลงจากตู้
 
-### EX encounters
+## Gameplay Screenshots
 
-- **Liquid Cat:** phase one stays in place and casts Orbital. Defeating it triggers one 0.65-second transformation into a moving compact second phase; each phase has 190 base HP, scaled by loop. During transformation it cannot attack or receive damage/status effects. Phase two takes 55% damage, leaves slowing ooze and uses Divide to create up to two damageable cat copies. Copies walk and shoot liquid bullets without creating more copies; the original replaces missing copies after its cooldown. Defeating the original in phase two clears its copies and awards the EX buff. Orbital locks a ground marker, warns for 0.4 seconds, then drops an attack object from the sky in 0.14 seconds for one hit within an 80-unit radius. It casts more often in phase two; the boss body stays in place during the cast, and walking respects Ice Wall.
-- **Allergic Vacuum:** draws loose dust and the nearby student toward its nozzle. Each consumed dust piece fills its allergy meter. At 100%, suction stops for a sneeze warning, then it recoils and ejects its collected dust as damaging projectiles. The dust settles and can be sucked up again.
-- **Insecure Sword:** drops Post-it notes. Walk over a note to pick it up, then approach the sword to apply it automatically. Each note lowers its armor but raises its confidence and chance of a powerful marked slash. A missed slash leaves the sword open to extra damage. At low confidence it often wobbles and deals zero damage.
+### ห้องต่อสู้และสิ่งกีดขวาง
 
-## Art handoff
+![ภาพเกมในห้องเรียน แสดงผู้เล่น มอนสเตอร์ โต๊ะ และปุ่มสกิล](docs/images/gameplay.png)
 
-The student now renders from transparent 64 × 64 PNG frames in `assets/characters/student_player/`: `idle` (left/right), `walk` (four frames per side), and `skill_case` (eight left / nine right). The sprite uses nearest-neighbor filtering at 2× size. `skill_case` plays only during the E/touch skill; `power_ball.png` is released partway through that animation. Normal weapon attacks do not trigger the skill animation. The character source is `../characters/main/aseprite/student001.aseprite`.
+### FINAL EXAM
 
-The title screen uses `assets/scene/ปกเกม/Whatzz.png` as a full cover with the supplied normal/focus START button and a Click/Enter prompt. The Building 30 entrance uses `assets/scene/scene30building_entrance_withoutcar.png` with the separate `scene30bCar_object.png` overlay at a crisp 3× scale. Monster, boss and EX rooms use `assets/scene/sceneroom_new_no_table.png`, repeated across the wide arena, falling back to the previous empty classroom when absent. Monster and boss rooms add three separate table objects with matching collision; EX has no tables. Sati's `cpp_element` uses six idle frames, sixteen transformation frames, and the spear sprite. Liquid Cat uses the team's exported PNG frames in `assets/characters/boss_ex/liquid-cat/` for idle, compact-form walking, transformation, divide, orbital strike and bullet attacks. The `skill` folder is still empty. Insecure Sword uses five idle and five attack PNG frames in `assets/characters/boss_ex/insecure-sword/`, at a crisp 2x scale. Its attack animation starts on the slash or zero-damage whiff; applying a Post-it interrupts it. Allergic Vacuum still uses temporary game shapes. The team's `Frame.png` and `Concept.png` files guide their behavior; they are presentation boards rather than game sprite frames. Sati's main body and attack animations use the team's numbered exports. Ordinary enemies use dedicated Algorithm/Network/Programming artwork when provided; fallback art uses Slime (Basic/Shielded), Blue Blob (Binder/Wave) and Green Blob (Warper/Ranged); their six behaviors and colored role markers are preserved. Blue/Green sheets contain 64x32 cells, with six idle and eight run frames. `MonsterSprite` selects an individual cell, then crops only its transparent side padding. Algorithm monsters use their dedicated art if provided, otherwise the same monster sprites. Tables in monster and boss rooms block movement, dashes and ordinary projectiles.
+![ภาพ FINAL EXAM ต่อสู้ Ae และ Dome บนตู้ Server จากเลนด้านล่าง](docs/images/final-exam.png)
 
-The on-screen skill button accepts touch or mouse input. This repository currently has a desktop launcher; an iPad build and its full touch control scheme are future platform work.
+## Survival Tips
 
-## Sound effects
+- **อย่าใช้ SP จนหมด:** เก็บไว้สำหรับ Dash หรือ Ice Wall และใช้ LAN ระหว่างรอฟื้นพลัง
+- **อ่านวงเตือนก่อนโจมตี:** ย้ายออกจากจุดเป้าหมายก่อนสายฟ้า ระเบิด หรือ Orbital ลงถึงพื้น
+- **ใช้โต๊ะให้ถูกจังหวะ:** โต๊ะขวางการเดินและกระสุนทั่วไป แต่กระสุนบอสข้ามโต๊ะได้ ส่วน Ice Wall กันกระสุนศัตรูรวมถึงบอส
+- **จัดการลูกน้องด้วย:** ห้องบอสจะผ่านเมื่อกำจัดศัตรูที่เหลือครบ ไม่ใช่แค่ลด HP บอสหมด
+- **อย่าลืม Potion:** ขวดมีจำกัด เลือกใช้ตอนที่ได้ประโยชน์จากการฟื้นพลังเต็มจำนวน
 
-The team's original `.m4a` files remain in `assets/characters/soundfx/`. The matching `.ogg` copies are used by the desktop game for menu choices, LAN and notebook attacks, hits, armor hits, weapon switching, PowerBall casting and impact, and room transitions. Sati's `boss_fx/cpp_transform_sound.ogg` plays when the C++ element begins transforming into a spear.
+## Project Status
 
-`assets/audio/BGM_sound.ogg` is the converted copy of the new root `BGM_sound.m4a`. It streams through `Music`, loops at 22% volume, and continues across the title, entrance, fights and rewards. Black cutscenes pause it. A defeat stops BGM and plays `audio/game_over.ogg` once at 55%; R stops that cue and restarts the run/BGM. The source `game_over.m4a` is retained. The START art uses root `click1_before_c.png` / `click2_focus.png`; both are cropped from their shared 64×64 canvas. Missing new images use a text START button, and missing new audio is silent. Volume and phase handling live in `audio/GameAudio.java`.
+เกมอยู่ในช่วงต้นแบบที่เล่นได้ มีโหมดผู้เล่นคนเดียว ห้องเรียน 4 ด่าน บอสปกติ 5 ตัว EX 3 ตัว และ FINAL EXAM การเลือกอัปเกรดกับรางวัล EX ช่วยให้ Build เติบโตตลอดรัน หลังจบลูปศัตรูจะมี HP, SP, ดาเมจ และความเร็วเพิ่มขึ้น
 
-Dome uses four cues from `boss_fx/Dome/`: `lighting_efx_cast_sound.ogg` on lightning charge, `lighting_efx_hit_sound.ogg` on the strike, `laser_efx_cast_sound.ogg` on laser charge, and `laser_efx_hit_sound.ogg` when firing. They play once per phase in both normal and Final Exam encounters, including when the player dodges. The two cast copies are shortened with tempo adjustment, preserving pitch, to match 0.85 and 1 second respectively; the original M4A files are retained. The other six Dome clips have OGG copies prepared but are not currently triggered. Adjust cast/fire volume in `audio/GameAudio.java`. Missing audio files remain optional.
+งานที่กำลังพัฒนาต่อคือความสมดุล ความชัดเจนของการโจมตี งานภาพ และคำแนะนำสำหรับผู้เล่นใหม่
 
-## Weapon upgrades
+อ่านรายละเอียดการออกแบบเพิ่มเติมใน [Game Design Document](GDD.md)
 
-- **LAN cable:** gain +7 hit damage, a wider and longer sweep, or a 1.5-second slow.
-- **Notebook:** gain +6 hit damage, a poison effect over three seconds, or a splash hit around the target.
-- **Shared/skill:** gain 18% faster weapon attacks, +20 movement speed, or +10 PowerBall damage. Effects unlock once; damage upgrades can be selected again on later stages.
+---
 
-These upgrades are permanent for the current run. During an EX fight, LAN also gains a tether: it marks enemies for 35% extra PowerBall damage, while ordinary monsters are pulled together and held briefly. Notebook gains a heat meter; four throws charge a wide piercing beam on the next attack. The beam applies poison if the regular poison upgrade is owned. Both EX techniques expire after that fight. Summoned notebook helpers remain an idea for a later version.
-
-## Team development
-
-See [TEAM_PLAN.md](TEAM_PLAN.md) for the four-person code split and integration checklist. Run `gradlew.bat :core:verifyGameRules` to check weapon unlocks, loop/EX sequencing, and combat rules.
-
-## Integrated team updates
-
-The current workspace includes `monsters-system` at `581089f` and the Ice Wall feature from `ability-weapon` at `997308f`, adapted to the current packages and collision systems. See [INTEGRATION.md](INTEGRATION.md) for provenance, art paths and verification. The latest refactor uses direct enemy inheritance; only Ae and Dome count toward Final Exam progress, and Far is removed.
-
-Verify the integrated rules with `.\gradlew.bat :core:verifyGameRules :core:verifyCustomBosses :core:verifyDomeBoss :lwjgl3:classes --no-daemon`. Use `--test-ex` or `--test-obstacles` to try Ice Wall immediately.
+โปรเจกต์เกมนักศึกษา ISNE · สปินออฟธีมนักศึกษาจาก **Pusenbi** · พัฒนาด้วย **Java และ libGDX** · ภาพประกอบแสดงเกมต้นแบบปัจจุบัน

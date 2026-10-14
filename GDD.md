@@ -82,9 +82,9 @@ HP reaches zero → Defeat/results screen → New run
 
 ### How to finish the loop
 
-Completing four stages finishes one school-year loop. EX and queued Final Exam encounters resolve before the game resumes the next part of its sequence. Defeating the three-teacher Final Exam is a major milestone, but the prototype has **no final graduation ending**; the run continues until HP reaches zero.
+Completing four stages finishes one school-year loop. EX and queued Final Exam encounters resolve before the game resumes the next part of its sequence. Defeating the two-teacher Final Exam is a major milestone, but the prototype has **no final graduation ending**; the run continues until HP reaches zero.
 
-**Demo goal:** Show one complete loop, an upgrade choice and the first EX, then reach loop 2. Demonstrate the Final Exam separately when random boss selection does not unlock it during that route.
+**Demo goal:** Show one complete loop, an upgrade choice, the first EX and the queued Ae–Dome Final Exam, then reach loop 2.
 
 **Team decision needed:** Decide whether the release should end at graduation or retain endless survival, and set a target run duration after playtesting.
 
