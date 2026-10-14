@@ -5,6 +5,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.MathUtils;
 import io.github.kirinojuju.audio.GameAudio;
 import io.github.kirinojuju.combat.CombatRoom;
+import io.github.kirinojuju.enemy.Enemy;
 import io.github.kirinojuju.weapon.LanWeaponAttack;
 import io.github.kirinojuju.weapon.NotebookWeaponAttack;
 import io.github.kirinojuju.weapon.WeaponAbility;
@@ -22,6 +23,7 @@ public final class PlayerCharacter {
     public static final float LAN_SWING_DURATION = .25f;
     public static final float LAN_REACH = 125f;
     public static final float LAN_ATTACK_INTERVAL = .44f;
+    public static final float LAN_WAVE_COOLDOWN = .1f;
     public static final float NOTEBOOK_ATTACK_INTERVAL = .28f;
     public static final float NOTEBOOK_BEAM_INTERVAL = .65f;
     private static final float SKILL_RELEASE_TIME = .4f;
@@ -40,27 +42,36 @@ public final class PlayerCharacter {
     public boolean notebookPoison, notebookSplash, notebookHeatBeam;
     public float notebookHeat;
     public float attackTimer, dashTimer, invulnerable, swingTimer;
+    public float lanWaveCooldown;
     public float slowTime;
     public float walkTime, skillTime, skillCooldown;
     public float iceWallCooldown;
     public float boundTime, bindImmunity;
     public int bindProgress, lastBindDirection;
     public boolean moving, facingRight = true, skillPlaying, skillReleased;
-    private CombatRoom.Enemy skillTarget;
-    private CombatRoom.Enemy attackTarget;
+    private Enemy skillTarget;
+    private Enemy attackTarget;
     private GameAudio audio;
     private final boolean[] owned = new boolean[Weapon.values().length];
-    private final WeaponAttack[] attacks = {new LanWeaponAttack(), new NotebookWeaponAttack()};
+    private final WeaponAttack[] attacks;
     private Weapon active;
     private boolean horizontalOnly;
     private RoomObstacles obstacles;
     private IceWall iceWall;
 
+    public PlayerCharacter() { this(new LanWeaponAttack(), new NotebookWeaponAttack()); }
+
+    public PlayerCharacter(WeaponAttack physical, WeaponAttack magical) {
+        if (physical == null || magical == null)
+            throw new IllegalArgumentException("Both weapon attacks are required");
+        attacks = new WeaponAttack[] {physical, magical};
+    }
+
     public Weapon activeWeapon() { return active; }
     public boolean owns(Weapon weapon) { return owned[weapon.ordinal()]; }
     public boolean hasBothWeapons() { return owns(Weapon.PHYSICAL) && owns(Weapon.MAGICAL); }
-    public CombatRoom.Enemy attackTarget() {
-        return attackTarget != null && attackTarget.hp > 0 ? attackTarget : null;
+    public Enemy attackTarget() {
+        return attackTarget != null && attackTarget.getHp() > 0 ? attackTarget : null;
     }
     public void setAudio(GameAudio audio) { this.audio = audio; }
     public void setObstacles(RoomObstacles obstacles) { this.obstacles = obstacles; }
@@ -92,7 +103,7 @@ public final class PlayerCharacter {
         sp = Math.min(100, sp + 30);
         invulnerable = .9f;
         attackTimer = 0;
-        walkTime = skillTime = skillCooldown = iceWallCooldown = 0;
+        walkTime = skillTime = skillCooldown = iceWallCooldown = lanWaveCooldown = 0;
         boundTime = bindImmunity = 0;
         slowTime = 0;
         bindProgress = lastBindDirection = 0;
@@ -107,15 +118,21 @@ public final class PlayerCharacter {
     }
 
     public void update(float dt, CombatRoom combat, boolean touchSkill, boolean mouseAttack) {
-        update(dt, combat, touchSkill, false, mouseAttack);
+        update(dt, combat, touchSkill, false, false, mouseAttack);
     }
 
     public void update(float dt, CombatRoom combat, boolean touchSkill,
                        boolean touchIceWall, boolean mouseAttack) {
+        update(dt, combat, touchSkill, touchIceWall, false, mouseAttack);
+    }
+
+    public void update(float dt, CombatRoom combat, boolean touchSkill,
+                       boolean touchIceWall, boolean touchLanWave, boolean mouseAttack) {
         attackTimer = Math.max(0, attackTimer - dt);
         dashTimer = Math.max(0, dashTimer - dt);
         invulnerable = Math.max(0, invulnerable - dt);
         swingTimer = Math.max(0, swingTimer - dt);
+        lanWaveCooldown = Math.max(0, lanWaveCooldown - dt);
         skillCooldown = Math.max(0, skillCooldown - dt);
         iceWallCooldown = Math.max(0, iceWallCooldown - dt);
         slowTime = Math.max(0, slowTime - dt);
@@ -140,6 +157,8 @@ public final class PlayerCharacter {
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) switchTo(Weapon.MAGICAL);
         if (Gdx.input.isKeyJustPressed(Input.Keys.TAB) && hasBothWeapons())
             switchTo(active == Weapon.PHYSICAL ? Weapon.MAGICAL : Weapon.PHYSICAL);
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.R) || touchLanWave) tryLanWave(combat);
 
         boolean attacking = mouseAttack || Gdx.input.isKeyPressed(Input.Keys.SPACE);
 
@@ -225,10 +244,10 @@ public final class PlayerCharacter {
 
     public void lockAttackTarget(CombatRoom combat, float aimX, float aimY) {
         attackTarget = null;
-        CombatRoom.Enemy pointed = combat.closestEnemy(aimX, aimY);
+        Enemy pointed = combat.closestEnemy(aimX, aimY);
         if (pointed != null) {
-            float dx = pointed.x - aimX, dy = pointed.y - aimY;
-            float pickRadius = pointed.radius + 40;
+            float dx = pointed.damageX(aimX) - aimX, dy = pointed.damageY(aimY) - aimY;
+            float pickRadius = pointed.damageRadius() + 40;
             if (dx * dx + dy * dy <= pickRadius * pickRadius) attackTarget = pointed;
         }
         if (attackTarget == null) attackTarget = combat.closestEnemy(x, y);
@@ -240,14 +259,14 @@ public final class PlayerCharacter {
             attackTarget = null;
             return;
         }
-        if (attackTarget == null || attackTarget.hp <= 0)
+        if (attackTarget == null || attackTarget.getHp() <= 0)
             attackTarget = combat.closestEnemy(x, y);
         faceAttackTarget();
     }
 
     private void faceAttackTarget() {
-        if (attackTarget == null || attackTarget.hp <= 0) return;
-        float dx = attackTarget.x - x, dy = attackTarget.y - y;
+        if (attackTarget == null || attackTarget.getHp() <= 0) return;
+        float dx = attackTarget.aimX() - x, dy = attackTarget.aimY() - y;
         float distance = (float)Math.sqrt(dx * dx + dy * dy);
         if (distance < .001f) return;
         faceX = dx / distance;
@@ -257,6 +276,29 @@ public final class PlayerCharacter {
 
     public void attack(CombatRoom combat) {
         if (active != null) attacks[active.ordinal()].attack(this, combat, audio);
+    }
+
+    /** Fires the teammate's straight sword wave while the LAN weapon is equipped. */
+    public boolean tryLanWave(CombatRoom combat) {
+        if (hp <= 0 || skillPlaying || active != Weapon.PHYSICAL || lanWaveCooldown > 0) return false;
+        Enemy target = attackTarget();
+        float dx = target == null ? faceX : target.aimX() - x;
+        float dy = target == null ? faceY : target.aimY() - y;
+        float length = (float)Math.sqrt(dx * dx + dy * dy);
+        if (length < .001f) {
+            dx = facingRight ? 1 : -1;
+            dy = 0;
+            length = 1;
+        }
+        dx /= length;
+        dy /= length;
+        faceX = swingFaceX = dx;
+        faceY = swingFaceY = dy;
+        if (Math.abs(dx) > .001f) facingRight = dx > 0;
+        combat.fireLanWave(x + dx * 24, y + dy * 24, dx, dy, 38 + physicalBonus);
+        lanWaveCooldown = LAN_WAVE_COOLDOWN;
+        if (audio != null) audio.lanWave();
+        return true;
     }
 
     public boolean tryStartIceWall(CombatRoom combat) {
@@ -303,10 +345,10 @@ public final class PlayerCharacter {
     }
 
     private void faceSkillTarget(CombatRoom combat) {
-        if (skillTarget == null || skillTarget.hp <= 0)
+        if (skillTarget == null || skillTarget.getHp() <= 0)
             skillTarget = combat.closestEnemy(x, y);
         if (skillTarget == null) return;
-        float dx = skillTarget.x - x, dy = skillTarget.y - y;
+        float dx = skillTarget.aimX() - x, dy = skillTarget.aimY() - y;
         float length = (float)Math.sqrt(dx * dx + dy * dy);
         if (length < .001f) return;
         faceX = dx / length;

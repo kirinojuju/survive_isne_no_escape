@@ -1,9 +1,10 @@
-package io.github.kirinojuju.render;
+package io.github.kirinojuju.render.sprite.effect;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
+import io.github.kirinojuju.render.OptionalAssetTexture;
 import io.github.kirinojuju.world.IceWall;
 
 /** Upright ice clusters follow the collision line without rotating their height into the floor. */

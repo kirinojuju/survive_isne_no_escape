@@ -1,8 +1,8 @@
 package io.github.kirinojuju.combat;
 
-import io.github.kirinojuju.combat.CombatRoom.Enemy;
 import io.github.kirinojuju.combat.CombatRoom.NotebookImpact;
 import io.github.kirinojuju.combat.CombatRoom.Shot;
+import io.github.kirinojuju.enemy.Enemy;
 import io.github.kirinojuju.player.PlayerCharacter;
 import io.github.kirinojuju.world.GameSpace;
 
@@ -70,7 +70,8 @@ final class ProjectileSystem {
     private boolean hitEnemyWithShot(Shot shot, PlayerCharacter player) {
         for (int i = 0; i < room.enemies.size; i++) {
             Enemy enemy = room.enemies.get(i);
-            if (enemy.hp <= 0 || !shotTouches(shot, enemy.x, enemy.y, enemy.radius)) continue;
+            if (enemy.getHp() <= 0 || !shotTouches(shot, enemy.damageX(shot.x), enemy.damageY(shot.y),
+                enemy.damageRadius())) continue;
             if (shot.powerBall) damageRules.explodePowerBall(shot, player.x, player.y);
             else {
                 damageRules.applyToEnemy(enemy, shot.damage, player.x, player.y);
@@ -105,10 +106,10 @@ final class ProjectileSystem {
     }
 
     private void steerHomingShot(Shot shot) {
-        if (shot.target == null || shot.target.hp <= 0)
+        if (shot.target == null || shot.target.getHp() <= 0)
             shot.target = room.closestEnemy(shot.x, shot.y);
         if (shot.target == null) return;
-        float dx = shot.target.x - shot.x, dy = shot.target.y - shot.y;
+        float dx = shot.target.aimX() - shot.x, dy = shot.target.aimY() - shot.y;
         float length = (float)Math.sqrt(dx * dx + dy * dy);
         if (length < .001f) return;
         float speed = (float)Math.sqrt(shot.vx * shot.vx + shot.vy * shot.vy);

@@ -1,203 +1,329 @@
 # Game Design Document — มาทั้งที่ก็เป็นนักเรียนติดลูปไปซะได้
 
-**Version:** 0.2 · **Updated:** October 1, 2026 · **Status:** Design document based on the current prototype
+**Version:** 0.5 · **Updated:** October 14, 2026 · **Status:** Prototype design and current implementation reference
 
-> **Status labels:** **Implemented** describes systems found in the current code and README. **Planned** describes work that remains incomplete. **Team decision needed** marks details the game and project documents have not settled. Vision and design goals are not claims that a feature is finished.
+> **Implemented** means present in the current workspace source. **Planned** means proposed work. **Team decision needed** marks unresolved choices. Design goals and acceptance criteria are not playtest results.
 
-## 1. Game overview
+## Overview
 
-| Topic | Description |
+### Theme, setting and genre
+
+| Topic | Design |
 | --- | --- |
-| Title | **มาทั้งที่ก็เป็นนักเรียนติดลูปไปซะได้** |
-| Genre | Single-player, 2D room-based action roguelike |
-| Premise | A computer engineering student fights through monsters and Ajarns while trying to survive a fourth year that repeats and grows harder. |
-| Hooks | Two student-themed weapons, four Ajarn combat styles per loop, EX enemies with distinct mechanics, and a joke ending in which the student chooses to go home before fighting. |
-| Current platform | Desktop via libGDX/LWJGL3. An iPad build and complete touch controls are future work. |
-| Run structure | A run continues until the player's HP reaches zero. The main loop has no final ending in the current prototype. |
-| Visual direction | Simple pixel art carried over from Pusenbi, adapted to ISNE student life through the characters, clothing, enemies, and locations. |
-
-### Intended player experience
-
-The player should feel that each new school year is more demanding, while their growing skill and upgrades help them keep up. Combat alternates between reading attack warnings, dodging, choosing the right weapon for the distance, and building a distinctive set of upgrades during each run. The tone is playful and rooted in student life. Dangerous attacks should give players a clear chance to react.
+| Game title | มาทั้งที่ก็เป็นนักเรียนติดลูปไปซะได้ |
+| Theme | School life, academic pressure and the absurdity of repeating a school year. |
+| Setting | An ISNE computer engineering campus, beginning at Building 30 and continuing through classrooms, laboratories and a server room. |
+| Genre | Single-player, 2D room-based action roguelike. |
+| Short pitch | Survive a looping fourth year with a LAN cable, a flying notebook and increasingly powerful upgrades. Fight Ajarns, outsmart unusual EX enemies and face two teachers together in the Final Exam. |
+| Player experience | Read a threat, dodge it, choose a response and become stronger through each victory. The tone is playful, while attacks should remain understandable. |
 
 ### Design pillars
 
-1. **Readable danger:** Powerful attacks use cues such as floor markers, aim lines, or charge animations.
-2. **Distinct weapons:** The LAN cable covers a wide area at close range without using SP. The notebook attacks from a distance and consumes SP.
-3. **Meaningful victories:** Each Ajarn offers a choice of one upgrade from three. EX enemies grant a unique buff.
-4. **Varied repetition:** Stage order and Ajarn selection change between loops, while difficulty rises each time.
+1. **Distinct weapons:** LAN offers free close-range control; Notebook trades SP for distance. PowerBall, Dash and Ice Wall support different responses to danger.
+2. **Varied repetition:** Four shuffled locations, changing boss selections, EX encounters and rising difficulty keep the same school-year structure fresh.
+3. **Meaningful victories:** Each Ajarn offers one of three upgrades; EX victories grant a lasting run buff; defeating Ae and Dome unlocks a special encounter.
+4. **Readable danger:** Floor markers, safe zones, aiming lines, charge animations and sound cues give players a chance to react.
 
-## 2. Core game loop
+### Influences
+
+- **Pusenbi — established visual influence:** Simple pixel art adapted to ISNE student clothing, objects and environments.
+- **Student life — thematic reference:** LAN cables, notebooks, programming, networking and deadlines turn familiar academic objects into combat ideas.
+- **Room-based roguelike structure — design reference:** Clear an arena, select a reward and repeat with a stronger build. Additional named game references require team agreement.
+
+### Project description
+
+The player controls a computer engineering student trapped in a repeating school year. Entering Building 30 begins a run through four shuffled stages. Each stage contains a monster room and an Ajarn encounter. The student starts with both weapons and must manage HP, regenerating SP, positioning and short cooldowns.
+
+Boss rewards let the player build around melee damage, ranged effects, speed or PowerBall. EX encounters introduce different problems: a two-phase cat, a dust-sensitive vacuum and a sword whose confidence changes its behavior. A separate Final Exam combines Ae and Dome in a server-room fight with horizontal movement. The prototype continues into harder loops after these milestones.
+
+### Gameplay mechanics brief
+
+- Move, lock a target, switch between LAN and Notebook, and attack.
+- Spend SP on Notebook, PowerBall, Dash or Ice Wall; use free LAN attacks while recovering.
+- Avoid marked hazards and use tables as cover against ordinary projectiles.
+- Clear both an Ajarn and its minions, then choose one upgrade.
+- Fight an EX after loop 1 and even-numbered loops; use temporary EX weapon techniques.
+- Defeat Ae and Dome within one run to unlock the Final Exam once.
+
+### Game loop
 
 ```text
-Title screen → Building 30 entrance → Left door
-             ↘ Car: choose to go home → Joke ending → New run
+Title → Building 30 entrance → Left door → Begin combat
+                           ↘ Car → Go-home joke ending → Restart
 
-Monster room → Ajarn room → Choose 1 of 3 upgrades
-      ↑                            ↓
-      └──────── Next stage ─────────┘
+Monster room → Ajarn + minions → Choose 1 of 3 upgrades
+     ↑                                ↓
+     └──────────── Next stage ────────┘
 
-Clear 4 stages → Start a harder loop
-Clear loop 1 or an even-numbered loop → Choose the final Ajarn upgrade
-                            → Fight 1 random EX → Gain its buff → Next loop
-HP reaches zero → Results screen → New run
+After stage 4:
+  Loop 1, 2, 4, 6, ... → Random EX → Run buff
+  Other loops         → Continue
+  Final Exam queued?  → Cutscene → Ae + Dome
+  Resume saved sequence → Next, harder loop
+
+HP reaches zero → Defeat/results screen → New run
 ```
 
-**Implemented:** Each loop shuffles four unique stage locations and selects four of eight Ajarns, including one from each combat family. A stage contains one monster room followed by one Ajarn room. Clearing a monster room restores 12 HP. Defeating an Ajarn restores 35 HP and presents an upgrade choice. One of three EX enemies appears after loop 1, then after loops 2, 4, 6, and so on.
+**Implemented:** Each loop uses all four locations once and selects four bosses from five active Ajarns: Ken or Sati; Ae; M; and Dome. Both location order and boss order are shuffled. Clearing a monster room restores **12 HP**. Clearing an Ajarn room restores **35 HP** and opens the upgrade screen. Healing cannot exceed maximum HP.
 
-### Four stage locations
+**Final Exam ordering:** Victories over Ae and Dome accumulate within the same run. In loop 1, a ready exam waits until after the introductory EX. In later loops it follows the qualifying boss reward unless an end-of-loop EX is already next; that EX comes first. Clearing the exam resumes the saved room sequence. M does not count toward the Ae/Dome requirement.
 
-| Location | Theme |
+## Project Scope
+
+### Targeted platforms
+
+**Implemented target:** Desktop through Java, libGDX and LWJGL3, using keyboard and mouse. The logical game space is 1280 × 720.
+
+**Planned:** An iPad build and a complete touch control scheme. Existing on-screen skill buttons do not establish full mobile support. Other desktop operating systems need their own release testing before being advertised as verified.
+
+### Targeted audience
+
+**Design target:** Players who enjoy short arena fights, repeated attempts and choosing a build. Student-life humor is aimed especially at university and computer engineering audiences. These are intended audiences, not findings from user research.
+
+### How to finish the loop
+
+Completing four stages finishes one school-year loop. EX and queued Final Exam encounters resolve before the game resumes the next part of its sequence. Defeating the three-teacher Final Exam is a major milestone, but the prototype has **no final graduation ending**; the run continues until HP reaches zero.
+
+**Demo goal:** Show one complete loop, an upgrade choice and the first EX, then reach loop 2. Demonstrate the Final Exam separately when random boss selection does not unlock it during that route.
+
+**Team decision needed:** Decide whether the release should end at graduation or retain endless survival, and set a target run duration after playtesting.
+
+### Technologies and delivery
+
+- Java 17 or newer; libGDX framework; LWJGL3 desktop launcher; Gradle build.
+- PNG pixel-art frames, nearest-neighbor filtering and optional local audio.
+- Separate systems for flow, player, weapons, combat, enemy behavior, rendering, world geometry and sound.
+- Original art and audio remain local. A source-only clone uses fallback visuals and missing sounds stay optional.
+- No implemented multiplayer, account system, persistent unlock progression or save/resume system is claimed by this design.
+
+## Story
+
+### Player POV
+
+You are a computer engineering student returning to Building 30. Familiar lessons have become dangerous arenas, Ajarns stand between you and the next stage, and even the everyday objects around you behave strangely. You fight to survive the year and understand why it keeps repeating.
+
+### Summary
+
+**Narrative direction:** Preserve the original Notion premise of a curse that returns the student to the first day of study, while presenting each gameplay loop as another attempt to survive year four. The exact connection between that first day and the repeating final year remains a team writing decision.
+
+The immediate objective is to survive each room. Longer-term goals are to build stronger combinations, defeat EX enemies and qualify for the Final Exam. At the entrance, choosing the car lets the student abandon the day through a joke ending.
+
+### In-depth
+
+- **Arrival:** Building 30 establishes an ordinary campus setting before the student chooses the door or the car.
+- **The repeating year:** Programming Lab, Circuit Workshop, Network Center and Capstone Studio represent areas of academic pressure. These are the current stage names; distinct room identities remain future art and level work.
+- **Ajarns as tests:** Teachers create different combat problems. Their attacks transform academic themes into exaggerated challenges.
+- **EX interruptions:** The cat, vacuum and sword interrupt the school-year rhythm with their own encounter rules and rewards.
+- **Final Exam:** Ae and Dome appear together on server cabinets. Restricting the student to a lower horizontal lane changes the player's usual movement habits.
+- **After the exam:** Current gameplay returns to the continuing run. Curse resolution, dialogue, graduation and a definitive story ending are **planned or undecided**, rather than implemented narrative content.
+
+## Gameplay
+
+### Core gameplay loops
+
+**Moment to moment:** Observe enemy warnings → reposition or dash → attack with the suitable weapon → recover SP → respond again.
+
+**Room to room:** Defeat all required enemies → receive healing/reward → choose an upgrade after an Ajarn → continue.
+
+**Run progression:** Complete four stages → resolve scheduled special encounters → enter a harder loop → survive until defeated → start with a fresh build.
+
+### Controls
+
+| Action | Input |
 | --- | --- |
-| Programming Lab | Programming laboratory |
-| Circuit Workshop | Algorithms workshop |
-| Network Center | Network laboratory |
-| Web Programming | Final-year project |
+| Move | WASD or arrow keys |
+| Normal attack | Hold left mouse button or Space |
+| Lock target | Click near an enemy; empty ground selects the nearest living enemy |
+| Switch weapon | Tab; 1 for LAN, 2 for Notebook |
+| Dash | Shift |
+| PowerBall | E or BALL button |
+| Ice Wall | F or ICE button |
+| LAN Sword Wave | R or LAN button, with LAN equipped |
+| HP / SP potion | Z / X |
+| Escape bind | Alternate A/D or Left/Right six times |
+| Choose upgrade | Click a card or press 1/2/3 |
+| Reroll upgrades | R, once per upgrade screen |
+| Continue / begin exam | Enter |
+| Restart after defeat | R |
 
-**Prototype limitation:** Stage names affect the displayed location and shuffled order, but combat currently reuses the same regular-room and boss-room backgrounds. The locations do not yet have distinct visuals or mechanics.
+R is context-sensitive: Sword Wave during combat, reroll on the upgrade screen and restart after defeat.
 
-## 3. Player and controls
+### Player resources and targeting
 
-| Action | Desktop control | Effect |
-| --- | --- | --- |
-| Move | WASD or arrow keys | Walk within the room's playable floor area. |
-| Normal attack | Hold left mouse button or Space | Attack repeatedly with the active weapon. |
-| Select a target | Click near an enemy | Lock that enemy. Clicking empty space locks the nearest living enemy. |
-| Switch weapons | Tab or 1/2 | Select the LAN cable or notebook. |
-| Dash | Shift | Move quickly with a brief period of damage immunity. |
-| Cast PowerBall | E or the on-screen SKILL button | Stop and cast a homing projectile. |
-| Ice Wall | F or ICE button | Raise a temporary barrier in the facing direction. |
-| HP / SP potion | Z / X | Consume a stored bottle for 40 HP / 35 SP. |
-| Escape a bind | Alternate A/D or left/right six times | Break free before the bind expires. |
-| Choose an upgrade | Click a card or press 1/2/3 | Take one upgrade. |
-| Continue | Enter | Move on after clearing a room. |
-| Restart after defeat | R | Begin a new run. |
+**Implemented:** Begin with **100 HP**, **100 SP**, both weapons and two HP/two SP potions. SP regenerates at **14 per second** and is also recovered on kills. Room entry restores up to **30 SP** and gives **0.9 seconds** of initial immunity. HP potions restore **40 HP**; SP potions restore **35 SP**. Using a potion at full capacity does not consume it. Bottles carry between rooms; replenishment and monster drops are not implemented.
 
-**Implemented:** The player enters combat with both weapons, 100/100 HP, and 100/100 SP. SP regenerates at 14 per second and increases on kills. The player stays on the floor below the room's windows, including while dashing. Starting a new room restores up to 30 SP and provides a short period of immunity.
+Normal attacks use the held target; Notebook projectiles home toward it. PowerBall initially locks the nearest living enemy and retargets if that enemy dies. Player and enemy movement stays inside the playable floor area.
 
 ### Weapons and abilities
 
-| Tool | Role | Prototype base values |
+| Tool | Role | Current base values before upgrades |
 | --- | --- | --- |
-| LAN cable | Close-range arc attack | 27 damage, 125-unit reach, one swing every 0.44 seconds, no SP cost. |
-| Notebook | Ranged attack that homes toward a locked target | 20 damage, one attack every 0.28 seconds, 10 SP per shot. |
-| PowerBall | Homing skill with an area explosion | 42 base projectile damage before bonuses, 130-unit blast radius, 30 SP cost, 2-second cooldown. |
-| Dash | Dodge or reposition | 115-unit movement, 25 SP cost, 0.75-second cooldown. |
+| LAN cable | Close-range arc and resource recovery option | 27 damage; 125-unit reach; 0.44-second interval; 0 SP |
+| Notebook | Homing ranged attack | 20 damage; 0.28-second interval; 10 SP |
+| PowerBall | Homing projectile with area damage and crowd control | 42 base damage; 130-unit explosion radius; 30 SP; 2-second cooldown |
+| Dash | Reposition or time immunity against impact | 115-unit movement; 25 SP; 0.75-second cooldown; 0.22-second immunity |
+| Ice Wall | Temporary barrier and nearby disruption | 25 SP; 7-second cooldown; 4.5-second duration; 24 damage on raising |
+| LAN Sword Wave | Straight projectile with LAN equipped | 38 damage plus physical bonus; 0 SP; 0.1-second cooldown |
 
-PowerBall's cast animation lasts about 0.72 seconds and releases the projectile about 0.4 seconds after casting starts. Movement, dashing, weapon switching, and normal attacks are unavailable during the cast. The projectile tracks its target and switches to another living enemy if that target dies. Its explosion knocks ordinary monsters back farther than bosses, briefly stuns them, and then slows them.
+PowerBall locks movement and ordinary attacks during its **0.72-second** cast, releasing at about **0.4 seconds**. Its explosion uses distance falloff, knocks back ordinary enemies more strongly than bosses, briefly stuns and then slows them. The base value is not a promise of identical damage to every target.
 
-## 4. Progression and balance
+Ice Wall appears **92 units** ahead and remains fixed. It blocks movement, dashes and enemy projectiles, including boss shots; friendly shots pass through. An out-of-bounds cast fails without spending SP or starting cooldown. Its wall and cooldown reset on room entry.
 
-### Ajarn rewards
+Sword Wave follows the locked aim or facing direction and hits one enemy. Tables stop it; friendly Ice Wall lets it through. Its current free cost and short cooldown require balance review against the intended melee/ranged distinction.
 
-**Implemented:** Defeating an Ajarn presents three different upgrades. The player chooses one, and its effect lasts for that run. There is no progression system that carries upgrades between runs.
+### Arena obstacles and status effects
 
-| Category | Upgrade choices |
+Normal monster and boss rooms have **three permanent tables**, randomized once on entry with space to move around them. Tables block movement, dashes and ordinary projectiles, including player shots. Boss projectiles travel over tables. EX and Final Exam rooms retain their own layouts.
+
+Binder shots stop movement for up to **3.5 seconds**; alternating left/right inputs breaks the bind early. A warper marks its destination before striking. Slow, poison, armor, reflected attacks and safe-zone effects are communicated through effects and HUD cues.
+
+### Upgrades and build choices
+
+After an Ajarn room, choose **one of three different available upgrades**. Effects last for the current run.
+
+| Upgrade group | Choices |
 | --- | --- |
-| LAN cable | +7 damage; wider and longer sweep; slow enemies for 1.5 seconds. |
-| Notebook | +6 damage; poison over 3 seconds; small splash attack. |
-| Shared / skill | +18% attack speed; +20 movement speed; +10 PowerBall damage. |
+| LAN | +7 damage; longer/wider sweep; 1.5-second slow on hit |
+| Notebook | +6 damage; poison over 3 seconds; splash damage |
+| Shared / skill | +18% attack-speed bonus; +20 movement speed; +10 PowerBall damage |
 
-**Optional ideas (not implemented):** An ultimate skill and special weapon drops from EX monsters.
+Slow, wide sweep, poison and splash unlock once. Damage upgrades can repeat. Attack-speed bonus caps at **+180%** and the movement upgrade bonus at **+160**. EX movement rewards also use the speed-bonus field, so final speed can depend on both systems.
 
-Trait upgrades such as slow, poison, and splash can be selected once. Damage bonuses can be selected again. Attack speed and movement speed have caps in the code.
+One reroll is available per upgrade screen. It favors eligible upgrades outside the previous three and does not consume the reroll when no alternative exists. Upgrades reset on a new run; no permanent progression between runs is implemented.
+
+### Regular enemies
+
+| Role | Behavior | Counterplay |
+| --- | --- | --- |
+| Basic | Approaches and attacks | Keep spacing or use LAN sweeps |
+| Ranged | Keeps distance and fires | Close in, use cover or return ranged attacks |
+| Wave | Sends expanding energy waves | Read the path and reposition |
+| Shielded | Armor absorbs damage | Break armor before HP |
+| Binder | Fires a movement-locking projectile | Dodge, then alternate directions if caught |
+| Warper | Marks a point before teleporting into an attack | Leave the marker before impact |
+
+Loop 1 introduces ranged enemies in stage 1, waves in stage 2, shields/binders in stage 3 and warpers in stage 4. Ordinary monsters separate when crowded. Algorithm, Network and Programming artwork also exists; visual variants should not be confused with the six combat roles.
+
+### Ajarns
+
+| Active boss | Distinct behavior in normal rooms | Player response |
+| --- | --- | --- |
+| Sati | Summons armored helpers; C++ element transforms into a spear | Manage minions and avoid the spear aim line |
+| Ken | Summons helpers; places 7–9 warned bombs | Move through safe gaps before explosions |
+| Ae | Warned warp alternating bind/damage, aimed spread and sweeping vertical laser | Leave the warp circle and time movement/dash across the sweep |
+| M | Splits once at half HP; both bodies fire aimed shots | Track both bodies and avoid converging fire |
+| Dome | Alternates marked lightning and a charged laser | Leave the locked target position before impact |
+
+Ae's warp warning lasts **0.8 seconds**; his laser warns for **0.9 seconds** before a **5-second** sweep. Dome's lightning charges for **0.85 seconds**, and his laser for **1 second**. These normal-room abilities differ from the anchored Final Exam patterns.
+
+Normal Ajarn rooms begin with **2 minions in loop 1**, **3 in loop 2**, and **5 from loop 3 onward**. Defeat the boss and remaining minions to clear. Sati and Ken can summon extra armored helpers while fewer than four regular minions are alive.
+
+### EX encounters
+
+EX appears after **loop 1**, then **loops 2, 4, 6, ...**. One of three enemies is selected randomly.
+
+| EX | Encounter rule | Reward for the current run |
+| --- | --- | --- |
+| Liquid Cat | Stationary first phase; one protected transformation into a moving compact phase. Uses marked Orbital strikes; phase two takes 55% damage, leaves slowing ooze and creates up to two damageable copies. Each original phase has 190 base HP before loop scaling. | +25 maximum HP and restore 45 HP |
+| Allergic Vacuum | Suction gathers dust and pulls the nearby player. At full allergy it warns, sneezes collected dust as projectiles and releases it to settle again. | +30 movement speed and restore 20 HP |
+| Insecure Sword | Collect Post-it notes and approach to apply them. Notes reduce armor but raise confidence and stronger-slash chance. A missed slash creates a damage opportunity. | +8 physical damage, +6 magic damage and restore 20 HP |
+
+During EX only, LAN gains **Tether**, marking enemies for **35% more PowerBall explosion damage** and pulling ordinary monsters together. Notebook gains **Heat**: four throws charge a piercing beam on the next attack. These techniques turn off after EX; earned EX buffs remain until the run ends.
+
+### Final Exam
+
+**Unlock:** Defeat Ae and Dome during the same run. This encounter is available **once per run**.
+
+After a black cutscene and Enter input, both bosses occupy the outer upper server cabinets. The student moves or dashes **left and right only** in the lower lane. Notebook and PowerBall can reach the bosses above. The bosses stay anchored while their attacks combine across the room; Ae fires his aimed spread and Dome fires his cabinet laser downward.
+
+Defeat both bosses to clear the exam and return to the saved normal sequence. This encounter is a combat milestone, not an implemented final ending.
 
 ### Difficulty scaling
 
-| Enemy stat | Multiplier in loop `n` |
+For loop number n, enemy base stats use the following multipliers:
+
+| Stat | Multiplier |
 | --- | --- |
-| HP | `1 + 0.15 × (n − 1)` |
-| SP | `1 + 0.10 × (n − 1)` |
-| Speed | `1 + 0.04 × (n − 1)` |
-| Damage | `1 + 0.10 × (n − 1)` |
+| HP / applicable armor | 1 + 0.15 × (n − 1) |
+| SP / applicable regeneration | 1 + 0.10 × (n − 1) |
+| Damage | 1 + 0.10 × (n − 1) |
+| Speed | 1 + 0.04 × (n − 1) |
 
-Monster-room population increases with the stage and loop, up to a cap on the loop-based increase. Loop 1 introduces enemy types gradually. Later loops can spawn additional special monsters more often. From loop 3 onward, Ajarns may gain an extra trait; from loop 5 onward, some may also gain wave attacks.
+These are linear additions relative to base values. Room populations and special-monster frequency also increase. Encounter-specific timings may have their own caps. Balance remains subject to playtesting.
 
-## 5. Regular enemies
+### Screens, HUD and feedback
 
-| Type | Behavior to read | Player response |
-| --- | --- | --- |
-| Basic | Approaches and attacks. | Maintain distance, sweep with the LAN cable, or attack before it closes in. |
-| Green ranged | Keeps its distance and fires. | Close the gap or use the notebook or PowerBall. |
-| Blue wave | Fires expanding energy waves. | Read the wave's path and move clear. |
-| White shielded | Armor absorbs damage. | Break the armor before depleting HP. |
-| Cyan binder | A projectile prevents movement for a short time. | Dodge the shot or alternate left and right to escape. |
-| Purple warper | Marks a landing point before teleporting in for a heavy hit. | Leave the marked area before it arrives. |
+**Implemented:** Title, Building 30 entrance, car prompt/joke ending, combat, room-clear transition, upgrade selection, Final Exam cutscene and defeat/results. Scene changes fade through black.
 
-Regular monsters spread apart when crowded. Loop 1 introduces ranged enemies in stage 1, waves in stage 2, shielded enemies and binders in stage 3, and warpers in stage 4.
+The HUD communicates HP/SP, potions, current weapon, loop/stage, enemy status, bonuses and encounter-specific meters such as Heat, Allergy and Confidence. Binding shows escape progress. Enemy markers and safe zones must stay readable over room art.
 
-## 6. Ajarns and special encounters
+**Planned UX work:** Short first-use prompts for weapon switching, SP, Dash, Ice Wall, bind escape and EX mechanics. Test whether new players understand these without consulting project documentation.
 
-### Eight Ajarns across four combat families
+## Art
 
-| Family | Current names | Main pattern |
-| --- | --- | --- |
-| Summoning + reflecting shield | Ajarn Sati, Ajarn Talgo (Ken) | Summon armored minions and reflect attacks with a shield. |
-| Summoning + warp strike | Ajarn Ohm, Ajarn Voltage | Summon minions and teleport toward the player. |
-| Long-range artillery | Ajarn Packet, Ajarn Firewall | Fire large projectiles from a distance. |
-| Energy waves + reflecting shield | Ajarn Deadline, Ajarn Thesis | Create energy waves and defend with a shield. |
+### Art style and aesthetic
 
-Ajarns hold a position toward the right side of the room between attacks. Summoners call armored minions, with a limit on living minions. Boss warps are sudden and alternate between binding the player's legs and dealing heavy damage. Regular warping monsters, by contrast, mark their destination before arriving.
+Simple **2D pixel art** with a playful campus identity. Student sprites use transparent **64 × 64** frames, displayed at 2× scale with nearest-neighbor filtering. Keep pixel scale consistent, silhouettes distinct and attack warnings visible above decorative detail.
 
-**Implemented signature attacks:** Ajarn Sati has a C++ element that transforms into a spear, with an aim line before launch. Ajarn Talgo (Ken) marks a green safe circle before a room-wide attack. The player has about 1.8 seconds to reach the circle or time a dash through the impact. Talgo's other attacks pause during the cast.
+**Current assets:** Building 30 entrance and separate car; classroom scenes and collision tables; student idle/walk/cast; several Ajarn sprites/effects; Liquid Cat and Insecure Sword animation. Sati has seven body and ten attack frames. Network and Programming monsters use the exported Network_Kiki (15 frames) and Program_Kiki (8 frames) series. Allergic Vacuum still uses temporary visuals. Missing optional exports use fallback sprites.
 
-**Planned:** Most Ajarn names and main character art are still placeholders. Each needs a distinct appearance, signature move, and short character voice while keeping the combat family readable.
+**Planned:** Replace remaining temporary visuals, give the four stage themes stronger identities and polish instructional feedback. Distinct art does not imply each location already has unique mechanics.
 
-### EX encounters after loop 1 and even-numbered loops
+### Sound design
 
-| EX | Encounter mechanic | Reward on defeat |
-| --- | --- | --- |
-| Liquid Cat | Switches between a full cat and a slower, smaller form that takes reduced damage. The compact form leaves slowing ooze and fires liquid bullets; the full form marks a landing point before a heavy leap. | +25 maximum HP and restore 45 HP. |
-| Allergic Vacuum | Pulls loose dust and a nearby player toward its nozzle. Dust raises its allergy meter. At 100%, suction stops, a sneeze warning appears, and collected dust is launched as damaging projectiles. | +30 movement speed and restore 20 HP. |
-| Insecure Sword | Drops Post-it notes. The player picks them up and brings them close to the sword. Notes lower its armor but raise its confidence and chance of a strong slash. A missed slash leaves it open to extra damage. | +8 LAN damage, +6 magic damage, and restore 20 HP. |
+**Implemented:** Menu selection, LAN and Notebook attacks, hits/armor, weapon switching, PowerBall, room transitions and Sati's C++ transformation. Dome has separate lightning/laser cast and impact cues. Sword Wave alternates two clips, restarting the cue on a successful cast.
 
-During an EX encounter only, the LAN cable gains **Tether**, which marks enemies for 35% extra PowerBall damage and pulls ordinary monsters together. The notebook gains **Heat**: four throws charge a wide piercing beam for the next attack. Both techniques turn off when the EX fight ends. The buff earned by defeating the EX remains for the rest of the run.
+**Direction:** Charge sounds should announce danger before impact; hits and armor should sound different; reward/transition cues should support the combat rhythm. Missing local sounds remain optional.
 
-## 7. Screens and player communication
+**Planned:** A consistent campus ambience and music direction, a complete volume mix and any missing encounter cues. No completed soundtrack is claimed.
 
-**Implemented:** Title screen; Building 30 entrance; prompt to take the car home; combat rooms; cleared-room interstitial; upgrade selection; defeat screen; and the car's joke ending. Scene changes fade through black.
+### Moodboard direction
 
-The HUD shows HP, SP, loop, stage, room or primary enemy, active weapon, and current bonuses. A bind adds an escape-progress bar. EX fights show relevant state such as Heat, Allergy, or Confidence. Warning markers and safe areas must remain readable over the background, especially when several enemies are on screen.
+Use original project art as the visual reference set:
 
-**UX proposal:** Before the first combat room, give players short prompts for attacking, switching weapons, dashing, and using the skill. On the first encounter with a binder, warper, or EX, explain its counterplay through brief in-game text and symbols. Then test whether a new player understands those mechanics without consulting the README.
-
-## 8. Art, audio, and technology
-
-| Area | Current status |
+| Reference | Intended feeling or design use |
 | --- | --- |
-| Player character | Transparent 64×64 PNG frames for idle, walk, and skill_case; displayed at 2× scale with nearest-neighbor filtering. |
-| Environments | Building 30 entrance with a separate car layer; team-made regular and boss room backgrounds. |
-| Bosses and EX | Liquid Cat and Insecure Sword have in-game animation frames. Sati's C++ element has art and sound. Allergic Vacuum, Sati's main body, and regular monsters still use some temporary visuals. |
-| Audio | Sound effects cover menu choices, weapons, hits, room changes, PowerBall, and the C++ element's transformation. |
-| Engine | Java and libGDX, desktop via LWJGL3, 1280×720 logical game space. |
+| Title artwork | Playful school-life premise and identity |
+| Building 30 entrance | Familiar campus arrival and the door/car choice |
+| Classroom with tables | Readable arena layout and usable cover |
+| Student idle/walk/cast frames | Consistent scale, clear motion and casting poses |
+| Liquid Cat / Insecure Sword art | Absurd EX personalities with readable phases |
+| Server room and Dome effects | Concentrated exam pressure and clear attack warnings |
 
-**Art direction for remaining work:** Keep pixel scale and nearest-neighbor rendering consistent. Give threats distinct effect colors, and prevent furniture or room art from obscuring attack warnings. Classroom furniture is currently part of the background and has no collision.
+These describe available reference subjects. The Notion moodboard should use reviewed exports from the team; this revision does not claim to have attached image files.
 
-## 9. Demo scope and acceptance criteria
+## Demo Acceptance and Team Decisions
 
-The team demo should play continuously from the entrance through four stages, include upgrade choices after Ajarns, present an EX encounter after loop 1, and enter loop 2 without blocking progress.
+### Acceptance criteria
 
-| Area | Acceptance criterion |
+| Area | Evidence needed |
 | --- | --- |
-| Run flow | Correct room order; four unique locations per loop; four boss families; EX after loop 1 and even-numbered loops. |
-| Combat | Both weapons and PowerBall work; major status effects have readable counters; HP, SP, and targeting are shown correctly. |
-| Progression | Choosing one of three upgrades changes gameplay; EX buffs last for the run; EX-only techniques disappear after the encounter. |
-| Presentation | The player character and all three EX enemies are visually distinct; major attacks have readable visual and audio timing; temporary art is replaced in content presented as finished. |
-| Stability | A player can launch the game, finish loop 2, lose, and restart without a freeze or progress-blocking error. |
+| Run flow | Play entrance → four stages → upgrade choices → first EX → loop 2 |
+| Combat | Demonstrate LAN, Notebook, PowerBall, Dash, Ice Wall, Sword Wave and cover rules |
+| Progression | Show one upgrade changing behavior, a valid reroll and an EX buff carrying forward |
+| Final Exam | Show correct Ae/Dome unlock, EX ordering, horizontal movement and return to the saved sequence |
+| Presentation | Read major warnings, distinguish enemies and identify remaining placeholder assets |
+| Stability | Complete the route, lose and restart without a progress-blocking error |
 
-**Prototype status:** Core systems and the behavior of all three EX encounters are implemented. Some character art and screen polish remain incomplete, so the presentation criteria describe work to finish rather than completed features.
+Automated rule checks support system verification; they do not replace live playtesting or establish a target session duration.
 
-## 10. Team decisions needed
+### Team responsibilities
 
-1. Final Thai title, short description, and story reason for the repeating fourth year.
-2. Final identities, art, and signature moves for Ajarns that still use placeholder names or visuals, including how each relates to the four stage themes.
-3. Target run length and what counts as a satisfying demo ending, since the prototype's main loop can continue indefinitely.
-4. Whether in-game controls and text remain in English or use Thai or both languages.
-5. Priority order for character art, sound, location-specific rooms, and touch controls after the desktop demo.
+The existing team plan assigns **Dim** to monster abilities, **Ju** to player abilities, **Apple** to upgrades and **Jj** to scene transitions/weapon abilities. These are responsibility areas, not proof of authorship of every existing feature. Each member should demonstrate and explain their own changes using actual implementation and commit evidence.
 
-## Project references
+### Decisions still needed
 
-- [README.md](README.md): Controls, game content, and current art and audio status.
-- [TEAM_PLAN.md](TEAM_PLAN.md): Team demo goal and division of work.
-- `core/src/main/java/io/github/kirinojuju/`: Current rules in `RunPlan`, `RunDirector`, `PlayerCharacter`, `CombatRoom`, `Upgrade`, and `GameRenderer`.
-- `core/src/test/java/io/github/kirinojuju/GameRulesCheck.java`: Regression checks for loop order, weapons, EX encounters, and combat rules.
+1. Confirm the curse origin and the relationship between the first-day premise and the looping fourth year.
+2. Choose endless survival or a graduation ending and set a tested target run length.
+3. Review Sword Wave's free rapid-fire balance and its effect on weapon roles.
+4. Finalize tutorials, language support and accessibility/readability checks.
+5. Prioritize remaining art/audio, distinct stage layouts and future touch controls.
+
+### Project references
+
+- README.md — controls, content, asset status and run instructions.
+- CODE_ARCHITECTURE.md — system layout and execution flow.
+- TEAM_PLAN.md — responsibility areas and demonstration expectations.
+- INTEGRATION.md — integration provenance and verification.
+- Core source: RunPlan, RunDirector, PlayerCharacter, Upgrade, PotionInventory, EnemyFactory, boss/EX behaviors, combat and world systems.
+- Existing checks: GameRulesCheck, CustomBossCheck and DomeBossCheck.

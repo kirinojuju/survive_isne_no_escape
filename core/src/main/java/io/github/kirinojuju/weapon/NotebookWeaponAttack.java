@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import io.github.kirinojuju.audio.GameAudio;
 import io.github.kirinojuju.combat.CombatRoom;
+import io.github.kirinojuju.enemy.Enemy;
 import io.github.kirinojuju.player.PlayerCharacter;
 import io.github.kirinojuju.render.OptionalAssetTexture;
 import io.github.kirinojuju.weapon.WeaponAttack.WeaponAttackSpec;
@@ -27,9 +28,9 @@ public final class NotebookWeaponAttack extends AbstractWeaponAttack {
         if (player.sp < spec.spCost) return false;
         player.sp -= spec.spCost;
         player.attackTimer = spec.interval / (1 + player.attackSpeedBonus);
-        CombatRoom.Enemy target = player.attackTarget();
-        float dx = target == null ? player.faceX : target.x - player.x;
-        float dy = target == null ? player.faceY : target.y - player.y;
+        Enemy target = player.attackTarget();
+        float dx = target == null ? player.faceX : target.aimX() - player.x;
+        float dy = target == null ? player.faceY : target.aimY() - player.y;
         float length = Math.max(.001f, (float)Math.sqrt(dx * dx + dy * dy));
         if (spec.beam) {
             player.notebookHeat = 0;

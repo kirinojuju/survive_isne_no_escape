@@ -7,17 +7,30 @@ import java.util.Random;
 
 /** The four stages and four distinct Ajarns chosen for one school-year loop. */
 public final class RunPlan {
-    // Boss identity, independent of combat family: Sati = C++, M = OOP;
-    // Ae, Far and Dome = Network; Ken = Algorithm.
     public static final int SATI_ID = 0, AE_ID = 1, M_ID = 2, DOME_ID = 3;
-    public static final int KEN_ID = 4, VOLTAGE_ID = 5, FAR_ID = 6, THESIS_ID = 7;
+    public static final int KEN_ID = 4;
     public static final String[] STAGES = {
         "Programming Lab", "Circuit Workshop", "Network Center", "Capstone Studio"
     };
-    public static final String[] BOSSES = {
-        "Ajarn Sati", "Ajarn Ae", "Ajarn M", "Ajarn Dome",
-        "Ajarn Ken", "Ajarn Voltage", "Ajarn Far", "Ajarn Thesis"
-    };
+    private static final int[] ACTIVE_BOSSES = {SATI_ID, AE_ID, M_ID, DOME_ID, KEN_ID};
+
+    public static int[] bossIds() { return ACTIVE_BOSSES.clone(); }
+
+    public static boolean isBossId(int id) {
+        for (int boss : ACTIVE_BOSSES) if (boss == id) return true;
+        return false;
+    }
+
+    public static String bossName(int id) {
+        switch (id) {
+            case SATI_ID: return "Ajarn Sati";
+            case AE_ID: return "Ajarn Ae";
+            case M_ID: return "Ajarn M";
+            case DOME_ID: return "Ajarn Dome";
+            case KEN_ID: return "Ajarn Ken";
+            default: return "Unknown Boss";
+        }
+    }
     public static final String[] EX_MONSTERS = {
         "Liquid Cat", "Allergic Vacuum", "Insecure Sword"
     };
@@ -27,7 +40,7 @@ public final class RunPlan {
     private final int[] bossOrder = new int[4];
     private int loop = 1;
     private int stage = 0;
-    private int finalExamDefeats;
+    private boolean aeDefeated, domeDefeated;
 
     public RunPlan(Random random) {
         this.random = random;
@@ -39,8 +52,10 @@ public final class RunPlan {
         List<Integer> bosses = new ArrayList<Integer>();
         for (int i = 0; i < STAGES.length; i++) stages.add(i);
         // One boss from each combat family keeps every loop varied.
-        for (int family = 0; family < 4; family++)
-            bosses.add(family + (random.nextBoolean() ? 4 : 0));
+        bosses.add(random.nextBoolean() ? KEN_ID : SATI_ID);
+        bosses.add(AE_ID);
+        bosses.add(M_ID);
+        bosses.add(DOME_ID);
         Collections.shuffle(stages, random);
         Collections.shuffle(bosses, random);
         for (int i = 0; i < 4; i++) {
@@ -54,18 +69,17 @@ public final class RunPlan {
     public int stageId() { return stageOrder[stage]; }
     public int bossId() { return bossOrder[stage]; }
     public String stageName() { return STAGES[stageId()]; }
-    public String bossName() { return BOSSES[bossId()]; }
+    public String bossName() { return bossName(bossId()); }
     public boolean isFinalStage() { return stage == 3; }
     public boolean hasExAfterYear() { return loop == 1 || loop % 2 == 0; }
     public int randomExId() { return random.nextInt(EX_MONSTERS.length); }
 
     public void recordBossDefeat(int bossId) {
-        if (bossId == AE_ID) finalExamDefeats |= 1;
-        else if (bossId == FAR_ID) finalExamDefeats |= 2;
-        else if (bossId == DOME_ID) finalExamDefeats |= 4;
+        if (bossId == AE_ID) aeDefeated = true;
+        else if (bossId == DOME_ID) domeDefeated = true;
     }
 
-    public boolean finalExamReady() { return finalExamDefeats == 7; }
+    public boolean finalExamReady() { return aeDefeated && domeDefeated; }
 
     /** Call only after the current boss is defeated. Returns true after stage four. */
     public boolean completeStage() {

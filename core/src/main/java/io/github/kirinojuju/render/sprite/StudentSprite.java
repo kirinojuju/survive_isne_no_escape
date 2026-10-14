@@ -1,10 +1,11 @@
-package io.github.kirinojuju.render;
+package io.github.kirinojuju.render.sprite;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.player.PlayerCharacter;
+import io.github.kirinojuju.render.OptionalAssetTexture;
 import java.util.Locale;
 
 /** Loads the artist's separate 64x64 PNG frames and chooses a player animation. */

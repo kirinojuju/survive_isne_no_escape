@@ -5,22 +5,56 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
+import io.github.kirinojuju.enemy.Enemy;
+import io.github.kirinojuju.enemy.boss.BossBody;
 
 /** Uses local art when available and a small code-drawn stand-in in fresh clones. */
 public final class OptionalAssetTexture {
     private OptionalAssetTexture() { }
 
+    /** The texture owns its visible bounds; disposal needs no separate global cache. */
+    private static final class BodyTexture extends Texture {
+        private final float[] bounds;
+
+        BodyTexture(Pixmap pixels) {
+            super(pixels);
+            bounds = readBodyBounds(pixels);
+        }
+    }
+
+    public static Texture frame(Texture[] frames, int index) {
+        Texture selected = frames[Math.max(0, Math.min(index, frames.length - 1))];
+        if (selected != null) return selected;
+        for (Texture frame : frames) if (frame != null) return frame;
+        return null;
+    }
+
     public static Texture load(String path) {
         FileHandle file = Gdx.files.internal(path);
-        Texture texture;
-        if (file.exists()) texture = new Texture(file);
-        else {
-            Pixmap pixels = placeholder(path);
-            try { texture = new Texture(pixels); }
-            finally { pixels.dispose(); }
+        boolean present = file.exists();
+        Pixmap pixels = present ? new Pixmap(file) : placeholder(path);
+        try {
+            boolean body = !present || path.startsWith("characters/boss/")
+                || path.startsWith("characters/boss_ex/");
+            Texture texture = body ? new BodyTexture(pixels) : new Texture(pixels);
+            texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+            return texture;
+        } finally {
+            pixels.dispose();
         }
-        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        return texture;
+    }
+
+    private static float[] readBodyBounds(Pixmap pixels) {
+        int width = pixels.getWidth(), height = pixels.getHeight();
+        int[] rgba = new int[width * height];
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++) rgba[y * width + x] = pixels.getPixel(x, y);
+        return BossBody.visibleBounds(width, height, rgba);
+    }
+
+    public static void applyBodyBounds(Enemy boss, Texture frame, boolean flipped) {
+        float[] bounds = frame instanceof BodyTexture ? ((BodyTexture) frame).bounds : null;
+        BossBody.applyBounds(boss, bounds, flipped);
     }
 
     private static Pixmap placeholder(String path) {
@@ -33,11 +67,20 @@ public final class OptionalAssetTexture {
         else if (path.contains("insecure-sword/")) drawSword(pixels);
         else if (path.contains("Tnetwork(Dome)/")) drawDome(pixels, path);
         else if (path.startsWith("weapons/notebook/")) drawNotebook(pixels, path);
+        else if (path.startsWith("weapons/sword_power/")) drawLanWave(pixels);
         else if (path.startsWith("weapons/icewall/")) drawIceWall(pixels);
         else if (path.startsWith("weapons/potion/")) drawPotion(pixels, path.contains("_hp"));
         else if (path.contains("monsters/")) drawSlime(pixels);
         else drawSati(pixels, path);
         return pixels;
+    }
+
+    private static void drawLanWave(Pixmap pixels) {
+        pixels.setColor(Color.CYAN);
+        for (int radius = 20; radius <= 23; radius++) pixels.drawCircle(32, 32, radius);
+        pixels.setBlending(Pixmap.Blending.None);
+        pixels.setColor(0, 0, 0, 0);
+        pixels.fillRectangle(0, 0, 33, 64);
     }
 
     private static void drawIceWall(Pixmap pixels) {

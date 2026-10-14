@@ -8,6 +8,8 @@ import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.flow.RunDirector;
 import io.github.kirinojuju.player.PlayerCharacter;
 import io.github.kirinojuju.render.GameRenderer;
+import io.github.kirinojuju.weapon.LanWeaponAttack;
+import io.github.kirinojuju.weapon.NotebookWeaponAttack;
 import java.util.Random;
 
 /** Desktop game entry point. Each gameplay area lives in its own class. */
@@ -40,7 +42,7 @@ public class schoolLife extends ApplicationAdapter {
     }
 
     private void newRun() {
-        player = new PlayerCharacter();
+        player = new PlayerCharacter(new LanWeaponAttack(), new NotebookWeaponAttack());
         combat = new CombatRoom(random);
         run = new RunDirector(random);
         player.setAudio(audio);
@@ -54,7 +56,7 @@ public class schoolLife extends ApplicationAdapter {
     private void updateExTestControls() {
         if (testMode.exId < 0) return;
         TestMode selected = selectedExTestMode();
-        boolean retry = Gdx.input.isKeyJustPressed(Input.Keys.R)
+        boolean retry = Gdx.input.isKeyJustPressed(Input.Keys.F4)
             || (run.phase == RunDirector.Phase.TRANSITION
                 && Gdx.input.isKeyJustPressed(Input.Keys.ENTER));
         if (selected != null) testMode = selected;
@@ -82,12 +84,14 @@ public class schoolLife extends ApplicationAdapter {
             && renderer.skillButtonJustPressed();
         boolean touchIceWall = run.phase == RunDirector.Phase.FIGHT
             && renderer.iceWallButtonJustPressed();
+        boolean touchLanWave = run.phase == RunDirector.Phase.FIGHT
+            && renderer.lanWaveButtonJustPressed();
         boolean mouseAttack = run.phase == RunDirector.Phase.FIGHT
             && renderer.mouseAttackHeld();
         if (mouseAttack && renderer.mouseAttackJustPressed())
             player.lockAttackTarget(combat, renderer.mouseWorldX(), renderer.mouseWorldY());
         handleMenuClicks();
-        if (run.update(dt, player, combat, touchSkill, touchIceWall, mouseAttack)) newRun();
+        if (run.update(dt, player, combat, touchSkill, touchIceWall, touchLanWave, mouseAttack)) newRun();
     }
 
     private void handleMenuClicks() {

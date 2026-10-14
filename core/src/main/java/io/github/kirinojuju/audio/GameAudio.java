@@ -3,7 +3,7 @@ package io.github.kirinojuju.audio;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Sound;
 
-/** Short game cues loaded from the team's converted sound effects. */
+/** Game cues; sword clips restart immediately on each successful cast. */
 public final class GameAudio {
     private static final String ROOT = "characters/soundfx/";
     private final Sound click = load("click_sound.ogg");
@@ -19,6 +19,9 @@ public final class GameAudio {
     private final Sound domeLightningStrike = load("boss_fx/Dome/lighting_efx_hit_sound.ogg");
     private final Sound domeLaserCast = load("boss_fx/Dome/laser_efx_cast_sound.ogg");
     private final Sound domeLaserFire = load("boss_fx/Dome/laser_efx_hit_sound.ogg");
+    private final Sound[] swordWaves = {loadSword("getsuga1.mp3"), loadSword("getsuga2.mp3")};
+    private Sound playingSwordWave;
+    private int swordWaveIndex;
     private float hitCooldown;
 
     private static Sound load(String name) {
@@ -26,9 +29,23 @@ public final class GameAudio {
         return Gdx.audio.newSound(Gdx.files.internal(ROOT + name));
     }
 
+    private static Sound loadSword(String name) {
+        String path = "weapons/sword_power/" + name;
+        return Gdx.files.internal(path).exists() ? Gdx.audio.newSound(Gdx.files.internal(path)) : null;
+    }
+
     public void update(float dt) { hitCooldown = Math.max(0, hitCooldown - dt); }
     public void click() { play(click, .35f); }
     public void lanAttack() { play(lanAttack, .42f); }
+    public void lanWave() {
+        Sound cue = swordWaves[swordWaveIndex];
+        swordWaveIndex = 1 - swordWaveIndex;
+        if (cue == null) cue = swordWaves[swordWaveIndex];
+        if (cue == null) { lanAttack(); return; }
+        if (playingSwordWave != null) playingSwordWave.stop();
+        play(cue, .45f);
+        playingSwordWave = cue;
+    }
     public void notebookAttack() { play(click, .18f); }
     public void weaponSwitch() { restart(weaponSwitch, .42f); }
     public void skillCast() { restart(skillCast, .38f); }
@@ -75,5 +92,6 @@ public final class GameAudio {
         dispose(domeLightningStrike);
         dispose(domeLaserCast);
         dispose(domeLaserFire);
+        for (Sound cue : swordWaves) dispose(cue);
     }
 }

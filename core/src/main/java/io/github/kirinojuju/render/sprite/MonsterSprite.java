@@ -1,14 +1,24 @@
-package io.github.kirinojuju.render;
+package io.github.kirinojuju.render.sprite;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import io.github.kirinojuju.combat.CombatRoom;
+import io.github.kirinojuju.enemy.Enemy;
+import io.github.kirinojuju.enemy.Monster;
+import io.github.kirinojuju.render.OptionalAssetTexture;
 
-/** Three art families share the six existing monster behaviors. */
-public final class MonsterSprite {
+/** Dedicated monster artwork with Slime/Blob fallbacks for the six combat roles. */
+public class MonsterSprite extends EnemySprite {
     private static final String ROOT = "characters/monsters/";
+    private static final float DRAW_SIZE = 92f;
+    private static final float FRAME_TIME = .12f;
+    private final Texture[] network = frames(ROOT + "monster_network/Network_Kiki%d.png", 1, 15, false);
+    private final Texture[] program = frames(ROOT + "monster_program/Program_Kiki%d.png", 1, 8, false);
+    private final Texture[] algorithm = frames(ROOT + "monster_algo/gigiAlgo%02d.png", 0, 2, false);
+    private final Texture algoBall = load(ROOT + "monster_algo/ballgigiAlgo00.png");
+    private final Texture[] slime = {optional("gigiSlime.png")};
     private final Frames slimeIdle = Frames.individual("slime-idle-", 4);
     private final Frames slimeMove = Frames.individual("slime-move-", 4);
     private final Frames slimeAttack = Frames.individual("slime-attack-", 5);
@@ -18,7 +28,21 @@ public final class MonsterSprite {
     private final Frames greenIdle = Frames.sheet("Green", "Idle");
     private final Frames greenRun = Frames.sheet("Green", "Run");
 
-    public void draw(SpriteBatch batch, CombatRoom.Enemy monster, float playerX) {
+    public MonsterSprite() { super(CombatRoom.BASIC); }
+    @Override public boolean supports(Enemy enemy) { return enemy.kind < 0; }
+
+    @Override public void draw(SpriteBatch batch, Enemy monster, float playerX) {
+        Texture[] dedicated = dedicatedFrames(monster);
+        if (dedicated != null) {
+            float interval = monster.kind == CombatRoom.BASIC ? .2f : FRAME_TIME;
+            Texture frame = OptionalAssetTexture.frame(dedicated,
+                (int)(monster.animationTime / interval) % dedicated.length);
+            if (frame != null) {
+                batch.draw(frame, monster.x - DRAW_SIZE / 2, monster.y - DRAW_SIZE / 2,
+                    DRAW_SIZE, DRAW_SIZE);
+                return;
+            }
+        }
         Frames animation;
         float frameTime = .12f, elapsed = monster.animationTime;
         switch (monster.kind) {
@@ -50,7 +74,24 @@ public final class MonsterSprite {
             monster.y - animation.originY * scale, flip ? -width : width, height);
     }
 
-    public void dispose() {
+    private Texture[] dedicatedFrames(Enemy enemy) {
+        if (!(enemy instanceof Monster)) return null;
+        switch (((Monster)enemy).appearance()) {
+            case ALGORITHM: return algorithm;
+            case NETWORK: return network;
+            case PROGRAM: return program;
+            case SLIME: return slime;
+            default: return null;
+        }
+    }
+
+    public void drawBall(SpriteBatch batch, CombatRoom.Shot shot) {
+        float size = shot.radius * 4;
+        batch.draw(algoBall, shot.x - size / 2, shot.y - size / 2, size, size);
+    }
+
+    @Override public void dispose() {
+        super.dispose();
         for (Frames animation : new Frames[] {slimeIdle, slimeMove, slimeAttack, slimeHurt,
             blueIdle, blueRun, greenIdle, greenRun}) animation.dispose();
     }

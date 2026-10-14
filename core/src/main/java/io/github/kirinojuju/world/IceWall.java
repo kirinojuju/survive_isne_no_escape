@@ -1,7 +1,7 @@
 package io.github.kirinojuju.world;
 
 import com.badlogic.gdx.math.MathUtils;
-import io.github.kirinojuju.combat.CombatRoom;
+import io.github.kirinojuju.enemy.Enemy;
 
 /** One temporary barrier: lifetime, rotated collision box and separation. */
 public final class IceWall {
@@ -89,7 +89,7 @@ public final class IceWall {
     }
 
     /** Ground movement is swept too, so a fast enemy cannot walk through between updates. */
-    public void stopEnemy(CombatRoom.Enemy enemy, float oldX, float oldY) {
+    public void stopEnemy(Enemy enemy, float oldX, float oldY) {
         if (enemy.anchored || movesOut(oldX, oldY, enemy.x - oldX, enemy.y - oldY, enemy.radius)) return;
         float hit = hitFraction(oldX, oldY, enemy.x, enemy.y, enemy.radius);
         if (hit < 0) return;
@@ -98,12 +98,12 @@ public final class IceWall {
         enemy.y = oldY + (enemy.y - oldY) * fraction;
     }
 
-    public void resolveEnemy(CombatRoom.Enemy enemy) {
+    public void resolveEnemy(Enemy enemy) {
         resolveEnemy(enemy, null);
     }
 
-    public void resolveEnemy(CombatRoom.Enemy enemy, RoomObstacles obstacles) {
-        if (enemy.anchored || enemy.hp <= 0
+    public void resolveEnemy(Enemy enemy, RoomObstacles obstacles) {
+        if (enemy.anchored || enemy.getHp() <= 0
             || hitFraction(enemy.x, enemy.y, enemy.x, enemy.y, enemy.radius) < 0) return;
         float cos = MathUtils.cos(angle), sin = MathUtils.sin(angle);
         float along = (enemy.x - x) * cos + (enemy.y - y) * sin;

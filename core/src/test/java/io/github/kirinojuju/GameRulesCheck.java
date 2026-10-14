@@ -1,23 +1,29 @@
 package io.github.kirinojuju;
 
+import io.github.kirinojuju.weapon.WeaponAttack;
+
 import io.github.kirinojuju.combat.CombatRoom;
-import io.github.kirinojuju.enemy.boss.TalgoBossBehavior;
-import io.github.kirinojuju.enemy.boss.SatiBossBehavior;
-import io.github.kirinojuju.enemy.ex.LiquidCatBehavior;
-import io.github.kirinojuju.enemy.boss.DomeBossBehavior;
-import io.github.kirinojuju.enemy.boss.MBoss;
+import io.github.kirinojuju.enemy.Enemy;
+import io.github.kirinojuju.enemy.boss.AeBoss;
+import io.github.kirinojuju.enemy.boss.Boss;
+import io.github.kirinojuju.enemy.boss.DomeBoss;
 import io.github.kirinojuju.enemy.boss.KenBoss;
-import io.github.kirinojuju.world.EntranceScene;
-import io.github.kirinojuju.world.GameSpace;
-import io.github.kirinojuju.player.PlayerCharacter;
-import io.github.kirinojuju.world.RoomObstacles;
-import io.github.kirinojuju.world.IceWall;
+import io.github.kirinojuju.enemy.boss.MBoss;
+import io.github.kirinojuju.enemy.boss.SatiBoss;
+import io.github.kirinojuju.enemy.ex.AllergicVacuumBoss;
+import io.github.kirinojuju.enemy.ex.ExBoss;
+import io.github.kirinojuju.enemy.ex.InsecureSwordBoss;
+import io.github.kirinojuju.enemy.ex.LiquidCatBoss;
 import io.github.kirinojuju.flow.RunDirector;
 import io.github.kirinojuju.flow.RunPlan;
+import io.github.kirinojuju.player.PlayerCharacter;
 import io.github.kirinojuju.player.Upgrade;
 import io.github.kirinojuju.weapon.WeaponAbility;
 import io.github.kirinojuju.weapon.WeaponAttack.WeaponAttackSpec;
-
+import io.github.kirinojuju.world.EntranceScene;
+import io.github.kirinojuju.world.GameSpace;
+import io.github.kirinojuju.world.IceWall;
+import io.github.kirinojuju.world.RoomObstacles;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
@@ -29,6 +35,7 @@ public final class GameRulesCheck {
     }
 
     public static void main(String[] args) {
+        checkInjectedWeapons();
         RunPlan order = new RunPlan(new Random(4));
         Set<Integer> stages = new HashSet<Integer>();
         Set<Integer> bosses = new HashSet<Integer>();
@@ -36,6 +43,7 @@ public final class GameRulesCheck {
         for (int i = 0; i < 4; i++) {
             stages.add(order.stageId());
             bosses.add(order.bossId());
+            check(RunPlan.isBossId(order.bossId()), "Every chosen boss must have an active identity");
             bossFamilies.add(order.bossId() % 4);
             order.completeStage();
         }
@@ -77,9 +85,9 @@ public final class GameRulesCheck {
         player.switchTo(PlayerCharacter.Weapon.PHYSICAL);
 
         combat.enemies.clear();
-        CombatRoom.Enemy target = new CombatRoom.Enemy(player.x + 150, player.y,
+        Enemy target = GameRulesCheck.fixture(player.x + 150, player.y,
             17, 100, 37, 0, 0, -1);
-        CombatRoom.Enemy backup = new CombatRoom.Enemy(player.x + 350, player.y,
+        Enemy backup = GameRulesCheck.fixture(player.x + 350, player.y,
             17, 100, 37, 0, 0, -1);
         combat.enemies.add(target);
         combat.enemies.add(backup);
@@ -102,7 +110,7 @@ public final class GameRulesCheck {
         combat.update(.01f, player, run.plan);
         check(combat.shots.first().vx > 0,
             "PowerBall should turn to follow its moving target");
-        target.hp = 0;
+        target.setHp(0);
         combat.update(.01f, player, run.plan);
         check(combat.shots.first().target == backup,
             "PowerBall should relock another living enemy if its target falls");
@@ -161,7 +169,9 @@ public final class GameRulesCheck {
         checkBossMinions();
         checkFirstExProgression();
         checkUpgrades();
+        checkUpgradeReroll();
         checkWeaponAbilityExtension();
+        checkLanWave();
         checkNotebookImpacts();
         checkRoomObstacles();
         checkIceWall();
@@ -173,7 +183,6 @@ public final class GameRulesCheck {
         checkExTestEntry();
         checkSatiSkill();
         checkPowerBallKnockback();
-        checkTalgoCast();
         checkDomeSkills();
         checkFinalExamMechanics();
         System.out.println("Game rules verified");
@@ -201,8 +210,8 @@ public final class GameRulesCheck {
                                                  CombatRoom combat) {
         if (run.phase != RunDirector.Phase.CUTSCENE) return;
         run.continueAfterCutscene(player, combat);
-        check(run.room == RunDirector.Room.FINAL_EXAM && combat.enemies.size == 3,
-            "The cutscene must lead to the three-boss server room");
+        check(run.room == RunDirector.Room.FINAL_EXAM && combat.enemies.size == 2,
+            "The cutscene must lead to the two-boss server room");
         combat.enemies.clear();
         run.finishRoom(player);
         run.continueAfterRoom(player, combat);
@@ -212,10 +221,9 @@ public final class GameRulesCheck {
         RunPlan identities = new RunPlan(new Random(91));
         identities.recordBossDefeat(RunPlan.AE_ID);
         identities.recordBossDefeat(RunPlan.M_ID);
+        check(!identities.finalExamReady(), "Defeating M must not count as defeating Dome");
         identities.recordBossDefeat(RunPlan.DOME_ID);
-        check(!identities.finalExamReady(), "Defeating M must not count as defeating Far");
-        identities.recordBossDefeat(RunPlan.FAR_ID);
-        check(identities.finalExamReady(), "Ae, Far and Dome must unlock the final exam");
+        check(identities.finalExamReady(), "Ae and Dome must unlock the final exam");
         checkFinalExamMechanics(1);
         checkFinalExamMechanics(2);
     }
@@ -230,14 +238,14 @@ public final class GameRulesCheck {
         check(!player.tryStartIceWall(combat) && combat.iceWall.time == 0,
             "Ice Wall must require enough SP");
         player.sp = 100;
-        CombatRoom.Enemy nearby = new CombatRoom.Enemy(692, 360, 17, 100, 0, 0, 0, CombatRoom.BASIC);
+        Enemy nearby = GameRulesCheck.fixture(692, 360, 17, 100, 0, 0, 0, CombatRoom.BASIC);
         combat.enemies.add(nearby);
         check(player.tryStartIceWall(combat) && player.sp == 75
-            && player.iceWallCooldown == 7 && nearby.hp == 76 && nearby.stunTime == .8f,
+            && player.iceWallCooldown == 7 && nearby.getHp() == 76 && nearby.stunTime == .8f,
             "Ice Wall must spend SP, start cooldown, damage and stun nearby enemies");
         check(!player.tryStartIceWall(combat) && player.sp == 75,
             "Cooldown must prevent a second cast without spending SP");
-        nearby.hp = 0;
+        nearby.setHp(0);
         player.moveBy(250, 0);
         check(player.x < combat.iceWall.x - IceWall.HALF_DEPTH - 17,
             "Walking must not cross Ice Wall");
@@ -267,19 +275,19 @@ public final class GameRulesCheck {
             check(combat.shots.size == 0 && player.hp == 100,
                 "Ice Wall must stop fast boss projectiles at every tested angle");
 
-            CombatRoom.Enemy target = new CombatRoom.Enemy(player.x, player.y, 17,
+            Enemy target = GameRulesCheck.fixture(player.x, player.y, 17,
                 100, 0, 0, 0, CombatRoom.BASIC);
             target.stunTime = 10;
             combat.enemies.add(target);
             combat.shots.add(new CombatRoom.Shot(700 + normalX * 80, 360 + normalY * 80,
                 -normalX * 1600, -normalY * 1600, 7, 20, 1, true));
             combat.update(.1f, player, plan);
-            check(target.hp == 80, "Friendly projectiles must pass through Ice Wall");
+            check(target.getHp() == 80, "Friendly projectiles must pass through Ice Wall");
         }
 
         combat.enemies.clear();
         combat.iceWall.raise(600, 360, 1, 0);
-        CombatRoom.Enemy blocked = new CombatRoom.Enemy(692, 360, 17, 100, 0, 0, 0, CombatRoom.BASIC);
+        Enemy blocked = GameRulesCheck.fixture(692, 360, 17, 100, 0, 0, 0, CombatRoom.BASIC);
         combat.enemies.add(blocked);
         combat.update(.01f, player, plan);
         check(combat.iceWall.hitFraction(blocked.x, blocked.y, blocked.x, blocked.y, blocked.radius) < 0,
@@ -299,7 +307,7 @@ public final class GameRulesCheck {
         check(player.iceWallCooldown == 0 && combat.iceWall.time == 0,
             "A new room must clear Ice Wall and its cooldown");
         combat.begin(RunDirector.Room.FINAL_EXAM, plan, 0);
-        CombatRoom.Enemy anchored = combat.enemies.first();
+        Enemy anchored = combat.enemies.first();
         float originalX = anchored.x, originalY = anchored.y;
         combat.iceWall.x = originalX;
         combat.iceWall.y = originalY;
@@ -321,7 +329,7 @@ public final class GameRulesCheck {
 
         PlayerCharacter caster = new PlayerCharacter();
         CombatRoom fixed = new CombatRoom(new Random(143));
-        fixed.enemies.add(new CombatRoom.Enemy(caster.x - 150, caster.y, 17,
+        fixed.enemies.add(GameRulesCheck.fixture(caster.x - 150, caster.y, 17,
             100, 0, 0, 0, CombatRoom.BASIC));
         check(caster.tryStartIceWall(fixed) && fixed.iceWall.x == caster.x + IceWall.CAST_DISTANCE
             && fixed.iceWall.y == caster.y,
@@ -340,7 +348,7 @@ public final class GameRulesCheck {
             "Outward casts at the arena edge must fail without moving the wall or spending SP");
         check(fixed.iceWall.moveX(wallX, wallY, 40, 17) > wallX,
             "An actor pushed into the wall center must be able to escape");
-        CombatRoom.Enemy fast = new CombatRoom.Enemy(wallX - 80, wallY, 17, 100, 0, 0, 0, CombatRoom.BASIC);
+        Enemy fast = GameRulesCheck.fixture(wallX - 80, wallY, 17, 100, 0, 0, 0, CombatRoom.BASIC);
         fast.x = wallX + 80;
         fixed.iceWall.stopEnemy(fast, wallX - 80, wallY);
         check(fast.x < wallX, "Swept enemy movement must not tunnel through Ice Wall");
@@ -379,10 +387,9 @@ public final class GameRulesCheck {
     private static void checkFinalExamMechanics(int loop) {
         RunPlan plan = new RunPlan(new Random(90));
         plan.recordBossDefeat(RunPlan.AE_ID);
-        plan.recordBossDefeat(RunPlan.FAR_ID);
-        check(!plan.finalExamReady(), "Two bosses must not unlock the final exam");
+        check(!plan.finalExamReady(), "Ae alone must not unlock the final exam");
         plan.recordBossDefeat(RunPlan.DOME_ID);
-        check(plan.finalExamReady(), "Ae, Far and Dome must unlock the final exam");
+        check(plan.finalExamReady(), "Ae and Dome must unlock the final exam");
 
         PlayerCharacter player = new PlayerCharacter();
         CombatRoom combat = new CombatRoom(new Random(91));
@@ -398,8 +405,7 @@ public final class GameRulesCheck {
         }
         check(run != null, "The test needs Dome as the final boss of an EX loop");
         run.plan.recordBossDefeat(RunPlan.AE_ID);
-        run.plan.recordBossDefeat(RunPlan.FAR_ID);
-        check(!run.plan.finalExamReady(), "Dome must be the third required victory");
+        check(!run.plan.finalExamReady(), "Dome must be the second required victory");
         player.acquire(PlayerCharacter.Weapon.MAGICAL);
         player.acquire(PlayerCharacter.Weapon.PHYSICAL);
         run.room = RunDirector.Room.BOSS;
@@ -407,25 +413,25 @@ public final class GameRulesCheck {
         check(run.nextRoom == RunDirector.Room.EX,
             "The first-loop and even-loop EX must both happen before a queued final exam");
         check(run.plan.finalExamReady(),
-            "Defeating Dome after Ae and Far must unlock the final exam");
+            "Defeating Dome after Ae must unlock the final exam");
         run.chooseUpgrade(0, player, combat);
         check(run.room == RunDirector.Room.EX && run.phase == RunDirector.Phase.FIGHT,
             "The original EX monster fight must remain playable");
         combat.enemies.clear();
         run.finishRoom(player);
         check(run.nextRoom == RunDirector.Room.FINAL_EXAM,
-            "After EX, the three-boss fight must be queued");
+            "After EX, the two-boss fight must be queued");
         run.continueAfterRoom(player, combat);
         check(run.phase == RunDirector.Phase.CUTSCENE,
             "The black cutscene must appear before the final exam");
         run.continueAfterCutscene(player, combat);
-        check(run.room == RunDirector.Room.FINAL_EXAM && combat.enemies.size == 3,
-            "The final exam must spawn exactly three bosses");
-        int[] kinds = {RunPlan.AE_ID, RunPlan.FAR_ID, RunPlan.DOME_ID};
+        check(run.room == RunDirector.Room.FINAL_EXAM && combat.enemies.size == 2,
+            "The final exam must spawn exactly two bosses");
+        int[] kinds = {RunPlan.AE_ID, RunPlan.DOME_ID};
         for (int slot = 0; slot < kinds.length; slot++) {
-            CombatRoom.Enemy boss = combat.enemies.get(slot);
+            Enemy boss = combat.enemies.get(slot);
             check(boss.kind == kinds[slot] && boss.anchored
-                && Math.abs(boss.x - GameSpace.serverBossX(slot)) < .001f
+                && Math.abs(boss.x - GameSpace.serverBossX(slot * 2)) < .001f
                 && boss.y == GameSpace.SERVER_BOSS_Y,
                 "Each boss must stay aligned with its server cabinet");
         }
@@ -436,19 +442,18 @@ public final class GameRulesCheck {
         player.dash(0, 1);
         check(player.y == playerY && player.x != playerX,
             "Dash must remain horizontal in the server fight");
-        CombatRoom.Enemy anchored = combat.enemies.first();
-        float bossX = anchored.x, bossY = anchored.y, bossHp = anchored.hp;
+        Enemy anchored = combat.enemies.first();
+        float bossX = anchored.x, bossY = anchored.y, bossHp = anchored.getHp();
         combat.firePowerBall(bossX, bossY, 0, 0, 10, anchored);
         combat.update(.01f, player, run.plan);
-        check(anchored.hp < bossHp && anchored.x == bossX && anchored.y == bossY,
+        check(anchored.getHp() < bossHp && anchored.x == bossX && anchored.y == bossY,
             "PowerBall must hurt a cabinet boss without knocking it off its cabinet");
-        combat.enemies.get(0).hp = 0;
-        combat.enemies.get(1).hp = 0;
+        combat.enemies.get(0).setHp(0);
         check(!combat.update(.01f, player, run.plan),
-            "The final exam must continue until all three bosses are defeated");
-        combat.enemies.first().hp = 0;
+            "The final exam must continue while one of its two bosses is alive");
+        combat.enemies.first().setHp(0);
         check(combat.update(.01f, player, run.plan),
-            "Defeating all three bosses must clear the final exam");
+            "Defeating both bosses must clear the final exam");
         run.finishRoom(player);
         run.continueAfterRoom(player, combat);
         check(run.room == RunDirector.Room.MOBS && run.plan.loop() == loop + 1
@@ -497,9 +502,9 @@ public final class GameRulesCheck {
             "Six alternating A/D presses should release the player");
 
         CombatRoom combat = new CombatRoom(new Random(8));
-        CombatRoom.Enemy first = new CombatRoom.Enemy(300, 300, 17, 100, 999, 0, 0,
+        Enemy first = GameRulesCheck.fixture(300, 300, 17, 100, 999, 0, 0,
             CombatRoom.BASIC);
-        CombatRoom.Enemy second = new CombatRoom.Enemy(300, 300, 17, 100, 999, 0, 0,
+        Enemy second = GameRulesCheck.fixture(300, 300, 17, 100, 999, 0, 0,
             CombatRoom.BASIC);
         first.sp = second.sp = 0;
         combat.enemies.add(first);
@@ -510,7 +515,7 @@ public final class GameRulesCheck {
             "Ordinary enemies should separate instead of overlapping");
 
         combat.enemies.clear();
-        CombatRoom.Enemy warper = new CombatRoom.Enemy(300, 300, 17, 58, 42, 0, 0,
+        Enemy warper = GameRulesCheck.fixture(300, 300, 17, 58, 42, 0, 0,
             CombatRoom.WARPER);
         warper.sp = warper.maxSp;
         combat.enemies.add(warper);
@@ -526,7 +531,7 @@ public final class GameRulesCheck {
             "Leaving the marked spot should dodge the warp attack");
 
         combat.enemies.clear();
-        CombatRoom.Enemy strikingWarper = new CombatRoom.Enemy(300, 300, 17, 58, 42, 0, 0,
+        Enemy strikingWarper = GameRulesCheck.fixture(300, 300, 17, 58, 42, 0, 0,
             CombatRoom.WARPER);
         strikingWarper.sp = strikingWarper.maxSp;
         combat.enemies.add(strikingWarper);
@@ -550,12 +555,12 @@ public final class GameRulesCheck {
 
         combat.enemies.clear();
         combat.shots.clear();
-        CombatRoom.Enemy boss = new CombatRoom.Enemy(850, 400, 36, 200, 72, 0, 12, 2);
+        Enemy boss = GameRulesCheck.fixture(850, 400, 36, 200, 72, 0, 12, 2);
         boss.reflector = true;
         boss.armor = boss.maxArmor = 110;
         combat.enemies.add(boss);
         combat.damageNearby(boss.x, boss.y, 1, 27);
-        check(boss.hp == 200 && boss.armor == 83 && combat.shots.size == 1
+        check(boss.getHp() == 200 && boss.armor == 83 && combat.shots.size == 1
             && combat.shots.first().reflected,
             "Armored boss should absorb damage and reflect an attack");
         combat.update(.02f, player, plan);
@@ -571,28 +576,28 @@ public final class GameRulesCheck {
         RunPlan plan = new RunPlan(new Random(11));
         CombatRoom combat = new CombatRoom(new Random(12));
 
-        CombatRoom.Enemy front = new CombatRoom.Enemy(player.x + 115, player.y,
+        Enemy front = GameRulesCheck.fixture(player.x + 115, player.y,
             17, 100, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy diagonal = new CombatRoom.Enemy(player.x + 90, player.y + 60,
+        Enemy diagonal = GameRulesCheck.fixture(player.x + 90, player.y + 60,
             17, 100, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy behind = new CombatRoom.Enemy(player.x - 100, player.y,
+        Enemy behind = GameRulesCheck.fixture(player.x - 100, player.y,
             17, 100, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy beyond = new CombatRoom.Enemy(player.x + 150, player.y,
+        Enemy beyond = GameRulesCheck.fixture(player.x + 150, player.y,
             17, 100, 999, 0, 0, CombatRoom.BASIC);
         combat.enemies.add(front);
         combat.enemies.add(diagonal);
         combat.enemies.add(behind);
         combat.enemies.add(beyond);
         combat.damageArc(player.x, player.y, 1, 0, PlayerCharacter.LAN_REACH, 65, 27);
-        check(front.hp == 73 && diagonal.hp == 73 && behind.hp == 100
-            && beyond.hp == 100,
+        check(front.getHp() == 73 && diagonal.getHp() == 73 && behind.getHp() == 100
+            && beyond.getHp() == 100,
             "LAN cable should sweep a shorter forward arc without striking behind");
         player.acquire(PlayerCharacter.Weapon.PHYSICAL);
         player.lockAttackTarget(combat, behind.x, behind.y);
         check(player.attackTarget() == behind && player.faceX < 0,
             "Clicking an enemy should lock and face that enemy");
         player.attack(combat);
-        check(behind.hp == 73 && front.hp == 73
+        check(behind.getHp() == 73 && front.getHp() == 73
             && player.attackTimer == PlayerCharacter.LAN_ATTACK_INTERVAL,
             "A locked LAN attack should strike its target at the slower attack rate");
         player.lockAttackTarget(combat, front.x, front.y);
@@ -611,11 +616,11 @@ public final class GameRulesCheck {
 
         combat.enemies.clear();
         combat.shots.clear();
-        CombatRoom.Enemy impact = new CombatRoom.Enemy(780, 360, 17, 100, 999, 0, 0,
+        Enemy impact = GameRulesCheck.fixture(780, 360, 17, 100, 999, 0, 0,
             CombatRoom.BASIC);
-        CombatRoom.Enemy splash = new CombatRoom.Enemy(875, 360, 17, 100, 999, 0, 0,
+        Enemy splash = GameRulesCheck.fixture(875, 360, 17, 100, 999, 0, 0,
             CombatRoom.BASIC);
-        CombatRoom.Enemy outside = new CombatRoom.Enemy(1100, 360, 17, 100, 999, 0, 0,
+        Enemy outside = GameRulesCheck.fixture(1100, 360, 17, 100, 999, 0, 0,
             CombatRoom.BASIC);
         impact.sp = splash.sp = outside.sp = 0;
         combat.enemies.add(impact);
@@ -623,14 +628,14 @@ public final class GameRulesCheck {
         combat.enemies.add(outside);
         combat.firePowerBall(780, 360, 0, 0, 42, impact);
         combat.update(.01f, player, plan);
-        check(impact.hp < 100 && splash.hp < 100 && outside.hp == 100,
+        check(impact.getHp() < 100 && splash.getHp() < 100 && outside.getHp() == 100,
             "PowerBall should damage multiple enemies in its blast radius");
         check(impact.stunTime > 0 && splash.slowTime > 0 && combat.blastTime > 0,
             "PowerBall should shock enemies and show its explosion");
 
         combat.enemies.clear();
         combat.shots.clear();
-        CombatRoom.Enemy shooter = new CombatRoom.Enemy(500, 360, 17, 100, 999, 80, 0,
+        Enemy shooter = GameRulesCheck.fixture(500, 360, 17, 100, 999, 80, 0,
             CombatRoom.RANGED);
         shooter.sp = 0;
         combat.enemies.add(shooter);
@@ -642,7 +647,7 @@ public final class GameRulesCheck {
 
         combat.enemies.clear();
         combat.shots.clear();
-        CombatRoom.Enemy waveEnemy = new CombatRoom.Enemy(300, 360, 17, 100, 43, 0, 9,
+        Enemy waveEnemy = GameRulesCheck.fixture(300, 360, 17, 100, 43, 0, 9,
             CombatRoom.WAVE);
         waveEnemy.sp = waveEnemy.maxSp;
         combat.enemies.add(waveEnemy);
@@ -653,7 +658,7 @@ public final class GameRulesCheck {
 
         combat.begin(RunDirector.Room.MOBS, plan, 0);
         int ranged = 0, advanced = 0;
-        for (CombatRoom.Enemy enemy : combat.enemies) {
+        for (Enemy enemy : combat.enemies) {
             check(enemy.y <= GameSpace.WALK_TOP - enemy.radius,
                 "Monsters must spawn below the windows");
             if (enemy.kind == CombatRoom.RANGED) ranged++;
@@ -663,38 +668,38 @@ public final class GameRulesCheck {
             "The first room of loop one should introduce only the ranged special");
         player.y = GameSpace.TOP;
         combat.update(1f, player, plan);
-        for (CombatRoom.Enemy enemy : combat.enemies)
+        for (Enemy enemy : combat.enemies)
             check(enemy.y <= GameSpace.WALK_TOP - enemy.radius,
                 "Monsters must stay below the windows while chasing");
         player.y = GameSpace.HEIGHT / 2;
         plan.completeStage();
         combat.begin(RunDirector.Room.MOBS, plan, 0);
-        boolean wave = false;
-        for (CombatRoom.Enemy enemy : combat.enemies)
-            if (enemy.kind == CombatRoom.WAVE) wave = true;
-        check(wave, "The wave monster should appear in the second stage");
+        boolean waveIntroduced = false;
+        for (Enemy enemy : combat.enemies)
+            if (enemy.kind == CombatRoom.WAVE) waveIntroduced = true;
+        check(waveIntroduced, "The wave monster should appear in the second stage");
         plan.completeStage();
         combat.begin(RunDirector.Room.MOBS, plan, 0);
-        CombatRoom.Enemy shield = null;
-        for (CombatRoom.Enemy enemy : combat.enemies)
+        Enemy shield = null;
+        for (Enemy enemy : combat.enemies)
             if (enemy.kind == CombatRoom.SHIELDED && enemy.armor > 0) shield = enemy;
         check(shield != null, "Shielded monsters should appear later in loop one");
-        float shieldHp = shield.hp, shieldArmor = shield.armor;
+        float shieldHp = shield.getHp(), shieldArmor = shield.armor;
         combat.damageNearby(shield.x, shield.y, 1, 20);
-        check(shield.hp == shieldHp && shield.armor == shieldArmor - 20,
+        check(shield.getHp() == shieldHp && shield.armor == shieldArmor - 20,
             "Shielded monster should lose armor before health");
 
         RunPlan bossPlan = new RunPlan(new Random(13));
         for (int stage = 0; stage < 4; stage++) {
             combat.begin(RunDirector.Room.BOSS, bossPlan, 0);
-            CombatRoom.Enemy boss = combat.enemies.first();
+            Enemy boss = combat.enemies.first();
             check(boss.x >= GameSpace.RIGHT - 80
                 && boss.y <= GameSpace.WALK_TOP - boss.radius,
                 "Boss should spawn at the far right below the windows");
             float homeX = boss.x, homeY = boss.y;
             int family = boss.kind % 4;
             if (boss.kind == RunPlan.DOME_ID)
-                check(boss.behavior instanceof DomeBossBehavior && boss.dome != null
+                check(boss instanceof DomeBoss && ((DomeBoss) boss).dome() != null
                     && boss.reflector && boss.armor > 0 && !boss.waveCaster,
                     "Dome should use lightning and laser with his reflecting armor");
             else if (boss instanceof KenBoss) {
@@ -702,8 +707,8 @@ public final class GameRulesCheck {
                     "Ken must retain his original bomb/summon traits");
                 boss.skillTimer = 0;
                 combat.update(.01f, player, bossPlan);
-                check(((KenBoss) boss).bombs.size >= 3 && boss.talgoCharge == 0,
-                    "Ken must use bombs rather than the generic Talgo grid");
+                check(((KenBoss) boss).bombs.size >= 3 ,
+                    "Ken must use bombs rather than a room-wide grid");
             } else if (family == 0)
                 check(boss.reflector && boss.armor > 0,
                     "Shield boss missing its reflecting armor");
@@ -757,7 +762,7 @@ public final class GameRulesCheck {
         CombatRoom combat = new CombatRoom(new Random(104));
         RunPlan plan = new RunPlan(new Random(105));
         PlayerCharacter player = new PlayerCharacter();
-        CombatRoom.Enemy ae = new CombatRoom.Enemy(1100, 400, 36, 200, 100, 0, 12, RunPlan.AE_ID);
+        Enemy ae = GameRulesCheck.fixture(1100, 400, 36, 200, 100, 0, 12, RunPlan.AE_ID);
         ae.warper = true;
         ae.skillTimer = 100;
         combat.enemies.add(ae);
@@ -835,7 +840,7 @@ public final class GameRulesCheck {
         check(combat.shots.size == 6, "Ae must resume firing after the new gap");
 
         combat.begin(RunDirector.Room.FINAL_EXAM, plan, 0);
-        CombatRoom.Enemy anchoredAe = combat.enemies.first();
+        Enemy anchoredAe = combat.enemies.first();
         anchoredAe.warper = true;
         anchoredAe.warpCooldown = 0;
         anchoredAe.skillTimer = 0;
@@ -863,7 +868,7 @@ public final class GameRulesCheck {
                         check(combat.enemies.first().warpCooldown == 6f,
                             "Ae's room entry must leave six seconds before warning, including later loops");
                     Set<Integer> kinds = new HashSet<Integer>();
-                    for (CombatRoom.Enemy enemy : combat.enemies) {
+                    for (Enemy enemy : combat.enemies) {
                         check(combat.obstacles.hitFraction(enemy.x, enemy.y, enemy.x, enemy.y, enemy.radius) < 0,
                             "Boss room enemies must spawn clear of table collision");
                         if (enemy.kind >= 0) continue;
@@ -887,29 +892,31 @@ public final class GameRulesCheck {
                 plan.nextLoop();
             }
         }
-        check(bossKinds.size() == RunPlan.BOSSES.length && monsterKinds.size() == 6,
-            "The shared room rule must cover every boss and all six existing monster types");
+        for (int bossId : RunPlan.bossIds())
+            check(bossKinds.contains(bossId), "Every active boss must be covered by the shared room rule");
+        check(bossKinds.size() == RunPlan.bossIds().length && monsterKinds.size() == 6,
+            "The shared room rule must cover every boss and all six monster types");
 
         RunPlan plan = new RunPlan(new Random(91));
         PlayerCharacter player = new PlayerCharacter();
         player.invulnerable = 100;
         combat.begin(RunDirector.Room.BOSS, plan, 0);
         boolean summoningBoss = combat.enemies.first().summoner;
-        for (CombatRoom.Enemy enemy : combat.enemies)
-            if (enemy.kind < 0) enemy.hp = 0;
+        for (Enemy enemy : combat.enemies)
+            if (enemy.kind < 0) enemy.setHp(0);
         for (int frame = 0; frame < 100; frame++)
             check(!combat.update(.1f, player, plan)
                 && (summoningBoss ? combat.enemies.size <= 5 : combat.enemies.size == 1),
                 "Only the user's summoning bosses may replenish helpers, with a four-minion cap");
 
         combat.begin(RunDirector.Room.BOSS, plan, 0);
-        combat.enemies.first().hp = 0;
+        combat.enemies.first().setHp(0);
         check(!combat.update(.01f, player, plan) && combat.enemies.size == 2,
             "Defeating only the boss must leave its existing minions to clear");
-        for (CombatRoom.Enemy enemy : combat.enemies) enemy.hp = 0;
+        for (Enemy enemy : combat.enemies) enemy.setHp(0);
         check(combat.update(.01f, player, plan), "The boss room clears after the boss and all minions fall");
         combat.begin(RunDirector.Room.FINAL_EXAM, plan, 0);
-        check(combat.enemies.size == 3, "Final Exam retains its three anchored bosses without extra minions");
+        check(combat.enemies.size == 2, "Final Exam retains its two anchored bosses without extra minions");
         combat.begin(RunDirector.Room.EX, plan, 0);
         check(combat.enemies.size == 1, "EX retains its single special enemy without extra minions");
     }
@@ -925,7 +932,7 @@ public final class GameRulesCheck {
                     && combat.enemies.size == 4 + stage,
                     "The first route to EX must use lighter monster rooms");
                 player.hp = 40;
-                for (CombatRoom.Enemy enemy : combat.enemies) enemy.hp = 0;
+                for (Enemy enemy : combat.enemies) enemy.setHp(0);
                 check(combat.update(.01f, player, run.plan), "The defeated monster room must clear");
                 run.finishRoom(player);
                 check(player.hp == 52 && run.nextRoom == RunDirector.Room.BOSS,
@@ -934,7 +941,7 @@ public final class GameRulesCheck {
                 check(run.room == RunDirector.Room.BOSS && combat.enemies.size == 3,
                     "Each first-loop boss must start with only two helpers");
                 player.hp = 40;
-                for (CombatRoom.Enemy enemy : combat.enemies) enemy.hp = 0;
+                for (Enemy enemy : combat.enemies) enemy.setHp(0);
                 check(combat.update(.01f, player, run.plan), "The defeated boss room must clear");
                 run.finishRoom(player);
                 check(player.hp == 75 && run.phase == RunDirector.Phase.UPGRADE,
@@ -946,7 +953,11 @@ public final class GameRulesCheck {
             check(run.room == RunDirector.Room.EX && run.plan.loop() == 1
                 && combat.enemies.size == 1 && player.lanTether && player.notebookHeatBeam,
                 "Four ordinary stages must reach the first EX with both EX techniques enabled");
-            for (CombatRoom.Enemy enemy : combat.enemies) enemy.hp = 0;
+            for (Enemy enemy : combat.enemies) enemy.setHp(0);
+            if (run.exId == 0) {
+                check(!combat.update(.01f, player, run.plan), "The first Cat phase must not end the EX route");
+                combat.enemies.first().setHp(0);
+            }
             check(combat.update(.01f, player, run.plan), "The first EX must be clearable");
             run.finishRoom(player);
             check(player.hp <= player.maxHp && !player.lanTether && !player.notebookHeatBeam,
@@ -970,7 +981,6 @@ public final class GameRulesCheck {
         earlyExam.plan.completeStage();
         earlyExam.plan.completeStage();
         earlyExam.plan.recordBossDefeat(RunPlan.AE_ID);
-        earlyExam.plan.recordBossDefeat(RunPlan.FAR_ID);
         earlyExam.plan.recordBossDefeat(RunPlan.DOME_ID);
         earlyExam.room = RunDirector.Room.BOSS;
         earlyExam.finishRoom(player);
@@ -984,7 +994,7 @@ public final class GameRulesCheck {
             "A deferred early Final Exam must leave the first EX accessible after four bosses");
         earlyExam.finishRoom(player);
         check(earlyExam.nextRoom == RunDirector.Room.FINAL_EXAM,
-            "The deferred three-boss exam must remain queued after the first EX");
+            "The deferred two-boss exam must remain queued after the first EX");
         earlyExam.continueAfterRoom(player, combat);
         check(earlyExam.phase == RunDirector.Phase.CUTSCENE,
             "The deferred exam must retain its black cutscene");
@@ -1015,18 +1025,18 @@ public final class GameRulesCheck {
             && player.skillDamageBonus == 10,
             "Stat upgrades must be applied to the student");
 
-        CombatRoom.Enemy lanTarget = new CombatRoom.Enemy(player.x + 150, player.y,
+        Enemy lanTarget = GameRulesCheck.fixture(player.x + 150, player.y,
             17, 100, 999, 0, 0, CombatRoom.BASIC);
         combat.enemies.add(lanTarget);
         player.attack(combat);
-        check(lanTarget.hp == 66 && lanTarget.slowTime > 0
+        check(lanTarget.getHp() == 66 && lanTarget.slowTime > 0
             && player.attackTimer < PlayerCharacter.LAN_ATTACK_INTERVAL,
             "A wide LAN sweep must reach farther, hit harder, and slow its target");
 
         combat.enemies.clear();
-        CombatRoom.Enemy notebookTarget = new CombatRoom.Enemy(760, player.y,
+        Enemy notebookTarget = GameRulesCheck.fixture(760, player.y,
             17, 100, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy nearby = new CombatRoom.Enemy(810, player.y,
+        Enemy nearby = GameRulesCheck.fixture(810, player.y,
             17, 100, 999, 0, 0, CombatRoom.BASIC);
         notebookTarget.sp = nearby.sp = 0;
         combat.enemies.add(notebookTarget);
@@ -1037,13 +1047,13 @@ public final class GameRulesCheck {
         check(combat.shots.first().poisonous && combat.shots.first().splash,
             "Notebook upgrades must attach to the thrown shot");
         combat.update(.23f, player, plan);
-        check(notebookTarget.hp < 100 && nearby.hp < 100
+        check(notebookTarget.getHp() < 100 && nearby.getHp() < 100
             && notebookTarget.poisonTime > 0 && nearby.poisonTime > 0
             && combat.splashTime > 0,
             "Notebook splash must damage and poison nearby monsters");
-        float hpAfterHit = notebookTarget.hp;
+        float hpAfterHit = notebookTarget.getHp();
         combat.update(1f, player, plan);
-        check(notebookTarget.hp < hpAfterHit,
+        check(notebookTarget.getHp() < hpAfterHit,
             "Poison must keep damaging monsters after the notebook hit");
         player.attackSpeedBonus = 1.8f;
         player.speedBonus = 160;
@@ -1052,6 +1062,42 @@ public final class GameRulesCheck {
             if (upgrade.available(player)) remaining++;
         check(remaining >= 3,
             "Late loops must still offer three upgrades after unlocks and speed caps");
+    }
+
+    private static void checkUpgradeReroll() {
+        PlayerCharacter player = new PlayerCharacter();
+        CombatRoom combat = new CombatRoom(new Random(160));
+        RunDirector run = new RunDirector(new Random(161));
+        check(!run.rerollUpgrades(player), "Reroll must be unavailable before an upgrade screen");
+        run.room = RunDirector.Room.BOSS;
+        run.finishRoom(player);
+        Set<Upgrade> original = new HashSet<Upgrade>();
+        for (Upgrade upgrade : run.offeredUpgrades) original.add(upgrade);
+        check(run.upgradeRerollsRemaining() == 1 && run.rerollUpgrades(player),
+            "Each boss reward must grant one reroll");
+        Set<Upgrade> rerolled = new HashSet<Upgrade>();
+        for (Upgrade upgrade : run.offeredUpgrades) {
+            check(upgrade.available(player) && !original.contains(upgrade),
+                "Reroll must prefer available upgrades outside the previous choices");
+            rerolled.add(upgrade);
+        }
+        check(rerolled.size() == 3 && run.upgradeRerollsRemaining() == 0
+            && !run.rerollUpgrades(player), "Repeated rerolls must not replace the choices again");
+        for (Upgrade upgrade : run.offeredUpgrades)
+            check(rerolled.contains(upgrade), "An exhausted reroll must preserve the offered rewards");
+        run.chooseUpgrade(0, player, combat);
+        check(!run.rerollUpgrades(player), "Reroll must be unavailable during combat");
+        run.room = RunDirector.Room.BOSS;
+        run.finishRoom(player);
+        check(run.upgradeRerollsRemaining() == 1, "The next boss must restore one reroll");
+        player.lanSlow = player.lanAoE = player.notebookPoison = player.notebookSplash = true;
+        player.attackSpeedBonus = 1.8f;
+        player.speedBonus = 160;
+        run.offeredUpgrades[0] = Upgrade.LAN_DAMAGE;
+        run.offeredUpgrades[1] = Upgrade.NOTEBOOK_DAMAGE;
+        run.offeredUpgrades[2] = Upgrade.POWER_BALL_DAMAGE;
+        check(!run.rerollUpgrades(player) && run.upgradeRerollsRemaining() == 1,
+            "With only three available upgrades, reroll must not consume a charge or repeat rewards");
     }
 
     private static void checkRoomObstacles() {
@@ -1089,7 +1135,7 @@ public final class GameRulesCheck {
             && obstacles.hitFraction(player.x, player.y, player.x, player.y, 17) < 0,
             "A diagonal dash must not cut through a table corner");
 
-        CombatRoom.Enemy walker = new CombatRoom.Enemy(270, table.y, 17,
+        Enemy walker = GameRulesCheck.fixture(270, table.y, 17,
             100, 999, 80, 0, CombatRoom.BASIC);
         for (int i = 0; i < 300; i++) {
             obstacles.moveToward(walker, 460, table.y, 2, 0);
@@ -1109,7 +1155,7 @@ public final class GameRulesCheck {
         RoomObstacles edge = new RoomObstacles();
         edge.tables.add(new RoomObstacles.Table(1, 640, 445));
         for (float radius : new float[]{17, 36}) {
-            CombatRoom.Enemy trapped = new CombatRoom.Enemy(640, GameSpace.WALK_TOP - radius,
+            Enemy trapped = GameRulesCheck.fixture(640, GameSpace.WALK_TOP - radius,
                 radius, 100, 999, 0, 0, CombatRoom.BASIC);
             edge.resolveEnemy(trapped);
             check(edge.hitFraction(trapped.x, trapped.y, trapped.x, trapped.y, radius) < 0,
@@ -1122,13 +1168,13 @@ public final class GameRulesCheck {
         combat.obstacles.tables.clear();
         combat.obstacles.tables.addAll(obstacles.tables);
         combat.enemies.clear();
-        CombatRoom.Enemy target = new CombatRoom.Enemy(460, table.y,
+        Enemy target = GameRulesCheck.fixture(460, table.y,
             17, 100, 999, 0, 0, CombatRoom.BASIC);
         target.sp = 0;
         combat.enemies.add(target);
         combat.fireFriendly(250, table.y, 1000, 0, 20, target).notebook = true;
         combat.update(.3f, player, plan);
-        check(target.hp == 100 && combat.shots.size == 0 && combat.notebookImpacts.size == 1,
+        check(target.getHp() == 100 && combat.shots.size == 0 && combat.notebookImpacts.size == 1,
             "A fast notebook must break against cover without hitting the enemy behind it");
         player.x = 460;
         player.y = table.y;
@@ -1143,13 +1189,13 @@ public final class GameRulesCheck {
         check(combat.shots.size == 0 && combat.blastTime > 0 && combat.blastX < table.solid.x,
             "PowerBall should explode at the front of cover instead of crossing it");
         target.x = table.solid.x - target.radius - 1;
-        target.hp = 100;
+        target.setHp(100);
         combat.fireFriendly(target.x - 30, table.y, 300, 0, 20, target);
         combat.update(.1f, player, plan);
-        check(target.hp == 80, "An enemy standing in front of cover must still take the hit");
+        check(target.getHp() == 80, "An enemy standing in front of cover must still take the hit");
         combat.firePowerBall(250, table.y, 1000, 0, 30, target);
         combat.update(.3f, player, plan);
-        check(target.hp > 0 && target.x < table.solid.x - target.radius,
+        check(target.getHp() > 0 && target.x < table.solid.x - target.radius,
             "PowerBall knockback must stop an enemy before the table instead of pushing through");
         combat.begin(RunDirector.Room.FINAL_EXAM, plan, 0);
         check(combat.obstacles.tables.size == 0,
@@ -1197,11 +1243,11 @@ public final class GameRulesCheck {
                 layouts.add(layout.toString());
                 upper |= obstacles.tables.get(1).y > 360;
                 lower |= obstacles.tables.get(1).y < 360;
-                for (CombatRoom.Enemy enemy : combat.enemies)
+                for (Enemy enemy : combat.enemies)
                     check(obstacles.hitFraction(enemy.x, enemy.y, enemy.x, enemy.y, enemy.radius) < 0,
                         "Enemies must enter each random room outside furniture");
 
-                CombatRoom.Enemy walker = new CombatRoom.Enemy(120, 360, 17,
+                Enemy walker = GameRulesCheck.fixture(120, 360, 17,
                     100, 999, 80, 0, CombatRoom.BASIC);
                 for (float destination : new float[]{1160, 640}) {
                     for (int step = 0; step < 800; step++) {
@@ -1223,7 +1269,7 @@ public final class GameRulesCheck {
     }
 
     private static void checkBossShotsAcrossTables() {
-        for (int pattern = 0; pattern < 7; pattern++) {
+        for (int pattern = 0; pattern < 6; pattern++) {
             CombatRoom combat = new CombatRoom(new Random(102));
             RunPlan plan = new RunPlan(new Random(103));
             PlayerCharacter player = new PlayerCharacter();
@@ -1231,24 +1277,24 @@ public final class GameRulesCheck {
             player.y = 300;
             RoomObstacles.Table table = new RoomObstacles.Table(0, 365, 300);
             combat.obstacles.tables.add(table);
-            int kind = pattern == 1 ? 1 : pattern == 2 ? 2 : pattern == 3 ? 7 : pattern == 6 ? 6 : 0;
-            CombatRoom.Enemy boss = new CombatRoom.Enemy(250, 300, 36, 200, 100, 0, 12, kind);
+            int kind = pattern == 1 ? 1 : pattern == 2 ? 2 : pattern == 3 ? 7 : 0;
+            Enemy boss = GameRulesCheck.fixture(250, 300, 36, 200, 100, 0, 12, kind);
             boss.sp = 100;
-            boss.satiCooldown = 100;
+            if (boss instanceof SatiBoss) ((SatiBoss) boss).satiCooldown = 100;
             boss.artillery = pattern == 2;
             boss.waveCaster = pattern == 3;
             combat.enemies.add(boss);
             if (pattern == 4) {
-                boss.satiCharge = .01f;
-                boss.satiAimX = player.x;
-                boss.satiAimY = player.y;
+                ((SatiBoss) boss).satiCharge = .01f;
+                ((SatiBoss) boss).satiAimX = player.x;
+                ((SatiBoss) boss).satiAimY = player.y;
             }
             if (pattern == 5) {
                 boss.armor = 100;
                 boss.reflector = true;
                 combat.damageNearby(player.x, player.y, 300, 1);
             } else {
-                boss.behavior.update(combat, boss, .01f, player, plan);
+                boss.updateBehavior(combat, .01f, player, plan);
             }
             check(combat.shots.size > 0, "Each boss projectile pattern must actually fire");
             for (CombatRoom.Shot shot : combat.shots)
@@ -1275,7 +1321,7 @@ public final class GameRulesCheck {
         CombatRoom combat = new CombatRoom(new Random(180));
         RunPlan plan = new RunPlan(new Random(181));
 
-        CombatRoom.Enemy shield = new CombatRoom.Enemy(800, 400, 17,
+        Enemy shield = GameRulesCheck.fixture(800, 400, 17,
             100, 100, 0, 20, RunPlan.SATI_ID);
         shield.armor = 10;
         shield.reflector = true;
@@ -1283,7 +1329,7 @@ public final class GameRulesCheck {
         combat.enemies.add(shield);
         combat.fireFriendly(shield.x, shield.y, 0, 0, 25, null);
         combat.update(.1f, player, plan);
-        check(shield.armor == 0 && shield.hp == 85 && combat.shots.size == 1,
+        check(shield.armor == 0 && shield.getHp() == 85 && combat.shots.size == 1,
             "A reflected hit must spill excess armor damage into HP and consume the incoming shot");
         CombatRoom.Shot reflected = combat.shots.first();
         check(reflected.reflected && reflected.ignoresTables && reflected.animationTime == 0
@@ -1295,7 +1341,7 @@ public final class GameRulesCheck {
 
         combat.enemies.clear();
         combat.shots.clear();
-        CombatRoom.Enemy poisoned = new CombatRoom.Enemy(900, 400, 17,
+        Enemy poisoned = GameRulesCheck.fixture(900, 400, 17,
             1, 100, 0, 20, CombatRoom.RANGED);
         poisoned.sp = 100;
         poisoned.poisonTime = .1f;
@@ -1307,16 +1353,16 @@ public final class GameRulesCheck {
         combat.update(.1f, player, plan);
         check(player.sp == 5, "A removed enemy must not grant SP again");
 
-        CombatRoom.Enemy sword = new CombatRoom.Enemy(player.x + 65, player.y,
+        Enemy sword = GameRulesCheck.fixture(player.x + 65, player.y,
             34, 100, 100, 0, 20, CombatRoom.INSECURE_SWORD);
         sword.armor = 150;
-        sword.skillTimer = sword.exObjectTimer = 100;
+        sword.skillTimer = ((ExBoss) sword).exObjectTimer = 100;
         combat.enemies.add(sword);
         combat.exObjects.add(new CombatRoom.ExObject(player.x, player.y, 11, .005f, CombatRoom.NOTE));
         combat.exObjects.add(new CombatRoom.ExObject(1000, 200, 8, .005f, CombatRoom.DUST));
         combat.update(.01f, player, plan);
         check(combat.exObjects.size == 0 && combat.carriedNotes == 0
-            && sword.exConfidence == 25 && sword.armor == 95 && sword.exState == 2,
+            && ((InsecureSwordBoss) sword).exConfidence == 25 && sword.armor == 95 && ((ExBoss) sword).exState == 2,
             "A touching note must be collected before expiry and applied to the sword in the same frame");
 
         int[] kinds = {CombatRoom.BASIC, CombatRoom.LIQUID_CAT,
@@ -1325,12 +1371,12 @@ public final class GameRulesCheck {
         float[] expectedDamage = {20, 20, 11, 30};
         for (int i = 0; i < kinds.length; i++) {
             combat.enemies.clear();
-            CombatRoom.Enemy target = new CombatRoom.Enemy(900, 400, 17,
+            Enemy target = GameRulesCheck.fixture(900, 400, 17,
                 100, 100, 0, 0, kinds[i]);
-            target.exState = states[i];
+            if (target instanceof ExBoss) ((ExBoss) target).exState = states[i];
             combat.enemies.add(target);
             combat.damageNearby(target.x, target.y, 1, 20);
-            check(Math.abs(target.hp - (100 - expectedDamage[i])) < .001f,
+            check(Math.abs(target.getHp() - (100 - expectedDamage[i])) < .001f,
                 "Ordinary enemies, both cat forms and the exposed sword must retain their damage rules");
         }
     }
@@ -1339,9 +1385,9 @@ public final class GameRulesCheck {
         PlayerCharacter player = new PlayerCharacter();
         CombatRoom combat = new CombatRoom(new Random(82));
         RunPlan plan = new RunPlan(new Random(83));
-        CombatRoom.Enemy target = new CombatRoom.Enemy(760, player.y,
+        Enemy target = GameRulesCheck.fixture(760, player.y,
             17, 100, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy nearby = new CombatRoom.Enemy(810, player.y,
+        Enemy nearby = GameRulesCheck.fixture(810, player.y,
             17, 100, 999, 0, 0, CombatRoom.BASIC);
         target.sp = nearby.sp = 0;
         combat.enemies.add(target);
@@ -1357,17 +1403,17 @@ public final class GameRulesCheck {
             "A flying notebook should animate without creating an early impact");
         combat.update(.20f, player, plan);
         check(combat.shots.size == 0 && combat.notebookImpacts.size == 1
-            && target.hp == 80 && nearby.hp == 100,
+            && target.getHp() == 80 && nearby.getHp() == 100,
             "Notebook impact art should accompany one hit without adding splash damage");
         CombatRoom.NotebookImpact firstImpact = combat.notebookImpacts.first();
         combat.update(.10f, player, plan);
         player.attack(combat);
         combat.update(.20f, player, plan);
         check(combat.notebookImpacts.size == 2 && firstImpact.time > 0
-            && combat.notebookImpacts.peek().time == 0 && target.hp == 60,
+            && combat.notebookImpacts.peek().time == 0 && target.getHp() == 60,
             "Rapid notebook hits should retain independent impact animations");
         combat.update(.10f, player, plan);
-        check(combat.notebookImpacts.size == 1 && target.hp == 60,
+        check(combat.notebookImpacts.size == 1 && target.getHp() == 60,
             "An expired impact should disappear without damaging the enemy again");
         combat.update(CombatRoom.NOTEBOOK_IMPACT_DURATION, player, plan);
         check(combat.notebookImpacts.size == 0, "All notebook impacts should expire");
@@ -1405,12 +1451,61 @@ public final class GameRulesCheck {
         check(combat.shots.size == 1 && calls[1] == 1,
             "An ability must not run after an attack that cannot pay its SP cost");
         player.acquire(PlayerCharacter.Weapon.PHYSICAL);
-        CombatRoom.Enemy nearby = new CombatRoom.Enemy(player.x + 100, player.y,
+        Enemy nearby = GameRulesCheck.fixture(player.x + 100, player.y,
             17, 100, 999, 0, 0, CombatRoom.BASIC);
         combat.enemies.add(nearby);
         player.attack(combat);
-        check(nearby.hp == 73 && calls[0] == 2 && calls[1] == 1,
+        check(nearby.getHp() == 73 && calls[0] == 2 && calls[1] == 1,
             "A notebook ability must not change the LAN attack");
+    }
+
+    private static void checkLanWave() {
+        PlayerCharacter player = new PlayerCharacter();
+        CombatRoom combat = new CombatRoom(new Random(150));
+        RunPlan plan = new RunPlan(new Random(151));
+        player.x = 300; player.y = 300;
+        check(!player.tryLanWave(combat), "An unarmed student must not cast LAN Wave");
+        player.acquire(PlayerCharacter.Weapon.MAGICAL);
+        check(!player.tryLanWave(combat), "Notebook must not cast the LAN weapon skill");
+        player.acquire(PlayerCharacter.Weapon.PHYSICAL);
+        player.physicalBonus = 12;
+        player.sp = 0;
+        Enemy target = GameRulesCheck.fixture(430, 300, 17, 100, 0, 0, 0, CombatRoom.BASIC);
+        target.skillTimer = 100;
+        combat.enemies.add(target);
+        check(player.tryLanWave(combat) && player.sp == 0 && combat.shots.size == 1,
+            "LAN Wave must be available without SP and launch one projectile");
+        check(!player.tryLanWave(combat) && combat.shots.size == 1,
+            "Repeated requests during cooldown must not launch extra waves");
+        combat.update(.15f, player, plan);
+        check(target.getHp() == 50 && combat.shots.size == 0,
+            "A traveling LAN Wave must hit once with the physical upgrade bonus");
+
+        target.x = 500;
+        combat.obstacles.tables.add(new RoomObstacles.Table(0, 400, 300));
+        player.lanWaveCooldown = 0;
+        player.tryLanWave(combat);
+        combat.update(.3f, player, plan);
+        check(target.getHp() == 50 && combat.shots.size == 0,
+            "Tables must stop LAN Wave before it damages an enemy behind cover");
+        combat.obstacles.tables.clear();
+        combat.iceWall.raise(player.x, player.y, 1, 0);
+        target.x = 430;
+        player.lanWaveCooldown = 0;
+        player.tryLanWave(combat);
+        combat.update(.15f, player, plan);
+        check(target.getHp() == 0 && combat.shots.size == 0,
+            "Friendly LAN Wave must pass through Ice Wall and damage an enemy beyond it");
+
+        player.lanWaveCooldown = 0;
+        player.skillPlaying = true;
+        check(!player.tryLanWave(combat), "PowerBall casting must lock the LAN weapon skill too");
+        player.skillPlaying = false;
+        player.hp = 0;
+        check(!player.tryLanWave(combat), "A defeated student must not launch LAN Wave");
+        player.lanWaveCooldown = 1;
+        player.startRoom(false);
+        check(player.lanWaveCooldown == 0, "Entering a room must reset LAN Wave cooldown");
     }
 
     private static void checkTetherAndHeatBeam() {
@@ -1421,11 +1516,11 @@ public final class GameRulesCheck {
         player.setExTechniques(true);
         check(player.lanTether && player.notebookHeatBeam,
             "Both special weapon techniques should activate for EX combat");
-        CombatRoom.Enemy first = new CombatRoom.Enemy(player.x + 110, player.y,
+        Enemy first = GameRulesCheck.fixture(player.x + 110, player.y,
             17, 200, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy second = new CombatRoom.Enemy(player.x + 130, player.y + 30,
+        Enemy second = GameRulesCheck.fixture(player.x + 130, player.y + 30,
             17, 200, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy ajarn = new CombatRoom.Enemy(player.x + 100, player.y - 65,
+        Enemy ajarn = GameRulesCheck.fixture(player.x + 100, player.y + 65,
             36, 250, 999, 0, 0, 0);
         combat.enemies.add(first);
         combat.enemies.add(second);
@@ -1440,9 +1535,9 @@ public final class GameRulesCheck {
             "Bosses should be marked for the combo without being dragged");
 
         combat.enemies.clear();
-        CombatRoom.Enemy marked = new CombatRoom.Enemy(760, 360,
+        Enemy marked = GameRulesCheck.fixture(760, 360,
             17, 200, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy plain = new CombatRoom.Enemy(640, 360,
+        Enemy plain = GameRulesCheck.fixture(640, 360,
             17, 200, 999, 0, 0, CombatRoom.BASIC);
         marked.tetherTime = 1.7f;
         marked.sp = plain.sp = 0;
@@ -1451,18 +1546,18 @@ public final class GameRulesCheck {
         combat.firePowerBall(700, 360, 0, 0, 40, null);
         combat.shots.first().life = 0;
         combat.update(.01f, player, plan);
-        check(marked.hp < plain.hp,
+        check(marked.getHp() < plain.getHp(),
             "PowerBall should deal bonus damage to a tethered target at equal distance");
 
         combat.enemies.clear();
         combat.shots.clear();
         Upgrade.NOTEBOOK_POISON.apply(player);
         player.acquire(PlayerCharacter.Weapon.MAGICAL);
-        CombatRoom.Enemy beamNear = new CombatRoom.Enemy(800, 360,
+        Enemy beamNear = GameRulesCheck.fixture(800, 360,
             17, 200, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy beamFar = new CombatRoom.Enemy(950, 360,
+        Enemy beamFar = GameRulesCheck.fixture(950, 360,
             17, 200, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy outside = new CombatRoom.Enemy(850, 480,
+        Enemy outside = GameRulesCheck.fixture(850, 480,
             17, 200, 999, 0, 0, CombatRoom.BASIC);
         combat.enemies.add(beamNear);
         combat.enemies.add(beamFar);
@@ -1476,7 +1571,7 @@ public final class GameRulesCheck {
         check(player.notebookHeat == 0 && combat.beamTime > 0
             && combat.shots.size == 0,
             "The next notebook attack should spend full heat on a beam");
-        check(beamNear.hp < 200 && beamFar.hp < 200 && outside.hp == 200
+        check(beamNear.getHp() < 200 && beamFar.getHp() < 200 && outside.getHp() == 200
             && beamNear.poisonTime > 0 && beamFar.poisonTime > 0,
             "The beam should pierce targets on its path and inherit poison");
         player.setExTechniques(false);
@@ -1490,14 +1585,28 @@ public final class GameRulesCheck {
         RunPlan plan = new RunPlan(new Random(51));
 
         combat.begin(RunDirector.Room.EX, plan, 0);
-        CombatRoom.Enemy cat = combat.enemies.first();
+        Enemy cat = combat.enemies.first();
         cat.skillTimer = 100;
+        float idleX = cat.x, idleY = cat.y;
         combat.update(3.6f, player, plan);
-        check(cat.exState == 1 && cat.radius == 16 && combat.exObjects.size == 0
-            && cat.catTransformTime > 0,
-            "Liquid Cat should start transforming before moving or leaving ooze");
+        check(((ExBoss) cat).exState == 0 && cat.x == idleX && cat.y == idleY && !((LiquidCatBoss) cat).catMoving,
+            "Phase one must remain idle instead of walking or transforming on a timer");
+        player.sp = 0;
+        combat.damageNearby(cat.x, cat.y, 1, cat.getHp() + 1000);
+        check(!combat.update(.01f, player, plan) && player.sp == 0 && cat.getHp() == cat.getMaxHp(),
+            "Lethal phase-one damage must refill phase two without clearing the room or rewarding a kill");
+        check(((ExBoss) cat).exState == 1 && cat.radius == 16 && combat.exObjects.size == 0
+            && ((LiquidCatBoss) cat).catTransformTime > 0,
+            "The first defeat must start the compact phase's transformation");
         float transformX = cat.x, transformY = cat.y;
-        combat.update(LiquidCatBehavior.TRANSFORM_DURATION, player, plan);
+        float transformHp = cat.getHp();
+        combat.fireNotebookBeam(cat.x - 100, cat.y, 1, 0, 500, true);
+        combat.damageArc(cat.x - 10, cat.y, 1, 0, 100, 90, 500, true, true);
+        combat.firePowerBall(cat.x, cat.y, 0, 0, 500, cat);
+        combat.update(.01f, player, plan);
+        check(cat.getHp() == transformHp && cat.poisonTime == 0 && cat.stunTime == 0 && cat.slowTime == 0,
+            "Transformation must reject damage, poison, stun, slow and tether attacks");
+        combat.update(((LiquidCatBoss) cat).catTransformTime, player, plan);
         check(cat.x == transformX && cat.y == transformY && combat.shots.size == 0,
             "Liquid Cat must not move or attack during its transformation");
         combat.update(.01f, player, plan);
@@ -1508,32 +1617,57 @@ public final class GameRulesCheck {
         check(player.slowTime > 0, "Liquid Cat ooze should slow the player");
         player.x = cat.x - 180;
         player.y = cat.y;
-        cat.skillTimer = 0;
-        cat.catTransformTime = 0;
+        cat.skillTimer = 100;
+        ((ExBoss) cat).exStateTime = 0;
         combat.update(.01f, player, plan);
-        check(cat.catDivideTime > 0 && combat.shots.size == 0,
-            "Divide must telegraph before releasing a bullet");
+        check(((LiquidCatBoss) cat).catDivideTime > 0 && combat.enemies.size == 1,
+            "Divide must play its animation before spawning copies");
         combat.update(.36f, player, plan);
-        check(cat.catDivideTime > 0 && combat.shots.size == 1
-            && combat.shots.first().liquidCatBullet,
-            "Liquid Cat must release one bullet halfway through its divide animation");
-        player.y = GameSpace.BOTTOM + 50;
+        check(((LiquidCatBoss) cat).catDivideTime > 0 && combat.enemies.size == 3 && combat.shots.size == 0,
+            "The original must split into two actual enemies, not just fire a bullet");
+        Enemy copy = combat.enemies.get(1);
+        check(LiquidCatBoss.isCopy(copy) && copy.getMaxHp() < cat.getMaxHp(),
+            "Copies must have their own smaller health bars");
+        player.x = 200;
         combat.update(.30f, player, plan);
-        check(combat.shots.size == 1, "The divide animation must not release a second bullet");
-        combat.update(2.5f, player, plan);
-        check(cat.exState == 0 && cat.radius == 34,
-            "Liquid Cat should return to its full hitbox");
-        check(cat.catTransformTime > 0,
-            "Changing forms should start Liquid Cat's transformation frames");
+        check(combat.enemies.size == 3, "A divide animation must spawn its copies only once");
+        ((ExBoss) copy).exStateTime = 0;
+        combat.update(.01f, player, plan);
+        combat.update(.36f, player, plan);
+        check(combat.enemies.size == 3 && combat.shots.size == 1 && combat.shots.first().liquidCatBullet,
+            "Copies may shoot but must never create more copies");
+        copy.setHp(0);
+        combat.update(.01f, player, plan);
+        check(combat.enemies.size == 2, "A defeated copy must disappear without transforming");
+        ((ExBoss) cat).exStateTime = 0;
+        combat.update(.01f, player, plan);
+        combat.update(.36f, player, plan);
+        check(combat.enemies.size == 3, "Divide must replace only the missing copy");
+        ((LiquidCatBoss) cat).catDivideTime = .31f;
+        combat.update(.02f, player, plan);
+        check(combat.enemies.size == 3 && ((ExBoss) cat).exState == 1,
+            "The second phase must stay compact and enforce its two-copy cap");
+        cat.setHp(0);
+        check(combat.update(.01f, player, plan) && combat.enemies.size == 0,
+            "The second defeat must remove the original and its copies in the same frame");
+
+        combat.begin(RunDirector.Room.EX, plan, 0);
+        cat = combat.enemies.first();
+        cat.setHp(1);
+        cat.poisonTime = .1f;
+        cat.poisonDps = 100;
+        check(!combat.update(.02f, player, plan) && ((ExBoss) cat).exState == 1 && cat.getHp() == cat.getMaxHp()
+            && cat.poisonTime == 0,
+            "Poison must trigger phase two once and must not carry damage through the transformation");
 
         player.x = GameSpace.WIDTH / 2;
         player.y = GameSpace.HEIGHT / 2;
         combat.begin(RunDirector.Room.EX, plan, 1);
-        CombatRoom.Enemy vacuum = combat.enemies.first();
-        vacuum.exMeter = 100;
-        vacuum.exStoredDust = 4;
+        Enemy vacuum = combat.enemies.first();
+        ((ExBoss) vacuum).exMeter = 100;
+        ((AllergicVacuumBoss) vacuum).exStoredDust = 4;
         combat.update(.01f, player, plan);
-        check(vacuum.exState == 1,
+        check(((ExBoss) vacuum).exState == 1,
             "A full allergy meter should start the sneeze warning");
         player.x = vacuum.x - 100;
         player.y = vacuum.y;
@@ -1546,13 +1680,13 @@ public final class GameRulesCheck {
         for (CombatRoom.ExObject object : combat.exObjects)
             if (object.kind == CombatRoom.DUST && object.ejectionTime > 0)
                 scatteredDust++;
-        check(vacuum.exState == 2 && vacuum.exMeter == 0 && scatteredDust >= 4,
+        check(((ExBoss) vacuum).exState == 2 && ((ExBoss) vacuum).exMeter == 0 && scatteredDust >= 4,
             "The sneeze should recoil and scatter the stored dust");
 
         player.x = GameSpace.WIDTH / 2;
         player.y = GameSpace.HEIGHT / 2;
         combat.begin(RunDirector.Room.EX, plan, 2);
-        CombatRoom.Enemy sword = combat.enemies.first();
+        Enemy sword = combat.enemies.first();
         CombatRoom.ExObject note = combat.exObjects.first();
         player.x = note.x;
         player.y = note.y;
@@ -1563,36 +1697,36 @@ public final class GameRulesCheck {
         player.x = sword.x - 70;
         player.y = sword.y;
         combat.update(.01f, player, plan);
-        check(combat.carriedNotes == 0 && sword.exConfidence == 25
-            && sword.armor < armor && sword.swordAttackTime == 0,
+        check(combat.carriedNotes == 0 && ((InsecureSwordBoss) sword).exConfidence == 25
+            && sword.armor < armor && ((InsecureSwordBoss) sword).swordAttackTime == 0,
             "Bringing a note to the sword should raise confidence and weaken armor");
-        sword.exConfidence = 100;
-        sword.exState = 0;
+        ((InsecureSwordBoss) sword).exConfidence = 100;
+        ((ExBoss) sword).exState = 0;
         sword.skillTimer = 0;
         combat.update(.01f, player, plan);
-        check(sword.exState == 1 && sword.exAimX == player.x && sword.swordAttackTime == 0,
+        check(((ExBoss) sword).exState == 1 && ((ExBoss) sword).exAimX == player.x && ((InsecureSwordBoss) sword).swordAttackTime == 0,
             "A confident sword should warn before its heavy strike");
         float hpBeforeDodge = player.hp;
         player.x = 500;
         combat.update(.66f, player, plan);
-        check(sword.exState == 2 && player.hp == hpBeforeDodge && sword.swordAttackTime > 0,
+        check(((ExBoss) sword).exState == 2 && player.hp == hpBeforeDodge && ((InsecureSwordBoss) sword).swordAttackTime > 0,
             "Moving away from the sword's marked point should dodge the slash");
         combat.update(.51f, player, plan);
-        check(sword.exState == 2 && sword.swordAttackTime == 0,
+        check(((ExBoss) sword).exState == 2 && ((InsecureSwordBoss) sword).swordAttackTime == 0,
             "The slash animation must finish while the sword remains open to attacks");
 
-        sword.exState = 0;
-        sword.exConfidence = 0;
+        ((ExBoss) sword).exState = 0;
+        ((InsecureSwordBoss) sword).exConfidence = 0;
         sword.skillTimer = 0;
         player.x = sword.x - 70;
         // Deterministically exercise a whiff, independent of the preceding pickup RNG.
         combat.random.setSeed(0);
         combat.update(.01f, player, plan);
-        check(sword.exState == 3 && sword.swordAttackTime > 0 && player.hp == hpBeforeDodge,
+        check(((ExBoss) sword).exState == 3 && ((InsecureSwordBoss) sword).swordAttackTime > 0 && player.hp == hpBeforeDodge,
             "A low-confidence whiff must animate without damaging the nearby player");
         combat.carriedNotes = 1;
         combat.update(.01f, player, plan);
-        check(sword.exState == 2 && sword.swordAttackTime == 0,
+        check(((ExBoss) sword).exState == 2 && ((InsecureSwordBoss) sword).swordAttackTime == 0,
             "Applying a Post-it must interrupt the whiff animation");
     }
 
@@ -1612,7 +1746,11 @@ public final class GameRulesCheck {
                 "EX test must prepare both weapons, full resources and EX-only techniques");
             check(combat.exObjects.size == (exId == 1 ? 6 : exId == 2 ? 3 : 0),
                 "EX test must include the boss's actual dust or Post-it objects");
-            combat.enemies.first().hp = 0;
+            combat.enemies.first().setHp(0);
+            if (exId == 0) {
+                check(!combat.update(.01f, player, run.plan), "The first Cat defeat must not finish EX");
+                combat.enemies.first().setHp(0);
+            }
             check(combat.update(.01f, player, run.plan), "EX test boss must be defeatable");
             run.finishRoom(player);
             check(run.phase == RunDirector.Phase.TRANSITION && !player.lanTether && !player.notebookHeatBeam,
@@ -1632,13 +1770,13 @@ public final class GameRulesCheck {
         RunPlan plan = new RunPlan(new Random(21));
         PlayerCharacter player = new PlayerCharacter();
         CombatRoom combat = new CombatRoom(new Random(22));
-        CombatRoom.Enemy sati = new CombatRoom.Enemy(640, 520, 36,
+        Enemy sati = GameRulesCheck.fixture(640, 520, 36,
             200, 72, 90, 12, 0);
-        sati.satiCooldown = .01f;
+        ((SatiBoss) sati).satiCooldown = .01f;
         combat.enemies.add(sati);
         combat.update(.02f, player, plan);
-        check(sati.satiCharge == SatiBossBehavior.CHARGE_DURATION
-            && sati.satiAimX == player.x && sati.satiAimY == player.y,
+        check(((SatiBoss) sati).satiCharge == SatiBoss.CHARGE_DURATION
+            && ((SatiBoss) sati).satiAimX == player.x && ((SatiBoss) sati).satiAimY == player.y,
             "Sati should lock a warning point before transforming the C++ element");
         float chargedX = sati.x, chargedY = sati.y;
         player.x = 850;
@@ -1654,9 +1792,9 @@ public final class GameRulesCheck {
         RunPlan plan = new RunPlan(new Random(60));
         PlayerCharacter player = new PlayerCharacter();
         CombatRoom combat = new CombatRoom(new Random(61));
-        CombatRoom.Enemy monster = new CombatRoom.Enemy(740, 360, 17,
+        Enemy monster = GameRulesCheck.fixture(740, 360, 17,
             200, 999, 0, 0, CombatRoom.BASIC);
-        CombatRoom.Enemy boss = new CombatRoom.Enemy(770, 420, 36,
+        Enemy boss = GameRulesCheck.fixture(770, 420, 36,
             200, 50, 0, 0, RunPlan.KEN_ID);
         combat.enemies.add(monster);
         combat.enemies.add(boss);
@@ -1676,33 +1814,33 @@ public final class GameRulesCheck {
         player.x = 600;
         player.y = 360;
         player.invulnerable = 0;
-        CombatRoom.Enemy boss = new CombatRoom.Enemy(1100, 425, 36,
+        Enemy boss = GameRulesCheck.fixture(1100, 425, 36,
             500, 72, 0, 12, RunPlan.DOME_ID);
         boss.sp = boss.maxSp;
-        boss.dome.remaining = 0;
+        ((DomeBoss) boss).dome().remaining = 0;
         combat.enemies.add(boss);
 
         float hp = player.hp;
         combat.update(.01f, player, plan);
-        check(boss.dome.phase == DomeBossBehavior.Phase.LIGHTNING_CHARGE
+        check(((DomeBoss) boss).dome().phase == DomeBoss.Phase.LIGHTNING_CHARGE
             && player.hp == hp && combat.shots.size == 0,
             "Dome should warn before lightning without firing generic projectiles");
         float targetX = player.x, targetY = player.y;
-        player.x += DomeBossBehavior.LIGHTNING_RADIUS + 40;
-        combat.update(DomeBossBehavior.LIGHTNING_CHARGE + .01f, player, plan);
-        check(boss.dome.aimX == targetX && boss.dome.aimY == targetY
+        player.x += DomeBoss.LIGHTNING_RADIUS + 40;
+        combat.update(DomeBoss.LIGHTNING_CHARGE + .01f, player, plan);
+        check(((DomeBoss) boss).dome().aimX == targetX && ((DomeBoss) boss).dome().aimY == targetY
             && player.hp == hp,
             "Lightning should keep its marked point so moving away avoids impact");
-        combat.update(DomeBossBehavior.LIGHTNING_STRIKE + .01f, player, plan);
-        combat.update(DomeBossBehavior.RECOVERY + .01f, player, plan);
+        combat.update(DomeBoss.LIGHTNING_STRIKE + .01f, player, plan);
+        combat.update(DomeBoss.RECOVERY + .01f, player, plan);
         player.x = targetX;
         combat.update(2.5f, player, plan);
-        check(boss.dome.phase == DomeBossBehavior.Phase.LASER_CHARGE
+        check(((DomeBoss) boss).dome().phase == DomeBoss.Phase.LASER_CHARGE
             && player.hp == hp,
             "Dome should alternate to a charged laser after lightning and recovery");
         player.y = 150;
-        combat.update(DomeBossBehavior.LASER_CHARGE + .01f, player, plan);
-        check(player.hp == hp && boss.dome.aimY == targetY,
+        combat.update(DomeBoss.LASER_CHARGE + .01f, player, plan);
+        check(player.hp == hp && ((DomeBoss) boss).dome().aimY == targetY,
             "The normal laser should aim at the marked position and allow a dodge");
         player.y = targetY;
         combat.update(.01f, player, plan);
@@ -1711,39 +1849,39 @@ public final class GameRulesCheck {
         hp = player.hp;
         combat.update(.01f, player, plan);
         check(player.hp == hp, "An active laser should respect hit invulnerability");
-        combat.update(DomeBossBehavior.LASER_FIRE, player, plan);
-        combat.update(DomeBossBehavior.RECOVERY + .01f, player, plan);
+        combat.update(DomeBoss.LASER_FIRE, player, plan);
+        combat.update(DomeBoss.RECOVERY + .01f, player, plan);
         combat.update(2.5f, player, plan);
-        check(boss.dome.phase == DomeBossBehavior.Phase.LIGHTNING_CHARGE,
+        check(((DomeBoss) boss).dome().phase == DomeBoss.Phase.LIGHTNING_CHARGE,
             "Dome should return to lightning after the laser");
         player.invulnerable = 0;
-        combat.update(DomeBossBehavior.LIGHTNING_CHARGE + .01f, player, plan);
+        combat.update(DomeBoss.LIGHTNING_CHARGE + .01f, player, plan);
         check(player.hp < hp, "Remaining inside the lightning marker should take damage");
 
-        combat.update(DomeBossBehavior.LIGHTNING_STRIKE + .01f, player, plan);
-        combat.update(DomeBossBehavior.RECOVERY + .01f, player, plan);
-        boss.dome.nextLaser = false;
-        boss.dome.remaining = 0;
+        combat.update(DomeBoss.LIGHTNING_STRIKE + .01f, player, plan);
+        combat.update(DomeBoss.RECOVERY + .01f, player, plan);
+        ((DomeBoss) boss).dome().nextLaser = false;
+        ((DomeBoss) boss).dome().remaining = 0;
         combat.update(.01f, player, plan);
         hp = player.hp;
-        player.x = boss.dome.aimX - 115;
+        player.x = ((DomeBoss) boss).dome().aimX - 115;
         player.invulnerable = player.dashTimer = 0;
         player.sp = 100;
-        check(player.dash(1, 0) && player.x == boss.dome.aimX,
+        check(player.dash(1, 0) && player.x == ((DomeBoss) boss).dome().aimX,
             "The test dash should land inside the lightning marker");
-        boss.dome.remaining = .01f;
+        ((DomeBoss) boss).dome().remaining = .01f;
         combat.update(.02f, player, plan);
         check(player.hp == hp, "Dash invulnerability should protect against lightning");
 
-        CombatRoom.Enemy other = new CombatRoom.Enemy(900, 425, 36,
+        Enemy other = GameRulesCheck.fixture(900, 425, 36,
             500, 72, 0, 12, RunPlan.DOME_ID);
-        check(other.behavior == boss.behavior && other.dome != boss.dome
-            && other.dome.phase == DomeBossBehavior.Phase.IDLE,
-            "Dome instances must keep independent skill states with a shared behavior");
+        check(((DomeBoss) other).dome() != ((DomeBoss) boss).dome()
+            && ((DomeBoss) other).dome().phase == DomeBoss.Phase.IDLE,
+            "Dome instances must own independent strategies and skill states");
 
         combat.begin(RunDirector.Room.FINAL_EXAM, plan, 0);
-        CombatRoom.Enemy serverDome = null;
-        for (CombatRoom.Enemy enemy : combat.enemies)
+        Enemy serverDome = null;
+        for (Enemy enemy : combat.enemies)
             if (enemy.kind == RunPlan.DOME_ID) serverDome = enemy;
         check(serverDome != null && serverDome.anchored,
             "The Final Exam must contain an anchored Dome");
@@ -1751,17 +1889,17 @@ public final class GameRulesCheck {
         combat.enemies.add(serverDome);
         player.startRoom(true);
         player.invulnerable = 0;
-        serverDome.dome.nextLaser = true;
-        serverDome.dome.remaining = 0;
+        ((DomeBoss) serverDome).dome().nextLaser = true;
+        ((DomeBoss) serverDome).dome().remaining = 0;
         hp = player.hp;
         combat.update(.01f, player, plan);
-        check(serverDome.dome.downward
-            && serverDome.dome.originX == serverDome.dome.endX
-            && Math.abs(serverDome.dome.endY - GameSpace.BOTTOM) < .01f
+        check(((DomeBoss) serverDome).dome().downward
+            && ((DomeBoss) serverDome).dome().originX == ((DomeBoss) serverDome).dome().endX
+            && Math.abs(((DomeBoss) serverDome).dome().endY - GameSpace.BOTTOM) < .01f
             && player.hp == hp,
             "The cabinet laser must warn vertically down to the player lane");
-        player.x = serverDome.dome.originX;
-        combat.update(DomeBossBehavior.LASER_CHARGE + .01f, player, plan);
+        player.x = ((DomeBoss) serverDome).dome().originX;
+        combat.update(DomeBoss.LASER_CHARGE + .01f, player, plan);
         check(player.hp < hp, "The downward laser must hit a player directly below Dome");
         player.x += 100;
         player.invulnerable = 0;
@@ -1775,68 +1913,64 @@ public final class GameRulesCheck {
         // Measure the actual cast cadence, including SP regeneration and all phases.
         combat.begin(RunDirector.Room.BOSS, plan, 0);
         combat.enemies.clear();
-        CombatRoom.Enemy rapidDome = new CombatRoom.Enemy(1100, 425, 36,
+        Enemy rapidDome = GameRulesCheck.fixture(1100, 425, 36,
             500, 72, 0, 12, RunPlan.DOME_ID);
         combat.enemies.add(rapidDome);
         player.startRoom(false);
         player.invulnerable = 100;
         int casts = 0;
         for (int i = 0; i < 1200; i++) {
-            DomeBossBehavior.Phase previous = rapidDome.dome.phase;
+            DomeBoss.Phase previous = ((DomeBoss) rapidDome).dome().phase;
             combat.update(.01f, player, plan);
-            if (previous == DomeBossBehavior.Phase.IDLE
-                && rapidDome.dome.phase != DomeBossBehavior.Phase.IDLE) casts++;
+            if (previous == DomeBoss.Phase.IDLE
+                && ((DomeBoss) rapidDome).dome().phase != DomeBoss.Phase.IDLE) casts++;
         }
         check(casts >= 5, "Dome should start at least five casts in twelve seconds in loop one");
     }
 
-    private static void checkTalgoCast() {
-        RunPlan plan = new RunPlan(new Random(62));
-        PlayerCharacter player = new PlayerCharacter();
-        CombatRoom combat = new CombatRoom(new Random(63));
-        CombatRoom.Enemy talgo = new CombatRoom.Enemy(1100, 360, 36,
-            500, 72, 0, 12, RunPlan.KEN_ID);
-        talgo.talgoCooldown = .01f;
-        talgo.skillTimer = 100;
-        talgo.sp = 0;
-        combat.enemies.add(talgo);
+    /** Build the same explicit-stat fixture using the concrete owner of each skill state. */
+    static Enemy fixture(float x, float y, float radius, float hp, float maxSp,
+                         float speed, float damage, int kind) {
+        if (kind == CombatRoom.WARPER) return new io.github.kirinojuju.enemy.WarperMonster(x, y, radius, hp, maxSp, speed, damage, kind);
+        if (kind < 0) return new io.github.kirinojuju.enemy.Monster(x, y, radius, hp, maxSp, speed, damage, kind);
+        switch (kind) {
+            case RunPlan.AE_ID: return new AeBoss(x, y, radius, hp, maxSp, speed, damage, kind);
+            case RunPlan.SATI_ID: return new SatiBoss(x, y, radius, hp, maxSp, speed, damage, kind);
+            case RunPlan.DOME_ID: return new DomeBoss(x, y, radius, hp, maxSp, speed, damage, kind);
+            case CombatRoom.LIQUID_CAT: return new LiquidCatBoss(x, y, radius, hp, maxSp, speed, damage, kind);
+            case CombatRoom.ALLERGIC_VACUUM: return new AllergicVacuumBoss(x, y, radius, hp, maxSp, speed, damage, kind);
+            case CombatRoom.INSECURE_SWORD: return new InsecureSwordBoss(x, y, radius, hp, maxSp, speed, damage, kind);
+            default: return new FixtureBoss(x, y, radius, hp, maxSp, speed, damage, kind);
+        }
+    }
+    private static final class FixtureBoss extends Boss {
+        FixtureBoss(float x, float y, float radius, float hp, float maxSp,
+                    float speed, float damage, int kind) {
+            super(x, y, radius, hp, maxSp, speed, damage, kind);
+        }
+    }
 
-        combat.update(.02f, player, plan);
-        check(talgo.talgoCharge == TalgoBossBehavior.CAST_DURATION,
-            "Talgo should mark a safe circle before casting the full-room AOE");
-        float reachX = talgo.talgoSafeX - player.x;
-        float reachY = talgo.talgoSafeY - player.y;
-        check(reachX * reachX + reachY * reachY <= 180 * 180,
-            "The marked circle should be reachable during the warning");
-        player.x = talgo.talgoSafeX;
-        player.y = talgo.talgoSafeY;
-        player.invulnerable = 0;
-        float hp = player.hp;
-        combat.update(TalgoBossBehavior.CAST_DURATION + .01f, player, plan);
-        check(player.hp == hp, "Standing in Talgo's safe circle should avoid the AOE");
+    private static final class ProbeAttack implements WeaponAttack {
+        int calls;
+        @Override public boolean attack(PlayerCharacter player, CombatRoom room,
+                                        io.github.kirinojuju.audio.GameAudio audio) {
+            calls++;
+            return true;
+        }
+        @Override public void addAbility(io.github.kirinojuju.weapon.WeaponAbility ability) { }
+    }
 
-        talgo.talgoCooldown = 0;
-        combat.update(.01f, player, plan);
-        player.x = talgo.talgoSafeX > GameSpace.WIDTH / 2
-            ? GameSpace.LEFT + 50 : GameSpace.RIGHT - 50;
-        player.y = GameSpace.HEIGHT / 2;
-        player.invulnerable = 0;
-        combat.update(TalgoBossBehavior.CAST_DURATION + .01f, player, plan);
-        check(player.hp < hp, "The AOE should damage a player outside the safe circle");
-
-        talgo.talgoCooldown = 0;
-        combat.update(.01f, player, plan);
-        player.x = talgo.talgoSafeX > GameSpace.WIDTH / 2
-            ? GameSpace.LEFT + 50 : GameSpace.RIGHT - 50;
-        player.y = GameSpace.HEIGHT / 2;
-        player.invulnerable = 0;
-        player.dashTimer = 0;
-        player.sp = 100;
-        hp = player.hp;
-        check(player.dash(0, 1), "A ready dash should activate during Talgo's cast");
-        talgo.talgoCharge = .01f;
-        combat.update(.02f, player, plan);
-        check(player.hp == hp,
-            "Dashing at the impact should protect the player outside the safe circle");
+    private static void checkInjectedWeapons() {
+        ProbeAttack physical = new ProbeAttack(), magical = new ProbeAttack();
+        PlayerCharacter player = new PlayerCharacter(physical, magical);
+        CombatRoom room = new CombatRoom(new Random(200));
+        player.acquire(PlayerCharacter.Weapon.PHYSICAL);
+        player.attack(room);
+        check(physical.calls == 1 && magical.calls == 0,
+            "Physical attacks must use the injected implementation");
+        player.acquire(PlayerCharacter.Weapon.MAGICAL);
+        player.attack(room);
+        check(physical.calls == 1 && magical.calls == 1,
+            "Switching weapons must dispatch to the other injected implementation");
     }
 }

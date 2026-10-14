@@ -1,20 +1,20 @@
 package io.github.kirinojuju;
 
 import io.github.kirinojuju.combat.CombatRoom;
-import io.github.kirinojuju.combat.CombatRoom.Enemy;
-import io.github.kirinojuju.enemy.AlgoMonster;
-import io.github.kirinojuju.enemy.boss.KenBoss;
-import io.github.kirinojuju.enemy.boss.KenBossBehavior;
+import io.github.kirinojuju.enemy.Enemy;
+import io.github.kirinojuju.enemy.Monster;
+import io.github.kirinojuju.enemy.WarperMonster;
 import io.github.kirinojuju.enemy.boss.AeBoss;
-import io.github.kirinojuju.enemy.boss.AeBossBehavior;
-import io.github.kirinojuju.world.GameSpace;
+import io.github.kirinojuju.enemy.boss.BossBody;
+import io.github.kirinojuju.enemy.boss.KenBoss;
 import io.github.kirinojuju.enemy.boss.MBoss;
-import io.github.kirinojuju.enemy.boss.MBossBehavior;
 import io.github.kirinojuju.enemy.boss.SatiBoss;
+import io.github.kirinojuju.enemy.ex.ExBoss;
 import io.github.kirinojuju.enemy.ex.LiquidCatBoss;
 import io.github.kirinojuju.flow.RunDirector;
 import io.github.kirinojuju.flow.RunPlan;
 import io.github.kirinojuju.player.PlayerCharacter;
+import io.github.kirinojuju.world.GameSpace;
 import java.util.Random;
 
 /** Regression checks for the user's enemy classes in the cleanup architecture. */
@@ -25,7 +25,11 @@ public final class CustomBossCheck {
 
     public static void main(String[] args) {
         checkFactory();
+        checkMonsterArtworkTypes();
         checkKen();
+        checkKenBodyHitbox();
+        checkBossBodyHitboxes();
+        checkTransparentBodyPadding();
         checkAe();
         checkM();
         checkSati();
@@ -59,36 +63,84 @@ public final class CustomBossCheck {
         check(ken && m && sati, "All custom bosses must remain reachable");
         RunPlan plan = new RunPlan(new Random(21));
         room.begin(RunDirector.Room.MOBS, plan, 0);
-        check(room.enemies.first() instanceof AlgoMonster, "Algorithm monster must keep its sprite/projectile class");
+        check(((Monster)room.factory.createMonster(640, 300, CombatRoom.BASIC, plan)).appearance()
+            == Monster.Appearance.ALGORITHM,
+            "Ordinary monsters must use Algorithm artwork");
         room.begin(RunDirector.Room.FINAL_EXAM, plan, 0);
-        check(room.enemies.size == 3, "Cleanup final exam must retain all three anchored bosses");
+        check(room.enemies.size == 2, "Cleanup final exam must retain both anchored bosses");
         for (Enemy enemy : room.enemies) {
             check(enemy.anchored, "Final exam bosses must stay on their cabinets");
-            check(!(enemy instanceof AeBoss), "Final exam Ae must retain its original behavior");
-            check(!(enemy.behavior instanceof MBossBehavior),
+            if (enemy.kind == RunPlan.AE_ID)
+                check(enemy instanceof AeBoss, "Final exam must use Ae's concrete boss model");
+            check(!(enemy instanceof MBoss),
                 "Final exam must retain its anchored attacks rather than M's split behavior");
+        }
+        PlayerCharacter examPlayer = new PlayerCharacter();
+        for (int frame = 0; frame < 600; frame++) {
+            room.update(.016f, examPlayer, plan);
+            for (Enemy enemy : room.enemies)
+                if (enemy instanceof AeBoss)
+                    check(((AeBoss) enemy).laserPhase() == AeBoss.LaserPhase.IDLE,
+                        "Anchored Ae must retain his spread without the normal-room sweeping laser");
         }
         room.begin(RunDirector.Room.EX, plan, 0);
         check(room.enemies.first() instanceof LiquidCatBoss, "EX factory must retain the user's Liquid Cat class");
+    }
+
+    private static void checkMonsterArtworkTypes() {
+        RunPlan plan = new RunPlan(new Random(13));
+        CombatRoom room = new CombatRoom(new Random(14));
+        boolean program = false, network = false, algo = false, slime = false;
+        for (int stage = 0; stage < 4; stage++) {
+            room.begin(RunDirector.Room.MOBS, plan, 0);
+            for (int i = 0; i < room.enemies.size; i++) {
+                Enemy enemy = room.enemies.get(i);
+                check(enemy.kind == CombatRoom.BASIC || enemy.kind == CombatRoom.SHIELDED
+                    || enemy.kind == CombatRoom.WARPER || enemy.kind == CombatRoom.RANGED
+                    || enemy.kind == CombatRoom.WAVE || enemy.kind == CombatRoom.BINDER,
+                    "All six supported monster kinds may spawn");
+                if (enemy.kind == CombatRoom.WARPER) {
+                    check(((Monster)enemy).appearance() == Monster.Appearance.PROGRAM
+                        && enemy instanceof WarperMonster,
+                        "Programming monsters must retain their teleport attacks");
+                    program = true;
+                } else if (enemy.kind == CombatRoom.SHIELDED) {
+                    check(((Monster)enemy).appearance() == Monster.Appearance.NETWORK && enemy.armor > 0,
+                        "Network monsters must have a shield");
+                    network = true;
+                } else if (enemy.kind == CombatRoom.BASIC) {
+                    check(((Monster)enemy).appearance() == Monster.Appearance.ALGORITHM,
+                        "Basic monsters must use Algorithm artwork");
+                    algo = true;
+                } else {
+                    check(((Monster)enemy).appearance() == Monster.Appearance.SLIME,
+                        "Ranged, wave and binding monsters must retain the slime artwork fallback");
+                    slime = true;
+                }
+                check(enemy.kind < 0 && enemy.getHp() > 0,
+                    "Artwork selection must preserve the monster's combat identity and statistics");
+            }
+            plan.completeStage();
+        }
+        check(program && network && algo && slime, "All four monster artwork types must be reachable");
     }
 
     private static void checkKen() {
         RunPlan plan = new RunPlan(new Random(1));
         CombatRoom room = new CombatRoom(new Random(2));
         KenBoss ken = new KenBoss(plan, new Random(3));
-        check(ken.behavior instanceof KenBossBehavior, "Ken must use its dedicated behavior");
         PlayerCharacter player = new PlayerCharacter();
         room.enemies.add(ken);
         ken.skillTimer = 0;
         room.update(.01f, player, plan);
-        check(ken.bombs.size >= 3 && ken.bombAttackTime > 0 && ken.talgoCharge == 0,
-            "Ken must use bombs rather than accidentally triggering the cleanup Talgo grid");
+        check(ken.bombs.size >= 7 && ken.bombs.size <= 9 && ken.bombAttackTime > 0,
+            "Ken must use bombs rather than accidentally triggering the room-wide grid");
         KenBoss.Bomb bomb = ken.bombs.first();
         player.x = bomb.x;
         player.y = bomb.y;
         player.invulnerable = 0;
         float hp = player.hp;
-        KenBossBehavior.updateBombSkill(ken, 3.01f, player, plan, false);
+        ken.advanceBombs(3.01f, player, plan, false);
         check(bomb.exploded && player.hp == hp - KenBoss.BOMB_DAMAGE,
             "Ken's warned bomb must keep its original damage");
         ken.summoner = true;
@@ -98,6 +150,164 @@ public final class CustomBossCheck {
         room.update(.01f, player, plan);
         check(room.enemies.size == 2 && room.enemies.peek().armor > 0,
             "Ken's original armored summon must coexist with the room's spawn queue");
+    }
+
+    private static void checkKenBodyHitbox() {
+        RunPlan plan = new RunPlan(new Random(15));
+        PlayerCharacter player = new PlayerCharacter();
+        float[][] points = {{0, -10}, {0, -KenBoss.DRAW_SIZE / 2},
+            {0, -KenBoss.DRAW_SIZE + 10}, {-55, -100}, {60, -100}};
+        for (float[] point : points) {
+            CombatRoom room = new CombatRoom(new Random(16));
+            KenBoss ken = new KenBoss(plan, new Random(17));
+            ken.x = 800;
+            ken.y = 450;
+            BossBody.applyBounds(ken, new float[] {15f / 64, 1f / 64, 49f / 64, 63f / 64}, false);
+            room.enemies.add(ken);
+            float hitX = ken.x + point[0], hitY = ken.y + ken.radius + point[1];
+            float hp = ken.getHp();
+            room.damageNearby(hitX, hitY, 1, 10);
+            check(ken.getHp() == hp - 10, "Area attacks must hit Ken's head, torso, feet and sides");
+            ken.setHp(hp);
+            room.damageArc(hitX - 20, hitY, 1, 0, 25, 60, 10);
+            check(ken.getHp() == hp - 10, "Melee attacks must reach Ken's visible body");
+            ken.setHp(hp);
+            room.fireFriendly(hitX, hitY, 0, 0, 10, null);
+            room.update(.01f, player, plan);
+            check(ken.getHp() == hp - 10, "Friendly projectiles must hit every part of Ken's body");
+            ken.setHp(hp);
+            room.firePowerBall(hitX, hitY, 0, 0, 20, null);
+            room.update(.01f, player, plan);
+            check(ken.getHp() == hp - 20, "Power-ball impacts must hit Ken's body");
+            ken.setHp(hp);
+            room.damageNearby(ken.x, ken.y + ken.radius - KenBoss.DRAW_SIZE - 30, 1, 10);
+            check(ken.getHp() == hp, "Attacks below Ken's body must miss");
+        }
+        CombatRoom room = new CombatRoom(new Random(18));
+        KenBoss ken = new KenBoss(plan, new Random(19));
+        ken.x = 800;
+        ken.y = 450;
+        BossBody.applyBounds(ken, new float[] {15f / 64, 1f / 64, 49f / 64, 63f / 64}, false);
+        room.enemies.add(ken);
+        float hp = ken.getHp();
+        room.fireNotebookBeam(ken.x - 200, ken.y + ken.radius - KenBoss.DRAW_SIZE + 10,
+            1, 0, 10, false);
+        check(ken.getHp() == hp - 10, "Notebook beam must hit Ken's feet without crossing his head");
+        for (int seed = 0; seed < 30; seed++) {
+            KenBoss caster = new KenBoss(plan, new Random(seed));
+            caster.skillTimer = 0;
+            caster.advanceBombs(.01f, player, plan, true);
+            check(caster.bombs.size >= 7 && caster.bombs.size <= 9,
+                "Every Ken bomb cast must create 7 to 9 bombs");
+        }
+    }
+
+    private static void checkBossBodyHitboxes() {
+        RunPlan plan = new RunPlan(new Random(50));
+        PlayerCharacter player = new PlayerCharacter();
+        int[] kinds = {RunPlan.KEN_ID, RunPlan.AE_ID, RunPlan.M_ID,
+            RunPlan.SATI_ID, RunPlan.DOME_ID, CombatRoom.LIQUID_CAT, CombatRoom.INSECURE_SWORD};
+        for (int kind : kinds) {
+            Enemy boss = GameRulesCheck.fixture(700, 460, 36, 500, 72, 0, 0, kind);
+            BossBody.applyBounds(boss, new float[] {.3f, .35f, .7f, .9f}, false);
+            boss.stunTime = 100;
+            if (kind == RunPlan.AE_ID) boss.bodyAspectRatio = 1.4f;
+            CombatRoom room = new CombatRoom(new Random(51));
+            room.enemies.add(boss);
+            float height = BossBody.top(boss) - BossBody.bottom(boss);
+            float width = BossBody.right(boss) - BossBody.left(boss);
+            float top = BossBody.top(boss);
+            float[][] points = {{boss.x, top - 2}, {boss.x, top - height / 2},
+                {boss.x, top - height + 2}, {boss.x - width / 2 + 2, top - height / 2},
+                {boss.x + width / 2 - 2, top - height / 2}};
+            for (float[] point : points) {
+                boss.x = 700;
+                boss.y = 460;
+                boss.setHp(500);
+                room.damageNearby(point[0], point[1], 1, 10);
+                check(boss.getHp() == 490, "Area hit must reach every body part of boss " + kind);
+                boss.setHp(500);
+                room.damageArc(point[0] - 20, point[1], 1, 0, 25, 60, 10);
+                check(boss.getHp() == 490, "Melee hit must reach every body part of boss " + kind);
+                boss.setHp(500);
+                room.fireFriendly(point[0], point[1], 0, 0, 10, null);
+                room.update(.01f, player, plan);
+                check(boss.getHp() == 490, "Projectile must reach every body part of boss " + kind);
+                boss.setHp(500);
+                room.firePowerBall(point[0], point[1], 0, 0, 20, null);
+                room.update(.01f, player, plan);
+                check(boss.getHp() == 480, "PowerBall must reach every body part of boss " + kind);
+            }
+            boss.x = 700;
+            boss.y = 460;
+            boss.setHp(500);
+            room.damageNearby(boss.x, top - height - 20, 1, 10);
+            room.damageNearby(boss.x + width / 2 + 20, top - height / 2, 1, 10);
+            check(boss.getHp() == 500, "Hits outside the boss body must miss: " + kind);
+            room.fireNotebookBeam(boss.x - width / 2 - 100, top - height + 2, 1, 0, 10, false);
+            check(boss.getHp() == 490, "Beam must hit feet without crossing the head: " + kind);
+            check(Math.abs(boss.aimY() - (top - height / 2)) < .01f,
+                "Player attacks must aim at the boss body center: " + kind);
+            check(!boss.overlapsBeam(boss.x - width / 2 - 100, top - height - 20, 1, 0, 400, 1),
+                "A beam below the body must miss: " + kind);
+        }
+        Enemy cat = GameRulesCheck.fixture(700, 460, 16, 500, 72, 0, 0, CombatRoom.LIQUID_CAT);
+        ((ExBoss) cat).exState = 1;
+        check(BossBody.height(cat) == BossBody.SMALL_CAT_DRAW_SIZE,
+            "Small cat hit area must shrink with its rendered form");
+        ((LiquidCatBoss) cat).catTransformTime = .2f;
+        float transformingSize = BossBody.SMALL_CAT_DRAW_SIZE
+            + (BossBody.CAT_DRAW_SIZE - BossBody.SMALL_CAT_DRAW_SIZE)
+                * ((LiquidCatBoss) cat).catTransformTime / LiquidCatBoss.TRANSFORM_DURATION;
+        check(BossBody.height(cat) == transformingSize,
+            "Transforming cat's hit area must shrink with its rendered form");
+        Enemy anchored = GameRulesCheck.fixture(700, 460, 36, 500, 72, 0, 0, RunPlan.DOME_ID);
+        anchored.anchored = true;
+        check(anchored.damageRadius() == 36 && anchored.damageY(0) == anchored.y,
+            "Final Exam must retain its original anchored hit geometry");
+        Enemy monster = GameRulesCheck.fixture(700, 460, 17, 50, 37, 80, 7, CombatRoom.BASIC);
+        check(monster.damageRadius() == 17 && monster.aimY() == monster.y,
+            "Ordinary monster geometry must remain unchanged");
+    }
+
+    private static void checkTransparentBodyPadding() {
+        int[] rgba = new int[64 * 64];
+        for (int y = 8; y <= 36; y++)
+            for (int x = 19; x <= 47; x++) rgba[y * 64 + x] = 0xffffffff;
+        rgba[0] = 0xffffff1f; // A very faint pixel outside the body must not expand the hit area.
+        float[] bounds = BossBody.visibleBounds(64, 64, rgba);
+        check(bounds[0] == 19f / 64 && bounds[1] == 27f / 64
+            && bounds[2] == 48f / 64 && bounds[3] == 56f / 64,
+            "Visible bounds must exclude transparent and very faint image margins");
+        check(BossBody.visibleBounds(64, 64, new int[64 * 64]) == null,
+            "A fully transparent frame must not create an invisible body rectangle");
+        RunPlan plan = new RunPlan(new Random(70));
+        Enemy boss = GameRulesCheck.fixture(700, 460, 36, 500, 72, 0, 0, RunPlan.M_ID);
+        boss.stunTime = 100;
+        BossBody.applyBounds(boss, bounds, false);
+        CombatRoom room = new CombatRoom(new Random(71));
+        room.enemies.add(boss);
+        PlayerCharacter player = new PlayerCharacter();
+        float paddingX = boss.x, paddingY = boss.y + boss.radius - BossBody.M_DRAW_SIZE + 10;
+        room.damageNearby(paddingX, paddingY, 1, 10);
+        room.damageArc(paddingX - 20, paddingY, 1, 0, 25, 60, 10);
+        room.fireFriendly(paddingX, paddingY, 0, 0, 10, null);
+        room.update(.01f, player, plan);
+        room.fireNotebookBeam(boss.x - 200, paddingY, 1, 0, 10, false);
+        check(boss.getHp() == 500, "Area, melee, projectile and beam hits inside empty PNG padding must miss");
+        room.shots.clear();
+        float centerX = (BossBody.left(boss) + BossBody.right(boss)) / 2;
+        float centerY = (BossBody.bottom(boss) + BossBody.top(boss)) / 2;
+        check(boss.aimX() == centerX && boss.aimY() == centerY,
+            "Targeting must aim at the visible body, not the empty canvas center");
+        room.damageNearby(centerX, centerY, 1, 10);
+        check(boss.getHp() == 490, "The visible torso must still take damage");
+        BossBody.applyBounds(boss, bounds, true);
+        check(boss.bodyLeft == 1 - 48f / 64 && boss.bodyRight == 1 - 19f / 64,
+            "Flipped artwork must mirror the visible hit bounds");
+        BossBody.applyBounds(boss, null, false);
+        check(boss.damageRadius() == boss.radius && boss.aimY() == boss.y,
+            "Missing artwork must keep a small fallback hit area");
     }
 
     private static void checkAe() {
@@ -111,29 +321,29 @@ public final class CustomBossCheck {
         ae.sp = ae.maxSp;
         float hp = player.hp;
         ae.updateBehavior(room, 2f, player, plan);
-        check(ae.behavior instanceof AeBossBehavior && ae.laserPhase == AeBoss.LaserPhase.WARNING,
+        check(ae.laserPhase() == AeBoss.LaserPhase.WARNING,
             "Ae must warn before starting its sweeping laser");
         check(player.hp == hp && room.shots.size == 3,
             "Laser warning must not damage the player and Ae must fire aimed bullet volleys");
-        ae.updateBehavior(room, AeBossBehavior.LASER_WARNING, player, plan);
-        check(ae.laserPhase == AeBoss.LaserPhase.SWEEP && ae.laserX == GameSpace.LEFT,
+        ae.updateBehavior(room, AeBoss.LASER_WARNING, player, plan);
+        check(ae.laserPhase() == AeBoss.LaserPhase.SWEEP && ae.laserX() == GameSpace.LEFT,
             "Laser must start at the left edge");
-        ae.updateBehavior(room, AeBossBehavior.LASER_DURATION / 2, player, plan);
-        check(player.hp < hp && Math.abs(ae.laserX - player.x) < .01f,
+        ae.updateBehavior(room, AeBoss.LASER_DURATION / 2, player, plan);
+        check(player.hp < hp && Math.abs(ae.laserX() - player.x) < .01f,
             "Sweeping laser must move right and hit a player in its path, even on long frames");
-        float beforeStun = ae.laserX;
+        float beforeStun = ae.laserX();
         ae.stunTime = 1;
         ae.updateBehavior(room, .5f, player, plan);
-        check(ae.laserX == beforeStun, "Stun must pause Ae's sweep");
+        check(ae.laserX() == beforeStun, "Stun must pause Ae's sweep");
         ae.stunTime = 0;
         player.invulnerable = 1;
         float hpAfterHit = player.hp;
-        ae.updateBehavior(room, AeBossBehavior.LASER_DURATION / 2, player, plan);
-        check(ae.laserPhase == AeBoss.LaserPhase.IDLE && ae.laserX == GameSpace.RIGHT,
+        ae.updateBehavior(room, AeBoss.LASER_DURATION / 2, player, plan);
+        check(ae.laserPhase() == AeBoss.LaserPhase.IDLE && ae.laserX() == GameSpace.RIGHT,
             "Laser must finish at the right edge and return to cooldown");
         check(player.hp == hpAfterHit, "Invulnerability must protect against the laser");
         AeBoss independent = new AeBoss(plan);
-        check(independent.laserPhase == AeBoss.LaserPhase.IDLE && independent.laserX == GameSpace.LEFT,
+        check(independent.laserPhase() == AeBoss.LaserPhase.IDLE && independent.laserX() == GameSpace.LEFT,
             "Each Ae must retain its own laser state");
     }
 
@@ -141,10 +351,9 @@ public final class CustomBossCheck {
         RunPlan plan = new RunPlan(new Random(4));
         CombatRoom room = new CombatRoom(new Random(5));
         MBoss m = new MBoss(plan);
-        check(m.behavior instanceof MBossBehavior, "M must dispatch its dedicated behavior");
         PlayerCharacter player = new PlayerCharacter();
         room.enemies.add(m);
-        m.hp = m.maxHp / 2;
+        m.setHp(m.getMaxHp() / 2);
         room.update(.01f, player, plan);
         check(room.enemies.size == 2 && room.enemies.peek() instanceof MBoss,
             "M must split once at half health without changing the array during iteration");
@@ -152,7 +361,7 @@ public final class CustomBossCheck {
         check(room.enemies.size == 2, "M and its copy must not repeatedly split");
         MBoss second = new MBoss(plan);
         room.enemies.add(second);
-        second.hp = second.maxHp / 2;
+        second.setHp(second.getMaxHp() / 2);
         room.update(.01f, player, plan);
         check(room.enemies.size == 4, "Each M must retain its own split state");
         m.skillTimer = 0;
@@ -168,10 +377,10 @@ public final class CustomBossCheck {
         CombatRoom room = new CombatRoom(new Random(8));
         room.enemies.add(sati);
         sati.summoner = false;
-        sati.satiCooldown = 0;
+        ((SatiBoss) sati).satiCooldown = 0;
         sati.sp = 0;
         room.update(.01f, player, plan);
-        check(sati.satiCharge > 0, "Sati's original cast must be dispatched through the new behavior");
+        check(((SatiBoss) sati).satiCharge > 0, "Sati's original cast must be dispatched through the new behavior");
         room.update(1.06f, player, plan);
         CombatRoom.Shot spear = null;
         for (CombatRoom.Shot shot : room.shots) if (shot.satiSpear) spear = shot;
@@ -187,8 +396,9 @@ public final class CustomBossCheck {
         PlayerCharacter player = new PlayerCharacter();
         room.begin(RunDirector.Room.EX, plan, 0);
         LiquidCatBoss cat = (LiquidCatBoss) room.enemies.first();
-        room.update(3.6f, player, plan);
-        check(cat.exState == 1 && cat.catTransformTime == LiquidCatBoss.TRANSFORM_DURATION,
+        cat.setHp(0);
+        room.update(.01f, player, plan);
+        check(((ExBoss) cat).exState == 1 && ((LiquidCatBoss) cat).catTransformTime == LiquidCatBoss.TRANSFORM_DURATION,
             "Liquid Cat must retain its transformation without double-decrementing timers");
         room.update(LiquidCatBoss.TRANSFORM_DURATION, player, plan);
         room.update(.01f, player, plan);
@@ -202,23 +412,39 @@ public final class CustomBossCheck {
         room.begin(RunDirector.Room.EX, plan, 0);
         cat = (LiquidCatBoss) room.enemies.first();
         cat.x = 800; cat.y = 360;
-        cat.exStateTime = .02f;
         cat.skillTimer = 0;
         player.x = 640; player.y = 360; player.hp = 100; player.invulnerable = 0;
         room.update(.01f, player, plan);
-        check(cat.exMeter > 0 && cat.exAimX == 640 && cat.exAimY == 360,
-            "Orbital leap must lock the warning point before dealing damage");
+        check(((ExBoss) cat).exMeter > 0 && ((ExBoss) cat).exAimX == 640 && ((ExBoss) cat).exAimY == 360,
+            "Orbital must lock the warning point before falling");
+        room.update(LiquidCatBoss.ORBITAL_WARNING, player, plan);
+        check(Math.abs(((ExBoss) cat).exMeter - LiquidCatBoss.ORBITAL_FALL) < .001f
+            && cat.x == 800 && player.hp == 100,
+            "The warning must finish before the short falling phase starts");
+        room.update(LiquidCatBoss.ORBITAL_FALL / 2, player, plan);
+        check(((ExBoss) cat).exMeter > 0 && player.hp == 100,
+            "Orbital must not deal damage before touching the marked ground point");
         player.x = 400;
-        room.update(.5f, player, plan);
-        check(cat.exState == 0 && cat.exMeter == 0 && cat.x == 640 && player.hp == 100,
-            "A pending leap must finish before changing form, and the player can dodge its locked marker");
-        room.update(.31f, player, plan);
-        check(cat.exState == 1 && cat.catTransformTime > 0,
-            "Liquid Cat must resume its form cycle after landing recovery");
+        room.update(LiquidCatBoss.ORBITAL_FALL, player, plan);
+        check(((ExBoss) cat).exState == 0 && ((ExBoss) cat).exMeter == 0 && cat.x == 800 && player.hp == 100,
+            "Orbital must hit its locked point without teleporting the boss, and remain dodgeable");
+        ((ExBoss) cat).exFlashTime = 0;
+        cat.skillTimer = 0;
+        player.x = 640;
+        room.update(.01f, player, plan);
+        room.update(LiquidCatBoss.ORBITAL_DURATION + .01f, player, plan);
+        check(player.hp == 80 && cat.x == 800, "Staying in the orbital marker must take one hit on landing");
+        player.invulnerable = 0;
+        room.update(.05f, player, plan);
+        check(player.hp == 80, "The impact visual must not repeat orbital damage");
+        cat.setHp(0);
+        room.update(.01f, player, plan);
+        check(((ExBoss) cat).exState == 1 && ((LiquidCatBoss) cat).catTransformTime > 0,
+            "Only lethal damage may start phase two");
         cat.stunTime = 1;
-        float remaining = cat.catTransformTime;
+        float remaining = ((LiquidCatBoss) cat).catTransformTime;
         room.update(.1f, player, plan);
-        check(cat.catTransformTime == remaining,
+        check(((LiquidCatBoss) cat).catTransformTime == remaining,
             "A stunned Cat must retain its pending transformation animation");
     }
 }

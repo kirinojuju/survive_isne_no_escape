@@ -7,7 +7,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
-import io.github.kirinojuju.combat.CombatRoom;
+import io.github.kirinojuju.enemy.Enemy;
 import io.github.kirinojuju.flow.RunDirector;
 import io.github.kirinojuju.render.OptionalAssetTexture;
 import java.util.Arrays;
@@ -93,12 +93,12 @@ public final class RoomObstacles {
         return destination;
     }
 
-    public void moveEnemy(CombatRoom.Enemy enemy, float dx, float dy) {
+    public void moveEnemy(Enemy enemy, float dx, float dy) {
         enemy.x = moveX(enemy.x, enemy.y, dx, enemy.radius);
         enemy.y = moveY(enemy.x, enemy.y, dy, enemy.radius);
     }
 
-    public void moveToward(CombatRoom.Enemy enemy, float x, float y, float step, float stop) {
+    public void moveToward(Enemy enemy, float x, float y, float step, float stop) {
         float distance = Vector2.dst(enemy.x, enemy.y, x, y);
         if (distance <= stop) return;
         findWaypoint(enemy.x, enemy.y, x, y, enemy.radius);
@@ -140,8 +140,8 @@ public final class RoomObstacles {
     }
 
     /** Spawn, teleport, spacing and knockback can all place an enemy inside a table. */
-    public void resolveEnemy(CombatRoom.Enemy enemy) {
-        if (enemy.anchored || enemy.hp <= 0) return;
+    public void resolveEnemy(Enemy enemy) {
+        if (enemy.anchored || enemy.getHp() <= 0) return;
         for (Table table : tables) {
             Rectangle box = table.solid;
             float left = box.x - enemy.radius, right = box.x + box.width + enemy.radius;

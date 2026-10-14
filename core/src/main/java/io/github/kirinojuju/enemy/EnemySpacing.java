@@ -2,7 +2,6 @@ package io.github.kirinojuju.enemy;
 
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
-import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.world.GameSpace;
 
 /** Resolves overlap after enemies have moved, keeping bosses in place near minions. */
@@ -11,14 +10,14 @@ public final class EnemySpacing {
     private static final float GAP = 12;
     private EnemySpacing() { }
 
-    public static void separate(Array<CombatRoom.Enemy> enemies) {
+    public static void separate(Array<Enemy> enemies) {
         for (int pass = 0; pass < SEPARATION_PASSES; pass++) {
             for (int i = 0; i < enemies.size; i++) {
-                CombatRoom.Enemy a = enemies.get(i);
-                if (a.hp <= 0) continue;
+                Enemy a = enemies.get(i);
+                if (a.getHp() <= 0) continue;
                 for (int j = i + 1; j < enemies.size; j++) {
-                    CombatRoom.Enemy b = enemies.get(j);
-                    if (b.hp <= 0) continue;
+                    Enemy b = enemies.get(j);
+                    if (b.getHp() <= 0) continue;
                     if (a.anchored && b.anchored) continue;
                     float dx = a.x - b.x, dy = a.y - b.y;
                     float minimum = a.radius + b.radius + GAP;
@@ -38,7 +37,7 @@ public final class EnemySpacing {
                     b.y -= dy / distance * overlap * (1 - aShare);
                 }
             }
-            for (CombatRoom.Enemy enemy : enemies) {
+            for (Enemy enemy : enemies) {
                 if (enemy.anchored) continue;
                 enemy.x = MathUtils.clamp(enemy.x, GameSpace.LEFT + enemy.radius,
                     GameSpace.RIGHT - enemy.radius);
@@ -49,7 +48,7 @@ public final class EnemySpacing {
     }
 
     /** Anchored enemies stay fixed; ordinary monsters yield to bosses. */
-    private static float pushShare(CombatRoom.Enemy a, CombatRoom.Enemy b) {
+    private static float pushShare(Enemy a, Enemy b) {
         if (a.anchored) return 0;
         if (b.anchored) return 1;
         if (a.kind >= 0 && b.kind < 0) return 0;

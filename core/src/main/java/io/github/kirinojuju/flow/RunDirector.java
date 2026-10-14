@@ -35,6 +35,7 @@ public final class RunDirector {
     private boolean nextLoopAfterFinalExam;
     private Phase fadeDestination;
     private final Random random;
+    private int upgradeRerollsRemaining;
     private GameAudio audio;
 
     public RunDirector(Random random) {
@@ -46,7 +47,6 @@ public final class RunDirector {
     /** Desktop test entry: skip progression and keep the real cutscene and fight. */
     public void startFinalExamTest(PlayerCharacter player) {
         plan.recordBossDefeat(RunPlan.AE_ID);
-        plan.recordBossDefeat(RunPlan.FAR_ID);
         plan.recordBossDefeat(RunPlan.DOME_ID);
         player.acquire(PlayerCharacter.Weapon.PHYSICAL);
         player.acquire(PlayerCharacter.Weapon.MAGICAL);
@@ -77,11 +77,17 @@ public final class RunDirector {
     /** Returns true when the player requests a fresh run. */
     public boolean update(float dt, PlayerCharacter player, CombatRoom combat,
                    boolean touchSkill, boolean mouseAttack) {
-        return update(dt, player, combat, touchSkill, false, mouseAttack);
+        return update(dt, player, combat, touchSkill, false, false, mouseAttack);
     }
 
     public boolean update(float dt, PlayerCharacter player, CombatRoom combat,
                           boolean touchSkill, boolean touchIceWall, boolean mouseAttack) {
+        return update(dt, player, combat, touchSkill, touchIceWall, false, mouseAttack);
+    }
+
+    public boolean update(float dt, PlayerCharacter player, CombatRoom combat,
+                          boolean touchSkill, boolean touchIceWall,
+                          boolean touchLanWave, boolean mouseAttack) {
         if (advanceSceneFade(dt, player, combat)) return false;
         switch (phase) {
             case GAME_OVER:
@@ -99,7 +105,8 @@ public final class RunDirector {
                 updateCarPrompt();
                 break;
             case UPGRADE:
-                if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) chooseUpgrade(0, player, combat);
+                if (Gdx.input.isKeyJustPressed(Input.Keys.R)) rerollUpgrades(player);
+                else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) chooseUpgrade(0, player, combat);
                 else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) chooseUpgrade(1, player, combat);
                 else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) chooseUpgrade(2, player, combat);
                 break;
@@ -110,7 +117,7 @@ public final class RunDirector {
                 if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) continueAfterCutscene(player, combat);
                 break;
             case FIGHT:
-                updateFight(dt, player, combat, touchSkill, touchIceWall, mouseAttack);
+                updateFight(dt, player, combat, touchSkill, touchIceWall, touchLanWave, mouseAttack);
                 break;
             default:
                 break;
@@ -143,8 +150,9 @@ public final class RunDirector {
     }
 
     private void updateFight(float dt, PlayerCharacter player, CombatRoom combat,
-                             boolean touchSkill, boolean touchIceWall, boolean mouseAttack) {
-        player.update(dt, combat, touchSkill, touchIceWall, mouseAttack);
+                             boolean touchSkill, boolean touchIceWall,
+                             boolean touchLanWave, boolean mouseAttack) {
+        player.update(dt, combat, touchSkill, touchIceWall, touchLanWave, mouseAttack);
         boolean cleared = combat.update(dt, player, plan);
         if (player.hp <= 0) phase = Phase.GAME_OVER;
         else if (cleared) finishRoom(player);
@@ -263,7 +271,7 @@ public final class RunDirector {
                 finalExamQueued = false;
                 finalExamCleared = true;
                 transitionTitle = "FINAL EXAM CLEARED";
-                transitionDetail = "Ae, Far and Dome defeated together.";
+                transitionDetail = "Ae and Dome defeated together.";
                 nextRoom = roomAfterFinalExam;
                 nextLoopOnContinue = nextLoopAfterFinalExam;
                 break;
@@ -295,7 +303,7 @@ public final class RunDirector {
         phase = Phase.UPGRADE;
         if (plan.finalExamReady() && !finalExamQueued && !finalExamCleared) {
             finalExamQueued = true;
-            // Let the player reach the introductory EX before the three-boss exam.
+            // Let the player reach the introductory EX before the Ae-Dome exam.
             if (plan.loop() > 1 && nextRoom != Room.EX) queueFinalExam();
         }
     }
@@ -319,7 +327,43 @@ public final class RunDirector {
         nextLoopOnContinue = false;
     }
 
+    /** One reroll per upgrade screen, preferring choices the player has not just seen. */
+    public boolean rerollUpgrades(PlayerCharacter player) {
+        if (phase != Phase.UPGRADE || upgradeRerollsRemaining <= 0) return false;
+
+        ArrayList<Upgrade> available = new ArrayList<Upgrade>();
+        ArrayList<Upgrade> unseen = new ArrayList<Upgrade>();
+        ArrayList<Upgrade> previous = new ArrayList<Upgrade>();
+        Collections.addAll(previous, offeredUpgrades);
+        for (Upgrade upgrade : Upgrade.values()) {
+            if (!upgrade.available(player)) continue;
+            available.add(upgrade);
+            if (!previous.contains(upgrade)) unseen.add(upgrade);
+        }
+        if (unseen.isEmpty()) return false;
+
+        Collections.shuffle(unseen, random);
+        Collections.shuffle(previous, random);
+        ArrayList<Upgrade> rerolled = new ArrayList<Upgrade>();
+        for (Upgrade upgrade : unseen) {
+            if (rerolled.size() == offeredUpgrades.length) break;
+            rerolled.add(upgrade);
+        }
+        for (Upgrade upgrade : previous) {
+            if (rerolled.size() == offeredUpgrades.length) break;
+            if (available.contains(upgrade) && !rerolled.contains(upgrade))
+                rerolled.add(upgrade);
+        }
+        for (int i = 0; i < offeredUpgrades.length; i++)
+            offeredUpgrades[i] = rerolled.get(i);
+        upgradeRerollsRemaining--;
+        return true;
+    }
+
+    public int upgradeRerollsRemaining() { return upgradeRerollsRemaining; }
+
     private void offerUpgrades(PlayerCharacter player) {
+        upgradeRerollsRemaining = 1;
         ArrayList<Upgrade> choices = new ArrayList<Upgrade>();
         for (Upgrade upgrade : Upgrade.values())
             if (upgrade.available(player)) choices.add(upgrade);
