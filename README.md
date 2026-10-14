@@ -2,215 +2,211 @@
 
 **Accepted into ISNE, yet stuck in a loop.**
 
-![ภาพปกเกม มาทั้งที่ก็เป็นนักเรียนติดลูปไปซะได้](docs/images/game-cover.png)
+![Game cover](docs/images/game-cover.png)
 
-เกมแอ็กชัน Roguelike มุมมอง 2D ที่เปลี่ยนชีวิตนักศึกษา ISNE ให้กลายเป็นการเอาชีวิตรอดในห้องเรียน ใช้สาย LAN และ Notebook ต่อสู้กับมอนสเตอร์ อาจารย์ และศัตรู EX เลือกอัปเกรดให้เข้ากับสไตล์การเล่น แล้วเผชิญปีการศึกษาที่วนกลับมาพร้อมความยากที่เพิ่มขึ้น
+A 2D action roguelike that turns ISNE student life into a fight for survival. Battle monsters, teachers, and EX enemies with a LAN cable and a notebook. Choose upgrades that fit your playstyle, then face another school year as the loop repeats with stronger enemies.
 
-[เรื่องราว](#story) · [ตัวละครหลัก](#main-character) · [Game Loop](#gameplay-loop) · [วิธีเล่น](#how-to-play) · [ปุ่มควบคุม](#controls)
+[Story](#story) · [Main Character](#main-character) · [Game Loop](#gameplay-loop) · [How to Play](#how-to-play) · [Controls](#controls)
 
 ## Game Overview
 
-| หัวข้อ | รายละเอียด |
+| Category | Description |
 | --- | --- |
-| แนวเกม | Single-player · 2D Action Roguelike · Arena Combat |
-| ธีม | ชีวิตนักศึกษา วิชาที่เรียน และการติดอยู่ในลูป |
-| สถานที่ | อาคาร 30 ห้องเรียน ห้องปฏิบัติการ และห้อง Server |
-| แพลตฟอร์มปัจจุบัน | PC / Windows ใช้คีย์บอร์ดและเมาส์ |
-| เป้าหมาย | ผ่านห้องต่อสู้ สร้าง Build ด้วยอัปเกรด ชนะ EX และ FINAL EXAM แล้วเอาชีวิตรอดในลูปถัดไป |
-| สถานะ | Playable Prototype — กำลังปรับสมดุลและงานภาพ |
+| Genre | Single-player · 2D Action Roguelike · Arena Combat |
+| Theme | Student life, academic subjects, and being trapped in a loop |
+| Setting | Building 30, classrooms, laboratories, and a server room |
+| Current Platform | PC / Windows, with keyboard and mouse controls |
+| Objective | Clear combat rooms, build your character through upgrades, defeat EX enemies and the FINAL EXAM, and survive the next loop |
+| Status | Playable prototype, with balancing and visual polish in progress |
 
-**จุดเด่นของเกม**
+**Game Highlights**
 
-- สลับอาวุธระยะใกล้และระยะไกล พร้อมบริหาร HP/SP ระหว่างต่อสู้
-- อ่านวงเตือน หลบสกิล ใช้โต๊ะหรือ Ice Wall ช่วยจัดตำแหน่ง
-- เลือกอัปเกรดหลังชนะบอส ทำให้แต่ละรันมี Build ต่างกัน
-- EX แต่ละตัวมีกติกาเฉพาะ และ FINAL EXAM เปลี่ยนสนามเป็นการต่อสู้ที่เดินได้เฉพาะซ้าย–ขวา
+- Switch between melee and ranged weapons while managing HP and SP.
+- Read attack warnings, dodge skills, and use tables or Ice Wall to control your position.
+- Choose upgrades after boss fights to create a different build each run.
+- Face unique EX mechanics and a FINAL EXAM where movement is limited to left and right.
 
 ## Story
 
-> “I'm a student here.”<br>
-> ผมเป็นนักเรียนที่นี่
+> “I'm a student here.”
 >
-> “I can't remember how many years I've been here...”<br>
-> ผมจำไม่ได้แล้วว่าเรียนที่นี่มากี่ปี...
+> “I can't remember how many years I've been here...”
 >
-> “But I have this feeling...”<br>
-> แต่ผมรู้สึกว่า...
+> “But I have this feeling...”
 >
-> “I... must be stuck in a loop.”<br>
-> ผม...ต้องติดอยู่ในลูปนี้แน่ ๆ
+> “I... must be stuck in a loop.”
 
-เรื่องเริ่มต้นที่อาคาร 30 สถานที่ที่ควรเป็นเพียงวันธรรมดาของนักศึกษา แต่ห้องเรียนกลับเต็มไปด้วยศัตรู และอาจารย์กลายเป็นบททดสอบที่ต้องผ่านไปให้ได้ เมื่อจบปีการศึกษา ทุกอย่างกลับเริ่มต้นอีกครั้งพร้อมความท้าทายที่มากกว่าเดิม
+The story begins at Building 30. What should have been an ordinary school day becomes a series of classrooms filled with enemies, with teachers standing between you and the next stage. When the school year ends, everything starts again with a greater challenge.
 
-ผู้เล่นเลือกเดินเข้าประตูเพื่อเผชิญหน้ากับลูป หรือเดินไปที่รถเพื่อพบฉากจบทางเลือกแบบขำ ๆ
+Walk through the classroom door to face the loop, or approach the car to discover a humorous alternative ending.
 
 ## Main Character
 
 <p align="center">
-  <img src="docs/images/main-character.png" alt="ตัวละครหลัก นักศึกษา ISNE ในชุดนักศึกษา" width="256" height="256">
+  <img src="docs/images/main-character.png" alt="The main character, an ISNE student in a student uniform" width="256" height="256">
 </p>
 
-**นักศึกษา ISNE ผู้ติดอยู่ในลูป** คือคนที่ผู้เล่นควบคุมตลอดรัน ใช้อุปกรณ์ใกล้ตัวเป็นอาวุธ และเอาตัวรอดด้วยการเคลื่อนที่ หลบการโจมตี และเลือกจังหวะใช้สกิล
+Play as **an ISNE student trapped in a loop**. Turn everyday equipment into weapons and survive through movement, dodging, and well-timed skills.
 
-| สิ่งที่มีตอนเริ่มต่อสู้ | รายละเอียด |
+| Starting Resource | Details |
 | --- | --- |
-| HP | 100 — หมดแล้วรันจบ |
-| SP | 100 — ใช้กับการโจมตี Notebook, Dash และสกิลบางชนิด; ฟื้นตามเวลาและเมื่อกำจัดศัตรู |
-| อาวุธ | LAN Cable และ Notebook สลับใช้ได้ทั้งสองแบบ |
-| Potion | ยา HP 2 ขวด และยา SP 2 ขวด |
+| HP | 100 — reaching zero ends the run |
+| SP | 100 — spent on Notebook attacks, Dash, and certain skills; recovers over time and when enemies are defeated |
+| Weapons | LAN Cable and Notebook, both available when combat begins |
+| Potions | 2 HP potions and 2 SP potions |
 
 ## Gameplay Loop
 
-**Opening Story → หน้าปก → อาคาร 30 → ประตูห้องเรียน → เริ่มต่อสู้**
+**Opening Story → Title Screen → Building 30 → Classroom Door → Combat**
 
 ```mermaid
 flowchart TD
-    A["ต่อสู้กับมอนสเตอร์"] --> B["ต่อสู้กับบอสและลูกน้อง"]
-    B --> C["เลือกอัปเกรด 1 จาก 3"]
-    C --> D{"ครบ 4 ด่านหรือยัง?"}
-    D -- "ยังไม่ครบ" --> A
-    D -- "ครบแล้ว" --> E["ตรวจห้องพิเศษตามลำดับรัน"]
-    E --> F["EX / FINAL EXAM ถ้ามี"]
-    F --> G["เริ่ม Loop ใหม่ ศัตรูแข็งแกร่งขึ้น"]
+    A["Fight monsters"] --> B["Fight a boss and minions"]
+    B --> C["Choose 1 of 3 upgrades"]
+    C --> D{"Four stages cleared?"}
+    D -- "Not yet" --> A
+    D -- "Yes" --> E["Check queued special encounters"]
+    E --> F["EX / FINAL EXAM when available"]
+    F --> G["Start the next loop with stronger enemies"]
     G --> A
 ```
 
-- **1 Loop มี 4 ด่าน** แต่ละด่านประกอบด้วยห้องมอนสเตอร์และห้องบอส ลำดับห้องเรียนและบอสถูกสลับในแต่ละลูป
-- ห้องเรียนทั้งสี่คือ **Programming Lab, Circuit Workshop, Network Center และ Capstone Studio**
-- ผ่านห้องมอนสเตอร์ฟื้น **12 HP**; ผ่านห้องบอสฟื้น **35 HP** และได้เลือกอัปเกรด
-- **EX แรกอยู่หลัง Loop 1** จากนั้นพบอีกหลัง Loop 2, 4, 6, ... โดยสุ่มศัตรู EX หนึ่งตัว
-- ชนะ **Ae และ Dome** ในรันเดียวกันเพื่อปลดล็อก **FINAL EXAM** หนึ่งครั้งต่อรัน ถ้ามี EX รออยู่ จะต่อสู้ EX ก่อนเข้าฉากคั่นของ FINAL EXAM
-- ชนะ FINAL EXAM แล้วกลับไปเล่นตามลำดับรันต่อ เกมต้นแบบเน้นการเอาชีวิตรอดในลูปที่ยากขึ้น
+- **Each loop has four stages.** Every stage contains a monster room and a boss room. Classroom and boss order are shuffled each loop.
+- The four classrooms are **Programming Lab, Circuit Workshop, Network Center, and Capstone Studio**.
+- Clearing a monster room restores **12 HP**. Clearing a boss room restores **35 HP** and grants an upgrade choice.
+- **The first EX encounter follows Loop 1.** Further EX encounters appear after Loops 2, 4, 6, and so on, with one randomly selected EX enemy.
+- Defeat **Ae and Dome** in the same run to unlock the **FINAL EXAM** once per run. If an EX encounter is queued, it takes place before the FINAL EXAM cutscene.
+- After the FINAL EXAM, the run continues. The prototype focuses on surviving increasingly difficult loops.
 
-**ผ่านห้อง:** กำจัดศัตรูที่เหลือทั้งหมด รวมลูกน้องของบอส<br>
-**แพ้:** HP เหลือ 0 → GAME OVER → กด R เริ่มรันใหม่ อัปเกรดและรางวัลสะสมอยู่เฉพาะรันปัจจุบัน
+**Room Clear:** Defeat every remaining enemy, including boss minions.<br>
+**Defeat:** HP reaches 0 → GAME OVER → Press R to start a new run. Upgrades and earned rewards last only for the current run.
 
 ## How to Play
 
-### 1. เปิดเกมและเข้าสู่โรงเรียน
+### 1. Launch the Game and Enter School
 
-สำหรับแพ็กเกม Windows ให้แตกไฟล์ ZIP แล้วเปิด **START_GAME.bat** โดยเครื่องต้องมี Java 17 หรือใหม่กว่า
+For the Windows game package, extract the ZIP and open **START_GAME.bat**. Java 17 or later is required.
 
-1. เมื่อเปิดเกมครั้งแรกจะพบ Story ภาษาอังกฤษและไทยบนฉากดำ ปล่อยให้เล่นอัตโนมัติ หรือกด **Enter / Space / คลิกซ้าย** เพื่อเลื่อนข้อความ และกด **Esc** เพื่อข้าม
-2. ที่หน้าปก คลิก **START** หรือกด **Enter** เพื่อเข้าอาคาร 30
-3. ใช้ **WASD / ปุ่มลูกศร** เดินไปประตูด้านซ้ายเพื่อเริ่มต่อสู้
-4. ถ้าอยากสำรวจทางเลือก เดินเข้าใกล้รถแล้วกด **E** หรือคลิกที่รถ เลือกกลับบ้านหรือกลับไปเผชิญหน้ากับโรงเรียน
+1. On the first launch, a short English and Thai story appears on a black screen. Let it advance automatically, press **Enter / Space / left-click** to advance, or press **Esc** to skip.
+2. On the title screen, click **START** or press **Enter** to enter Building 30.
+3. Use **WASD / arrow keys** to reach the door on the left and begin combat.
+4. To explore the alternative ending, approach the car and press **E** or click it. Choose whether to go home or return to school.
 
-### 2. เอาชีวิตรอดในห้องต่อสู้
+### 2. Survive Combat Rooms
 
-1. คลิกใกล้ศัตรูเพื่อเลือกเป้า แล้ว **กดคลิกซ้ายค้าง / Space** เพื่อโจมตี กรอบสีเขียวแสดงเป้าหมายที่ล็อกอยู่
-2. ใช้ **Tab** สลับอาวุธ: **LAN** เหมาะกับระยะใกล้และไม่เสีย SP ส่วน **Notebook** โจมตีระยะไกลและติดตามเป้าหมาย แต่ใช้ SP
-3. ขยับออกจากวงหรือแนวเตือนก่อนการโจมตีลงถึงตัว ใช้ **Shift** เพื่อ Dash เมื่อจำเป็น
-4. ใช้ **E — PowerBall**, **F — Ice Wall** และ **R — Sword Wave** ตามสถานการณ์ โดย Sword Wave ต้องถือ LAN
-5. ดูแถบ HP/SP และจำนวน Potion ด้านบน กด **Z** เติม HP หรือ **X** เติม SP ก่อนทรัพยากรหมด
-6. กำจัดศัตรูให้ครบห้อง แล้วกด **Enter** เพื่อไปต่อ หลังชนะบอสให้เลือกอัปเกรดหนึ่งอย่าง
+1. Click near an enemy to select a target, then **hold the left mouse button / Space** to attack. A green outline marks the locked target.
+2. Press **Tab** to switch weapons. **LAN** is suited to melee combat and costs no SP. **Notebook** fires homing ranged attacks that consume SP.
+3. Move out of warning circles and lines before attacks land. Use **Shift** to Dash when needed.
+4. Use **E — PowerBall**, **F — Ice Wall**, and **R — Sword Wave** as the situation demands. Sword Wave requires LAN to be equipped.
+5. Watch the HP/SP bars and potion counts at the top of the screen. Press **Z** to restore HP or **X** to restore SP.
+6. Defeat every enemy, then press **Enter** to continue. After a boss fight, choose one upgrade.
 
-### 3. สร้าง Build และผ่านห้องพิเศษ
+### 3. Build Your Character and Clear Special Encounters
 
-- หลังชนะบอส เลือกอัปเกรดจากสามตัวเลือกด้วยเมาส์หรือปุ่ม **1 / 2 / 3** กด **R** เพื่อสุ่มตัวเลือกใหม่ได้หนึ่งครั้งต่อหน้ารางวัล
-- เลือกเพิ่มดาเมจ ความเร็วโจมตี ความเร็วเดิน หรือเอฟเฟกต์อย่าง Slow, Poison และ Splash ให้เข้ากับอาวุธที่ใช้
-- ในห้อง EX จะได้ใช้ **LAN Tether** และ **Notebook Heat Beam** ชั่วคราว ส่วนรางวัลจากการชนะ EX อยู่ต่อจนจบรัน
-- ใน FINAL EXAM ผู้เล่นอยู่เลนล่างและเดิน/Dash ได้เฉพาะ **ซ้าย–ขวา** ใช้การโจมตีระยะไกลขึ้นไปหาบอสบนตู้ Server พร้อมหลบสกิลของทั้งสองตัว
+- After defeating a boss, choose one of three upgrades with the mouse or **1 / 2 / 3**. Press **R** to reroll once per reward screen.
+- Improve damage, attack speed, movement speed, or effects such as Slow, Poison, and Splash to support your preferred weapon.
+- EX rooms temporarily provide **LAN Tether** and **Notebook Heat Beam**. Rewards earned by defeating an EX enemy remain until the run ends.
+- During the FINAL EXAM, movement and Dash are restricted to **left and right** in the lower lane. Use ranged attacks against the bosses on the server cabinets while dodging both bosses' skills.
 
 ## Controls
 
-| การกระทำ | ปุ่ม |
+| Action | Input |
 | --- | --- |
-| เลื่อน Story / ข้าม Story | Enter, Space หรือคลิกซ้าย / Esc |
-| เริ่มเกมที่หน้าปก | คลิก START หรือ Enter |
-| เดิน | WASD หรือปุ่มลูกศร; FINAL EXAM ใช้เฉพาะซ้าย–ขวา |
-| โจมตีปกติ | คลิกซ้ายค้าง หรือ Space |
-| ล็อกเป้า | คลิกใกล้ศัตรู; คลิกพื้นว่างจะเลือกศัตรูที่ใกล้ผู้เล่นที่สุด |
-| สลับอาวุธ | Tab หรือ 1 = LAN, 2 = Notebook |
+| Advance Story / Skip Story | Enter, Space, or left-click / Esc |
+| Start from the Title Screen | Click START or press Enter |
+| Move | WASD or arrow keys; left and right only during the FINAL EXAM |
+| Normal Attack | Hold the left mouse button or Space |
+| Lock Target | Click near an enemy; clicking empty ground selects the enemy nearest to the player |
+| Switch Weapon | Tab, or 1 = LAN and 2 = Notebook |
 | Dash | Shift |
-| PowerBall | E หรือปุ่ม BALL บนจอ |
-| Ice Wall | F หรือปุ่ม ICE บนจอ |
-| LAN Sword Wave | R หรือปุ่ม LAN บนจอ เมื่อถือ LAN |
-| ใช้ยา HP / SP | Z / X |
-| หลุดจาก Bind | กด A–D หรือซ้าย–ขวาสลับกัน 6 ครั้ง |
-| เลือกอัปเกรด | คลิกตัวเลือก หรือ 1 / 2 / 3 |
-| สุ่มอัปเกรดใหม่ | R — หนึ่งครั้งต่อหน้ารางวัล |
-| ไปห้องถัดไป / เริ่ม FINAL EXAM | Enter |
-| เริ่มรันใหม่หลังแพ้ | R |
+| PowerBall | E or the on-screen BALL button |
+| Ice Wall | F or the on-screen ICE button |
+| LAN Sword Wave | R or the on-screen LAN button, with LAN equipped |
+| Use HP / SP Potion | Z / X |
+| Escape Bind | Alternate A–D or Left–Right six times |
+| Choose Upgrade | Click an option or press 1 / 2 / 3 |
+| Reroll Upgrades | R — once per reward screen |
+| Continue to the Next Room / Start the FINAL EXAM | Enter |
+| Start a New Run After Defeat | R |
 
-**ปุ่ม R เปลี่ยนหน้าที่ตามหน้าจอ:** ระหว่างต่อสู้คือ Sword Wave, หน้ารางวัลคือสุ่มอัปเกรด และหน้า GAME OVER คือเริ่มใหม่
+**R changes function by screen:** Sword Wave during combat, reroll on the reward screen, and restart on GAME OVER.
 
 ## Weapons & Skills
 
-| อาวุธ / สกิล | การใช้งาน | ค่าใช้จ่ายพื้นฐาน |
+| Weapon / Skill | Function | Base Cost |
 | --- | --- | --- |
-| LAN Cable | ฟาดเป็นวงด้านหน้า เหมาะกับศัตรูระยะใกล้ | ไม่เสีย SP |
-| Notebook | ขว้างโจมตีจากระยะไกล กระสุนติดตามเป้าหมาย | 10 SP ต่อครั้ง |
-| Sword Wave | ปล่อยคลื่นตรงไปตามเป้าหรือทิศที่หัน เมื่อถือ LAN | ไม่เสีย SP |
-| PowerBall | ลูกพลังติดตามเป้า ระเบิดเป็นวงและผลักศัตรู; ยืนร่ายก่อนปล่อย | 30 SP |
-| Ice Wall | วางกำแพงด้านหน้า ตำแหน่งคงที่ 4.5 วินาที กั้นการเดินและกระสุนศัตรู | 25 SP |
-| Dash | พุ่งเปลี่ยนตำแหน่ง พร้อมช่วงป้องกันดาเมจสั้น ๆ | 25 SP |
+| LAN Cable | Swing in a forward arc to hit nearby enemies | No SP cost |
+| Notebook | Throw homing projectiles at distant targets | 10 SP per attack |
+| Sword Wave | Send a straight wave toward the target or facing direction, with LAN equipped | No SP cost |
+| PowerBall | Launch a homing energy ball that explodes in an area and pushes enemies; stand still to cast | 30 SP |
+| Ice Wall | Place a wall in a fixed position ahead for 4.5 seconds; blocks movement and enemy projectiles | 25 SP |
+| Dash | Reposition quickly with brief invulnerability | 25 SP |
 
-**Potion:** ยา HP ฟื้น **40 HP** และยา SP ฟื้น **35 SP** ขวดที่เหลือเก็บข้ามห้องได้ การกดใช้ขณะค่าพลังเต็มจะไม่เสียขวด
+**Potions:** HP potions restore **40 HP**, and SP potions restore **35 SP**. Unused bottles carry over between rooms. Using a potion while its resource is full does not consume a bottle.
 
 ## Enemies & Bosses
 
-### มอนสเตอร์ปกติ
+### Regular Monsters
 
-| ประเภท | สิ่งที่ต้องรับมือ |
+| Type | Behavior |
 | --- | --- |
-| Basic | เข้าประชิดและโจมตี |
-| Ranged | รักษาระยะแล้วปล่อยกระสุน |
-| Wave | ยิงคลื่นพลังเข้าหาผู้เล่น |
-| Shielded | มีเกราะ ต้องทำลายเกราะก่อนลด HP |
-| Binder | กระสุนจับผู้เล่นให้อยู่กับที่ |
-| Warper | เตือนจุดก่อนวาร์ปเข้ามาโจมตี |
+| Basic | Approaches the player and attacks at close range |
+| Ranged | Keeps its distance and fires projectiles |
+| Wave | Fires energy waves toward the player |
+| Shielded | Has armor that must be broken before its HP can be reduced |
+| Binder | Fires projectiles that temporarily immobilize the player |
+| Warper | Marks an attack location before teleporting in to strike |
 
-### บอสอาจารย์
+### Teacher Bosses
 
-มีบอสปกติ **5 ตัว** แต่ละลูปพบ 4 ตัว: **Ken หรือ Sati** ร่วมกับ **Ae, M และ Dome**
+There are **five regular bosses**. Each loop includes four: **Ken or Sati**, together with **Ae, M, and Dome**.
 
-| บอส | รูปแบบการต่อสู้ |
+| Boss | Combat Pattern |
 | --- | --- |
-| Ajarn Ken | วางระเบิดหลายจุดพร้อมวงเตือน และเรียกลูกน้อง |
-| Ajarn Sati | ธาตุ C++ แปลงเป็นหอก และเรียกลูกน้องมีเกราะ |
-| Ajarn Ae | วาร์ป โจมตีจับ/ทำดาเมจ และเลเซอร์กวาดในห้องปกติ |
-| Ajarn M | แยกร่างเมื่อ HP เหลือครึ่งหนึ่ง ต้องรับมือกระสุนจากทั้งสองร่าง |
-| Ajarn Dome | สายฟ้าเตือนจุดก่อนฟาด สลับกับเลเซอร์ชาร์จก่อนยิง |
+| Ajarn Ken | Places bombs at multiple marked locations and summons minions |
+| Ajarn Sati | Transforms C++ elements into spears and summons armored minions |
+| Ajarn Ae | Teleports, binds or damages the player, and uses sweeping lasers in regular boss rooms |
+| Ajarn M | Splits into two bodies at half HP, forcing the player to dodge projectiles from both |
+| Ajarn Dome | Alternates marked lightning strikes with lasers that charge before firing |
 
 ### EX Encounters
 
-| EX | กติกาพิเศษ | รางวัล |
+| EX Enemy | Special Mechanics | Reward |
 | --- | --- | --- |
-| Liquid Cat | เฟสแรกอยู่นิ่ง เมื่อถูกกำจัดจะแปลงเป็นเฟสสองที่เคลื่อนที่ แยกร่าง และใช้ Orbital จากฟ้า | Max HP +25 และฟื้น 45 HP |
-| Allergic Vacuum | ดูดฝุ่นและดึงผู้เล่นเข้าใกล้ เมื่อค่าแพ้เต็มจะเตือนก่อนจามฝุ่นออกมา | ความเร็วเดิน +30 และฟื้น 20 HP |
-| Insecure Sword | เดินเก็บ Post-it แล้วนำเข้าใกล้บอสเพื่อลดเกราะ แต่ทำให้มันมั่นใจขึ้น; ฉวยจังหวะตอนฟันพลาด | ดาเมจ LAN +8, Notebook +6 และฟื้น 20 HP |
+| Liquid Cat | Remains stationary in phase one; taking lethal damage triggers a mobile second phase with copies and fast Orbital strikes from the sky | Max HP +25 and restore 45 HP |
+| Allergic Vacuum | Sucks in dust and pulls the player closer; a full allergy meter triggers a warning followed by a dusty sneeze | Movement speed +30 and restore 20 HP |
+| Insecure Sword | Collect Post-it notes and bring them near the boss to reduce its armor while raising its confidence; attack when it misses a swing | LAN damage +8, Notebook damage +6, and restore 20 HP |
 
 ### FINAL EXAM — Ae & Dome
 
-เมื่อชนะ Ae และ Dome ครบในรันเดียวกัน จะเปิดห้องพิเศษที่ทั้งสองอยู่บนตู้ Server ด้านบน ผู้เล่นเดินขึ้นไปไม่ได้และต้องรับมือการโจมตีพร้อมกันจากเลนด้านล่าง โดยเลเซอร์ของ Dome ยิงลงจากตู้
+Defeating Ae and Dome in the same run unlocks a special room where both bosses stand on the upper server cabinets. The player cannot move up to them and must face their combined attacks from the lower lane. Dome's lasers fire downward from the cabinet.
 
 ## Gameplay Screenshots
 
-### ห้องต่อสู้และสิ่งกีดขวาง
+### Combat Rooms and Obstacles
 
-![ภาพเกมในห้องเรียน แสดงผู้เล่น มอนสเตอร์ โต๊ะ และปุ่มสกิล](docs/images/gameplay.png)
+![Classroom combat showing the player, monsters, tables, and skill buttons](docs/images/gameplay.png)
 
 ### FINAL EXAM
 
-![ภาพ FINAL EXAM ต่อสู้ Ae และ Dome บนตู้ Server จากเลนด้านล่าง](docs/images/final-exam.png)
+![Fighting Ae and Dome on server cabinets from the lower lane during the FINAL EXAM](docs/images/final-exam.png)
 
 ## Survival Tips
 
-- **อย่าใช้ SP จนหมด:** เก็บไว้สำหรับ Dash หรือ Ice Wall และใช้ LAN ระหว่างรอฟื้นพลัง
-- **อ่านวงเตือนก่อนโจมตี:** ย้ายออกจากจุดเป้าหมายก่อนสายฟ้า ระเบิด หรือ Orbital ลงถึงพื้น
-- **ใช้โต๊ะให้ถูกจังหวะ:** โต๊ะขวางการเดินและกระสุนทั่วไป แต่กระสุนบอสข้ามโต๊ะได้ ส่วน Ice Wall กันกระสุนศัตรูรวมถึงบอส
-- **จัดการลูกน้องด้วย:** ห้องบอสจะผ่านเมื่อกำจัดศัตรูที่เหลือครบ ไม่ใช่แค่ลด HP บอสหมด
-- **อย่าลืม Potion:** ขวดมีจำกัด เลือกใช้ตอนที่ได้ประโยชน์จากการฟื้นพลังเต็มจำนวน
+- **Keep some SP in reserve.** Save it for Dash or Ice Wall, and use LAN while SP recovers.
+- **Watch attack warnings.** Leave marked areas before lightning, bombs, or Orbital strikes land.
+- **Use cover carefully.** Tables block movement and ordinary projectiles, but boss projectiles can pass over them. Ice Wall blocks enemy projectiles, including boss shots.
+- **Clear the minions too.** Boss rooms finish only when all remaining enemies have been defeated.
+- **Make potions count.** Bottles are limited, so use them when you can benefit from the full amount restored.
 
 ## Project Status
 
-เกมอยู่ในช่วงต้นแบบที่เล่นได้ มีโหมดผู้เล่นคนเดียว ห้องเรียน 4 ด่าน บอสปกติ 5 ตัว EX 3 ตัว และ FINAL EXAM การเลือกอัปเกรดกับรางวัล EX ช่วยให้ Build เติบโตตลอดรัน หลังจบลูปศัตรูจะมี HP, SP, ดาเมจ และความเร็วเพิ่มขึ้น
+The playable prototype includes single-player combat, four classroom stages, five regular bosses, three EX enemies, and the FINAL EXAM. Upgrades and EX rewards develop your build throughout a run. Enemy HP, SP, damage, and speed increase with each completed loop.
 
-งานที่กำลังพัฒนาต่อคือความสมดุล ความชัดเจนของการโจมตี งานภาพ และคำแนะนำสำหรับผู้เล่นใหม่
+Ongoing work focuses on balancing, attack readability, visual polish, and guidance for new players.
 
-อ่านรายละเอียดการออกแบบเพิ่มเติมใน [Game Design Document](GDD.md)
+Read more in the [Game Design Document](GDD.md).
 
 ---
 
-โปรเจกต์เกมนักศึกษา ISNE · สปินออฟธีมนักศึกษาจาก **Pusenbi** · พัฒนาด้วย **Java และ libGDX** · ภาพประกอบแสดงเกมต้นแบบปัจจุบัน
+An ISNE student game project · A student-themed spin-off of **Pusenbi** · Built with **Java and libGDX** · Screenshots show the current playable prototype.
