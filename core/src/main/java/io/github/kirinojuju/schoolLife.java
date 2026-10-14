@@ -29,6 +29,7 @@ public class schoolLife extends ApplicationAdapter {
     private RunDirector run;
     private GameRenderer renderer;
     private GameAudio audio;
+    private boolean introShown;
 
     public schoolLife() { this(TestMode.NONE); }
 
@@ -51,6 +52,9 @@ public class schoolLife extends ApplicationAdapter {
         if (testMode == TestMode.FINAL_EXAM) run.startFinalExamTest(player);
         else if (testMode == TestMode.OBSTACLES) run.startObstaclesTest(player, combat);
         else if (testMode.exId >= 0) run.startExTest(player, combat, testMode.exId);
+        else if (!introShown) run.startIntro();
+        introShown = true;
+        audio.updatePhase(run.phase);
     }
 
     private void updateExTestControls() {
@@ -76,6 +80,7 @@ public class schoolLife extends ApplicationAdapter {
         float dt = Math.min(Gdx.graphics.getDeltaTime(), 1f / 30f);
         audio.update(dt);
         updateRun(dt);
+        audio.updatePhase(run.phase);
         renderer.draw(run, player, combat);
     }
 
@@ -96,6 +101,12 @@ public class schoolLife extends ApplicationAdapter {
 
     private void handleMenuClicks() {
         switch (run.phase) {
+            case INTRO:
+                if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) run.advanceIntro();
+                break;
+            case START_SELECT:
+                if (renderer.startButtonJustPressed()) run.startRun(player, combat);
+                break;
             case UPGRADE:
                 int upgrade = renderer.upgradeChoiceJustPressed();
                 if (upgrade >= 0) run.chooseUpgrade(upgrade, player, combat);

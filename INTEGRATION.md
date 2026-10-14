@@ -195,4 +195,24 @@ GitHub ทั้งสอง branch ไม่มีภาพใหม่เห�
 - Core main source count remains 51 files. GameRenderer is now 178 lines due to explicit subpackage imports; other views: SceneRenderer 270, CombatRenderer 460, GameHud 268.
 - All three rule checks and desktop compilation passed. Graphical checks cover hitbox indicators/new scenes, complete scripted run progression, Liquid Cat phases/copies and Sword/Final Exam controls.
 - Updated the existing demo JAR/ZIP and IDE output folders to use the new package paths; removed obsolete generated classes from the previous flat IDE render folder.
+
+## START button and background/defeat audio — 14 October 2026
+
+- Integrated the root `click1_before_c.png` / `click2_focus.png` START button images. Shared crop bounds preserve 4x pixel scaling; SceneRenderer owns the button rectangle used by pointer hit testing. Hover selects focus art. Clicking enters Building 30; Enter remains available. Repeated input during the opening fade is ignored.
+- Converted `BGM_sound.m4a` (180.43 seconds) and `game_over.m4a` (6.50 seconds) to `assets/audio/BGM_sound.ogg` and `game_over.ogg`, keeping the originals. BGM streams as looping Music at .22 volume; Game Over uses a Sound cue at .55.
+- GameAudio reacts once per Phase change: BGM continues across menus/entrance/fights/rewards; pauses during black cutscenes/car ending; stops on GAME_OVER. Defeat audio plays once and stops when restarting. R starts a fresh run and BGM again. Existing immediate Sword Sound handling is preserved.
+- Added no main Java files: still 51. Missing new images use a text START button, and missing new audio remains optional. Audio and textures are disposed with their owners.
+- All three rule checks and desktop compilation passed. A muted real OpenAL check verified BGM decode/play/loop flag, defeat Sound playback once, restart/cutscene phase changes and disposal. The same graphical check verified normal/focus START, inside/outside clicks at 1000x800 with letterboxing, fade duplicate prevention, Enter and missing-new-asset fallback.
+- SwordAudioCheck passed 11 rapid casts and cooldown/Notebook/missing-file gates; BranchUpdateCheck passed scripted cover-to-loop-two progression. The current standalone JAR passed MenuAudioCheck from its release directory using packaged assets. Refreshed the seven-file demo ZIP and IDE compiled classes.
+- New screenshots and local checks: `build/menu-audio-2026-10-14/`. Work is local on `game-cleanup-and-ex-updates`, based on bf00bd9.
+
+## English car ending and bilingual opening story — 14 October 2026
+
+- Replaced the car ending's unsupported Thai bitmap-font text with centered English: "You didn't graduate in four years." / "Life really is too short...". The restart prompt now shows both Enter and R. Centered text fits within the logical screen width.
+- Normal app startup enters INTRO before the cover. Four black story cards display English with Thai subtitles, fade in/out, and advance after 4.2 seconds each. Enter/Space/left click advances; Esc skips. Finishing/skipping fades into the cover, without starting gameplay in the same input event. Retries within the same app return directly to the cover; desktop test modes bypass the story.
+- RunDirector owns story text, page/time and progression; SceneRenderer owns text presentation; GameAudio keeps BGM paused during INTRO and starts it at the cover. No additional main Java files.
+- Extended the existing GenerateGameTitle tool to shape Thai subtitles using AWT TextLayout and an installed Thai font. Bundled `core/src/main/resources/ui/intro-story-th.png` contains four subtitle rows, so runtime needs no installed Thai font or new dependency. Regenerate with `java tools/GenerateGameTitle.java` after editing Thai INTRO_LINES. The source-only clone and JAR include the subtitle resource; IDE output is synced too.
+- All three rule checks and desktop build passed. IntroStoryCheck verified visible English/Thai on all four pages, black/fading background, automatic/keyboard/mouse/skip paths, centered English car ending, retry behavior and EX bypass. Reviewed page 2, page 4 and car-ending screenshots visually.
+- Updated MenuAudioCheck and BranchUpdateCheck for the opening story. Real OpenAL verification and scripted normal progression passed. The release JAR also passed IntroStoryCheck and MenuAudioCheck from its own directory using bundled resources/assets. Refreshed the existing seven-file demo ZIP and presentation links.
+- Evidence: `build/intro-story-2026-10-14/`, including its `jar-*` screenshots. Changes remain local on `game-cleanup-and-ex-updates`.
 - Remaining architectural limits are documented: renderer/player still have broad responsibilities, and some geometry/status fields remain public. The project does not claim complete SOLID compliance or custom implementations of every design pattern from the lecture.

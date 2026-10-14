@@ -1,9 +1,11 @@
 package io.github.kirinojuju.audio;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
+import io.github.kirinojuju.flow.RunDirector.Phase;
 
-/** Game cues; sword clips restart immediately on each successful cast. */
+/** Looping background music, screen cues and immediate sword effects. */
 public final class GameAudio {
     private static final String ROOT = "characters/soundfx/";
     private final Sound click = load("click_sound.ogg");
@@ -20,18 +22,47 @@ public final class GameAudio {
     private final Sound domeLaserCast = load("boss_fx/Dome/laser_efx_cast_sound.ogg");
     private final Sound domeLaserFire = load("boss_fx/Dome/laser_efx_hit_sound.ogg");
     private final Sound[] swordWaves = {loadSword("getsuga1.mp3"), loadSword("getsuga2.mp3")};
+    private final Music background = loadBackground();
+    private final Sound gameOver = loadSound("audio/game_over.ogg");
+    private Phase previousPhase;
     private Sound playingSwordWave;
     private int swordWaveIndex;
     private float hitCooldown;
 
     private static Sound load(String name) {
-        if (!Gdx.files.internal(ROOT + name).exists()) return null;
-        return Gdx.audio.newSound(Gdx.files.internal(ROOT + name));
+        return loadSound(ROOT + name);
     }
 
     private static Sound loadSword(String name) {
-        String path = "weapons/sword_power/" + name;
+        return loadSound("weapons/sword_power/" + name);
+    }
+
+    private static Sound loadSound(String path) {
         return Gdx.files.internal(path).exists() ? Gdx.audio.newSound(Gdx.files.internal(path)) : null;
+    }
+
+    private static Music loadBackground() {
+        String path = "audio/BGM_sound.ogg";
+        if (!Gdx.files.internal(path).exists()) return null;
+        Music music = Gdx.audio.newMusic(Gdx.files.internal(path));
+        music.setLooping(true);
+        music.setVolume(.22f);
+        return music;
+    }
+
+    /** React once per screen change: continuous BGM, quiet cutscenes and a single defeat cue. */
+    public void updatePhase(Phase phase) {
+        if (phase == previousPhase) return;
+        previousPhase = phase;
+        if (phase == Phase.GAME_OVER) {
+            if (background != null) background.stop();
+            restart(gameOver, .55f);
+        } else {
+            if (gameOver != null) gameOver.stop();
+            if (background == null) return;
+            if (phase == Phase.INTRO || phase == Phase.CUTSCENE || phase == Phase.CAR_ENDING) background.pause();
+            else if (!background.isPlaying()) background.play();
+        }
     }
 
     public void update(float dt) { hitCooldown = Math.max(0, hitCooldown - dt); }
@@ -93,5 +124,7 @@ public final class GameAudio {
         dispose(domeLaserCast);
         dispose(domeLaserFire);
         for (Sound cue : swordWaves) dispose(cue);
+        dispose(gameOver);
+        if (background != null) background.dispose();
     }
 }

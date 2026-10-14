@@ -13,10 +13,17 @@ import java.util.Random;
 
 /** Menu, room transitions, loop completion and EX rewards. */
 public final class RunDirector {
-    public enum Phase { START_SELECT, ENTRANCE, CAR_PROMPT, CAR_ENDING,
+    public enum Phase { INTRO, START_SELECT, ENTRANCE, CAR_PROMPT, CAR_ENDING,
         FIGHT, UPGRADE, TRANSITION, CUTSCENE, GAME_OVER }
     public enum Room { MOBS, BOSS, EX, FINAL_EXAM }
     private static final float SCENE_FADE_DURATION = .4f;
+    private static final float INTRO_PAGE_DURATION = 4.2f;
+    private static final String[][] INTRO_LINES = {
+        {"I'm a student here.", "ผมเป็นนักเรียนที่นี่"},
+        {"I can't remember how many years I've been here...", "ผมจำไม่ได้แล้วว่าเรียนที่นี่มากี่ปี..."},
+        {"But I have this feeling...", "แต่ผมรู้สึกว่า..."},
+        {"I... must be stuck in a loop.", "ผม...ต้องติดอยู่ในลูปนี้แน่ ๆ"}
+    };
     public static final int MONSTER_CLEAR_HEAL = 12;
     public static final int BOSS_CLEAR_HEAL = 35;
 
@@ -36,6 +43,8 @@ public final class RunDirector {
     private Phase fadeDestination;
     private final Random random;
     private int upgradeRerollsRemaining;
+    private int introPage;
+    private float introPageTime;
     private GameAudio audio;
 
     public RunDirector(Random random) {
@@ -43,6 +52,43 @@ public final class RunDirector {
         plan = new RunPlan(random);
     }
     public void setAudio(GameAudio audio) { this.audio = audio; }
+
+    public static int introPageCount() { return INTRO_LINES.length; }
+    public int introPage() { return introPage; }
+    public String introEnglish() { return INTRO_LINES[introPage][0]; }
+    public float introAlpha() {
+        return Math.max(0, Math.min(1, Math.min(introPageTime, INTRO_PAGE_DURATION - introPageTime) / .65f));
+    }
+
+    /** Only the first normal app launch starts the story; retrying a run returns to the cover. */
+    public void startIntro() {
+        if (phase != Phase.START_SELECT) return;
+        introPage = 0;
+        introPageTime = 0;
+        phase = Phase.INTRO;
+    }
+
+    public void advanceIntro() {
+        if (phase != Phase.INTRO) return;
+        if (introPage + 1 == INTRO_LINES.length) skipIntro();
+        else { introPage++; introPageTime = 0; }
+    }
+
+    public void skipIntro() {
+        if (phase != Phase.INTRO) return;
+        phase = Phase.START_SELECT;
+        sceneFade = 1;
+    }
+
+    private void updateIntro(float dt) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) skipIntro();
+        else if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)
+            || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) advanceIntro();
+        else {
+            introPageTime += dt;
+            if (introPageTime >= INTRO_PAGE_DURATION) advanceIntro();
+        }
+    }
 
     /** Desktop test entry: skip progression and keep the real cutscene and fight. */
     public void startFinalExamTest(PlayerCharacter player) {
@@ -90,6 +136,9 @@ public final class RunDirector {
                           boolean touchLanWave, boolean mouseAttack) {
         if (advanceSceneFade(dt, player, combat)) return false;
         switch (phase) {
+            case INTRO:
+                updateIntro(dt);
+                break;
             case GAME_OVER:
                 return Gdx.input.isKeyJustPressed(Input.Keys.R);
             case CAR_ENDING:
@@ -159,7 +208,7 @@ public final class RunDirector {
     }
 
     public void startRun(PlayerCharacter player, CombatRoom combat) {
-        if (phase != Phase.START_SELECT) return;
+        if (phase != Phase.START_SELECT || fadeDestination != null || sceneFade > 0) return;
         if (audio != null) audio.click();
         fadeDestination = Phase.ENTRANCE;
     }

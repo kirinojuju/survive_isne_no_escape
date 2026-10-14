@@ -13,6 +13,8 @@
 5. `Enemy` กำหนดข้อมูลและลำดับร่วม; คลาสลูก Override พฤติกรรมของตัวเอง
 6. `GameRenderer` ประสานการวาดผ่าน `SceneRenderer`, `CombatRenderer` และ `GameHud`
 
+เมื่อเปิดแอปปกติ `schoolLife.newRun()` เรียก `RunDirector.startIntro()` ครั้งแรก: Story อังกฤษ/ไทย 4 ช่วง → ปก → ทางเข้าตึก → ต่อสู้ `RunDirector` ดูแลหน้าปัจจุบัน เวลา และการกดข้าม ส่วน `SceneRenderer` วาดข้อความ/Fade ภาษาไทยใช้ภาพข้อความที่จัดรูปสระวรรณยุกต์ไว้ใน `ui/intro-story-th.png` สร้างใหม่ด้วย `tools/GenerateGameTitle.java` หลังแก้ `INTRO_LINES` การเริ่มรันใหม่ไม่เล่น Story ซ้ำ และโหมดเทสเข้าห้องเดิมได้โดยตรง
+
 ## การสืบทอด
 
 ### โฟลเดอร์ส่วนแสดงผล
@@ -128,7 +130,7 @@ Cat สามารถฟื้นเลือดเปลี่ยนเฟส�
 - ใช้ Class/Object, constructor, private/getter/setter, abstract, extends, super, Overload, Override และ implements จริง
 - ใช้ Factory และการเรียกผ่าน interface/คลาสแม่; ไม่ได้เพิ่ม Adapter/Chain of Responsibility เพื่อให้ครบชื่อ
 - SOLID ดีขึ้นในส่วนการแบ่งหน้าที่และการขยายพฤติกรรม แต่ Player ยังรับผิดชอบหลายส่วน
-- `GameRenderer` ลดจาก 1,018 เป็น 178 บรรทัด โดยเพิ่ม 3 คลาสตามหน้าที่: SceneRenderer, CombatRenderer และ GameHud; Logic การวาดยังคงอยู่ในคลาสที่เป็นเจ้าของ
+- `GameRenderer` ลดจาก 1,018 เป็น 183 บรรทัด โดยเพิ่ม 3 คลาสตามหน้าที่: SceneRenderer, CombatRenderer และ GameHud; Logic การวาดยังคงอยู่ในคลาสที่เป็นเจ้าของ
 - พิกัดและสถานะบางส่วนยังเป็น public; เลือดศัตรูถูกควบคุมผ่านเมธอดแล้ว
 - static/final ยังใช้กับค่าคงที่และ reference ที่ไม่เปลี่ยน ไม่มีสถานะ AI ส่วนกลางที่ใช้ร่วมกันทุกบอส
 
@@ -138,7 +140,7 @@ Cat สามารถฟื้นเลือดเปลี่ยนเฟส�
 
 | ไฟล์ | หน้าที่ |
 | --- | --- |
-| [audio/GameAudio.java](D:/oop-game-school-life/project-school-action-roguelike-state/core/src/main/java/io/github/kirinojuju/audio/GameAudio.java) | โหลด/เล่นเสียง จัดการเสียง Sword ทันที และคืนทรัพยากรเสียง |
+| [audio/GameAudio.java](D:/oop-game-school-life/project-school-action-roguelike-state/core/src/main/java/io/github/kirinojuju/audio/GameAudio.java) | โหลดเสียง, วน BGM ด้วย Music, เล่น Game Over ครั้งเดียวตาม Phase, เล่น Sword ทันที และคืนทรัพยากร |
 | [combat/CombatDamage.java](D:/oop-game-school-life/project-school-action-roguelike-state/core/src/main/java/io/github/kirinojuju/combat/CombatDamage.java) | รับดาเมจ เกราะ สะท้อน พิษ การโจมตีประชิด Beam และระเบิด |
 | [combat/CombatRoom.java](D:/oop-game-school-life/project-school-action-roguelike-state/core/src/main/java/io/github/kirinojuju/combat/CombatRoom.java) | ข้อมูลห้อง คำสั่งโจมตีจากอาวุธ และลำดับระบบต่อสู้ |
 | [combat/ProjectileSystem.java](D:/oop-game-school-life/project-school-action-roguelike-state/core/src/main/java/io/github/kirinojuju/combat/ProjectileSystem.java) | เดินกระสุน ตามเป้าหมาย ตรวจโต๊ะ/กำแพง/ตัวละคร และอายุเอฟเฟกต์ชน |

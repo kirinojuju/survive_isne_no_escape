@@ -29,7 +29,7 @@ public final class GameRenderer {
     public static final Rectangle CAR_TARGET = new Rectangle(825, 335, 199, 120);
     public static final Rectangle CAR_YES_BUTTON = new Rectangle(300, 239, 315, 64);
     public static final Rectangle CAR_NO_BUTTON = new Rectangle(665, 239, 315, 64);
-    public static final String CAR_ENDING_MESSAGE = "คุณเรียนไม่จบ 4 ปี ชีิวิตมันชั่งแสนสั้นจริงๆ";
+    public static final String CAR_ENDING_MESSAGE = "You didn't graduate in four years.";
     public static final Color INK = new Color(.09f, .12f, .18f, 1);
     public static final Color PAPER = new Color(.91f, .94f, .91f, 1);
     public static final Color CYAN = new Color(.36f, .85f, .86f, 1);
@@ -74,7 +74,8 @@ public final class GameRenderer {
             return;
         }
         if (SceneRenderer.isEntrancePhase(run.phase)) {
-            scene.drawEntrance(run, player);
+            updateTouchPosition();
+            scene.drawEntrance(run, player, scene.isStartButtonAt(touchPosition.x, touchPosition.y));
         } else {
             scene.drawRoom(run, combat);
             combatView.drawGround(player, combat);
@@ -151,6 +152,10 @@ public final class GameRenderer {
 
     public boolean entranceCarJustPressed() {
         return touchJustPressed() && CAR_TARGET.contains(touchPosition);
+    }
+
+    public boolean startButtonJustPressed() {
+        return touchJustPressed() && scene.isStartButtonAt(touchPosition.x, touchPosition.y);
     }
 
     public int carChoiceJustPressed() {

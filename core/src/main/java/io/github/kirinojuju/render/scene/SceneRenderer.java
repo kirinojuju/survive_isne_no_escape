@@ -8,17 +8,21 @@ import static io.github.kirinojuju.render.GameRenderer.CYAN;
 import static io.github.kirinojuju.render.GameRenderer.GOLD;
 import static io.github.kirinojuju.render.GameRenderer.GREEN;
 import static io.github.kirinojuju.render.GameRenderer.INK;
+import static io.github.kirinojuju.render.GameRenderer.PAPER;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.math.Rectangle;
 import io.github.kirinojuju.combat.CombatRoom;
 import io.github.kirinojuju.flow.RunDirector;
 import io.github.kirinojuju.player.PlayerCharacter;
@@ -30,6 +34,7 @@ import io.github.kirinojuju.world.RoomObstacles.TableSprites;
 
 /** Backgrounds, entrance/car screens and scene fades. */
 public final class SceneRenderer implements Disposable {
+    private final Rectangle startButton = new Rectangle(540, 60, 200, 116);
     private final SpriteBatch batch;
     private final ShapeRenderer shapes;
     private final BitmapFont font, bigFont;
@@ -42,7 +47,15 @@ public final class SceneRenderer implements Disposable {
     private final Texture carObject = loadRoom("scene/scene30bCar_object.png");
     private final Texture cover = Gdx.files.internal("scene/ปกเกม/Whatzz.png").exists()
         ? loadRoom("scene/ปกเกม/Whatzz.png") : null;
-    private final Texture gameTitle = loadGameTitle();
+    private final Texture gameTitle = loadUiTexture("game-title.png");
+    private final Texture introThai = loadUiTexture("intro-story-th.png");
+    private final TextureRegion[][] introThaiLines = introThai == null ? null
+        : TextureRegion.split(introThai, introThai.getWidth(), introThai.getHeight() / RunDirector.introPageCount());
+    private final Texture startNormal = optional("click1_before_c.png");
+    private final Texture startFocus = optional("click2_focus.png");
+    // Both exports use the same 64x64 canvas. Crop their shared visible area at a crisp 4x scale.
+    private final TextureRegion normalButton = buttonRegion(startNormal);
+    private final TextureRegion focusButton = buttonRegion(startFocus);
 
     public SceneRenderer(SpriteBatch batch, ShapeRenderer shapes, BitmapFont font,
                   BitmapFont bigFont, StudentSprite student) {
@@ -64,28 +77,42 @@ public final class SceneRenderer implements Disposable {
         return OptionalAssetTexture.load(path);
     }
 
-    private static Texture loadGameTitle() {
-        FileHandle file = Gdx.files.classpath("ui/game-title.png");
+    private static Texture optional(String path) {
+        return Gdx.files.internal(path).exists() ? loadRoom(path) : null;
+    }
+
+    private static TextureRegion buttonRegion(Texture texture) {
+        return texture == null ? null : new TextureRegion(texture, 8, 19, 50, 29);
+    }
+
+    public boolean isStartButtonAt(float x, float y) { return startButton.contains(x, y); }
+
+    private static Texture loadUiTexture(String name) {
+        FileHandle file = Gdx.files.classpath("ui/" + name);
         // IDE launches may not have copied resources yet. Support the project and assets folders.
-        if (!file.exists()) file = Gdx.files.local("core/src/main/resources/ui/game-title.png");
-        if (!file.exists()) file = Gdx.files.local("../core/src/main/resources/ui/game-title.png");
+        if (!file.exists()) file = Gdx.files.local("core/src/main/resources/ui/" + name);
+        if (!file.exists()) file = Gdx.files.local("../core/src/main/resources/ui/" + name);
         if (!file.exists()) {
-            Gdx.app.log("GameRenderer", "Title image missing: ui/game-title.png");
+            Gdx.app.log("SceneRenderer", "UI text image missing: ui/" + name);
             return null;
         }
         return new Texture(file);
     }
 
     public static boolean isEntrancePhase(RunDirector.Phase phase) {
-        return phase == RunDirector.Phase.START_SELECT
+        return phase == RunDirector.Phase.INTRO || phase == RunDirector.Phase.START_SELECT
             || phase == RunDirector.Phase.ENTRANCE
             || phase == RunDirector.Phase.CAR_PROMPT
             || phase == RunDirector.Phase.CAR_ENDING;
     }
 
-    public void drawEntrance(RunDirector run, PlayerCharacter player) {
+    public void drawEntrance(RunDirector run, PlayerCharacter player, boolean startHovered) {
+        if (run.phase == RunDirector.Phase.INTRO) {
+            drawIntro(run);
+            return;
+        }
         if (run.phase == RunDirector.Phase.START_SELECT && cover != null) {
-            drawTitleScreen();
+            drawTitleScreen(startHovered);
             return;
         }
         if (run.phase == RunDirector.Phase.CAR_ENDING) {
@@ -99,22 +126,25 @@ public final class SceneRenderer implements Disposable {
             || run.phase == RunDirector.Phase.CAR_PROMPT)
             student.draw(batch, player);
         drawEntranceText(run.phase, player);
+        if (run.phase == RunDirector.Phase.START_SELECT) drawStartButton(startHovered);
         batch.end();
     }
 
-    private void drawTitleScreen() {
+    private void drawTitleScreen(boolean hovered) {
         float scale = Math.min(GameSpace.WIDTH / cover.getWidth(), GameSpace.HEIGHT / cover.getHeight());
         float width = cover.getWidth() * scale, height = cover.getHeight() * scale;
         batch.begin();
         batch.draw(cover, (GameSpace.WIDTH - width) / 2, (GameSpace.HEIGHT - height) / 2, width, height);
+        drawStartButton(hovered);
         batch.end();
-        shapes.begin(ShapeRenderer.ShapeType.Filled);
-        shapes.setColor(INK);
-        shapes.rect(390, 55, 500, 65);
-        shapes.end();
-        batch.begin();
-        centeredText(font, "Press ENTER to begin", 95);
-        batch.end();
+    }
+
+    private void drawStartButton(boolean hovered) {
+        TextureRegion image = hovered && focusButton != null ? focusButton : normalButton;
+        if (image != null)
+            batch.draw(image, startButton.x, startButton.y, startButton.width, startButton.height);
+        else centeredText(bigFont, hovered ? "[ START ]" : "START", startButton.y + 72);
+        centeredText(font, "CLICK START / ENTER", 40);
     }
 
     private void drawGameTitle(float centerY, float maxWidth) {
@@ -126,14 +156,39 @@ public final class SceneRenderer implements Disposable {
 
     private void centeredText(BitmapFont textFont, String text, float y) {
         GlyphLayout layout = new GlyphLayout(textFont, text);
+        float scaleX = textFont.getData().scaleX, scaleY = textFont.getData().scaleY;
+        if (layout.width > GameSpace.WIDTH - 160) {
+            float fit = (GameSpace.WIDTH - 160) / layout.width;
+            textFont.getData().setScale(scaleX * fit, scaleY * fit);
+            layout.setText(textFont, text);
+        }
         textFont.draw(batch, text, (GameSpace.WIDTH - layout.width) / 2, y);
+        textFont.getData().setScale(scaleX, scaleY);
+    }
+
+    private void drawIntro(RunDirector run) {
+        ScreenUtils.clear(0, 0, 0, 1);
+        float alpha = run.introAlpha();
+        batch.begin();
+        bigFont.setColor(PAPER.r, PAPER.g, PAPER.b, alpha);
+        centeredText(bigFont, run.introEnglish(), 400);
+        bigFont.setColor(PAPER);
+        if (introThaiLines != null) {
+            batch.setColor(PAPER.r, PAPER.g, PAPER.b, alpha);
+            batch.draw(introThaiLines[run.introPage()][0], 240, 300, 800, 64);
+            batch.setColor(Color.WHITE);
+        }
+        centeredText(font, (run.introPage() + 1) + " / " + RunDirector.introPageCount(), 155);
+        centeredText(font, "ENTER / SPACE / CLICK: continue    ESC: skip", 95);
+        batch.end();
     }
 
     private void drawCarEnding() {
         ScreenUtils.clear(0, 0, 0, 1);
         batch.begin();
-        bigFont.draw(batch, CAR_ENDING_MESSAGE, 205, 350);
-        line("Press ENTER to start a new run", 300);
+        centeredText(bigFont, CAR_ENDING_MESSAGE, 400);
+        centeredText(font, "Life really is too short...", 335);
+        centeredText(font, "Press ENTER or R to start a new run", 260);
         batch.end();
     }
 
@@ -266,5 +321,8 @@ public final class SceneRenderer implements Disposable {
         building30.dispose(); carObject.dispose();
         if (cover != null) cover.dispose();
         if (gameTitle != null) gameTitle.dispose();
+        if (introThai != null) introThai.dispose();
+        if (startNormal != null) startNormal.dispose();
+        if (startFocus != null) startFocus.dispose();
     }
 }

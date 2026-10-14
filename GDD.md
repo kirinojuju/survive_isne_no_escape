@@ -48,7 +48,7 @@ Boss rewards let the player build around melee damage, ranged effects, speed or 
 ### Game loop
 
 ```text
-Title → Building 30 entrance → Left door → Begin combat
+Opening story (EN/TH) → Title → Building 30 entrance → Left door → Begin combat
                            ↘ Car → Go-home joke ending → Restart
 
 Monster room → Ajarn + minions → Choose 1 of 3 upgrades
@@ -94,6 +94,7 @@ Completing four stages finishes one school-year loop. EX and queued Final Exam e
 - PNG pixel-art frames, nearest-neighbor filtering and optional local audio.
 - Separate systems for flow, player, weapons, combat, enemy behavior, rendering, world geometry and sound.
 - Original art and audio remain local. A source-only clone uses fallback visuals and missing sounds stay optional.
+- Four opening story cards pair English and Thai on black, with fades and automatic advancement. Enter/Space/click advances; Esc skips. Title START uses the team's normal/focus button images. BGM begins at the cover and loops across menus/gameplay; black cutscenes pause it. Defeat stops BGM and plays a single Game Over cue; restarting resumes BGM without replaying the opening story.
 - No implemented multiplayer, account system, persistent unlock progression or save/resume system is claimed by this design.
 
 ## Story
@@ -131,6 +132,8 @@ The immediate objective is to survive each room. Longer-term goals are to build 
 
 | Action | Input |
 | --- | --- |
+| Opening story | Enter / Space / left click to advance; Esc to skip |
+| Start from the title | Click START or press Enter; button highlights on hover |
 | Move | WASD or arrow keys |
 | Normal attack | Hold left mouse button or Space |
 | Lock target | Click near an enemy; empty ground selects the nearest living enemy |
@@ -253,7 +256,7 @@ These are linear additions relative to base values. Room populations and special
 
 ### Screens, HUD and feedback
 
-**Implemented:** Title, Building 30 entrance, car prompt/joke ending, combat, room-clear transition, upgrade selection, Final Exam cutscene and defeat/results. Scene changes fade through black.
+**Implemented:** Bilingual opening story, title, Building 30 entrance, car prompt/English joke ending, combat, room-clear transition, upgrade selection, Final Exam cutscene and defeat/results. Scene changes fade through black.
 
 The HUD communicates HP/SP, potions, current weapon, loop/stage, enemy status, bonuses and encounter-specific meters such as Heat, Allergy and Confidence. Binding shows escape progress. Enemy markers and safe zones must stay readable over room art.
 

@@ -166,7 +166,7 @@ public PlayerCharacter(WeaponAttack physical, WeaponAttack magical) {
 }
 ```
 
-ตัวเกมส่ง implementation เข้ามาจาก [schoolLife.newRun()](D:/oop-game-school-life/project-school-action-roguelike-state/core/src/main/java/io/github/kirinojuju/schoolLife.java:44)
+ตัวเกมส่ง implementation เข้ามาจาก [schoolLife.newRun()](D:/oop-game-school-life/project-school-action-roguelike-state/core/src/main/java/io/github/kirinojuju/schoolLife.java:45)
 
 อธิบายว่า: “ผู้เล่นเรียกผ่าน `WeaponAttack` และรับ Object ทาง constructor จึงเปลี่ยน implementation หรือทดสอบด้วยอาวุธจำลองได้ โดยไม่แก้เมธอดโจมตีของผู้เล่น”
 
